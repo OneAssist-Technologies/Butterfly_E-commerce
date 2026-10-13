@@ -1,0 +1,10 @@
+{
+  "description": "Explore and compare premium smart TVs with detailed specs, seamless navigation, and responsive support tools tailored for discerning electronics shoppers.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
