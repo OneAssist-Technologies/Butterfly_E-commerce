@@ -19,6 +19,14 @@ export const metadata: Metadata = {
   title: 'Butterfly SMART TV | Brighter Colours. Smarter Living.',
   description:
     'Experience stunning visuals, immersive sound, and smart features — all in one with Butterfly Smart TV.',
+  icons: {
+    icon: [
+      { url: '/brand/butterfly-wordmark-badge.png' },
+      { url: '/icon.png' },
+      { url: '/favicon.ico' },
+    ],
+    apple: '/brand/butterfly-wordmark-badge.png',
+  },
 };
 
 export default function RootLayout({
@@ -27,9 +35,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 min-h-screen flex flex-col`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white text-zinc-900 min-h-screen flex flex-col`}
       >
         <AppProviders>
           <Header />

@@ -73,6 +73,7 @@ export function CartDrawer({
                     src={item.image}
                     alt={item.name}
                     fill
+                    sizes="64px"
                     className="object-contain"
                   />
                 </div>
@@ -109,6 +110,27 @@ export function CartDrawer({
 
             <button
               onClick={() => {
+                try {
+                  const newOrders = cartItems.map((item, idx) => ({
+                    id: `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
+                    customerName: 'Customer (Online Checkout)',
+                    email: 'online.order@butterfly.com',
+                    model: `${item.model} (${item.name})`,
+                    amount: item.price,
+                    numericAmount: parseInt(item.price.replace(/[^0-9]/g, '')) || 0,
+                    payment: 'Prepaid (UPI)' as const,
+                    status: 'Processing' as const,
+                    date: new Date().toLocaleDateString('en-IN', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    }),
+                  }));
+                  const existing = JSON.parse(localStorage.getItem('butterfly_customer_orders') || '[]');
+                  localStorage.setItem('butterfly_customer_orders', JSON.stringify([...newOrders, ...existing]));
+                } catch {
+                  // Ignore storage error
+                }
                 alert('Order request placed successfully! Our sales team will connect with you.');
                 onClearCart();
                 onClose();

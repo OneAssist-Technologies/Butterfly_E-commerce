@@ -20,7 +20,7 @@ export function ProductModal({ product, onClose, onAddToCart }: ProductModalProp
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+        className="relative w-full max-w-2xl bg-white border border-zinc-200 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button */}
@@ -40,6 +40,7 @@ export function ProductModal({ product, onClose, onAddToCart }: ProductModalProp
               src={product.image}
               alt={product.name}
               fill
+              sizes="(max-width: 768px) 100vw, 50vw"
               className="object-contain p-2"
             />
           </div>
@@ -52,37 +53,37 @@ export function ProductModal({ product, onClose, onAddToCart }: ProductModalProp
                   {product.badge}
                 </span>
               )}
-              <h3 className="text-xl font-extrabold text-zinc-900 dark:text-white tracking-tight">
+              <h3 className="text-xl font-extrabold text-zinc-900 tracking-tight">
                 {product.model}
               </h3>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">
+              <p className="text-sm text-zinc-500 font-medium">
                 {product.name}
               </p>
             </div>
 
-            <div className="space-y-2 text-xs text-zinc-600 dark:text-zinc-300 py-2 border-t border-b border-zinc-100 dark:border-zinc-800">
+            <div className="space-y-2 text-xs text-zinc-600 py-2 border-t border-b border-zinc-100">
               <div className="flex justify-between">
                 <span className="text-zinc-400">Resolution</span>
-                <span className="font-semibold">{product.resolution}</span>
+                <span className="font-semibold text-zinc-800">{product.resolution}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-zinc-400">Operating System</span>
-                <span className="font-semibold">{product.os}</span>
+                <span className="font-semibold text-zinc-800">{product.os}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-zinc-400">Audio Output</span>
-                <span className="font-semibold">{product.sound}</span>
+                <span className="font-semibold text-zinc-800">{product.sound}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-zinc-400">Connectivity</span>
-                <span className="font-semibold">Wi-Fi, Bluetooth 5.0, 3x HDMI</span>
+                <span className="font-semibold text-zinc-800">Wi-Fi, Bluetooth 5.0, 3x HDMI</span>
               </div>
             </div>
 
             {/* Price & Action */}
             <div>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-black text-zinc-900 dark:text-white">
+                <span className="text-2xl font-black text-zinc-900">
                   {product.price}
                 </span>
                 <span className="text-xs text-emerald-600 font-bold">Special Offer</span>
@@ -104,7 +105,7 @@ export function ProductModal({ product, onClose, onAddToCart }: ProductModalProp
 
               <button
                 onClick={onClose}
-                className="py-3 px-4 rounded-xl border border-zinc-300 dark:border-zinc-700 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                className="py-3 px-4 rounded-xl border border-zinc-300 text-xs font-semibold text-zinc-700 hover:bg-zinc-100 transition-colors"
               >
                 Close
               </button>
