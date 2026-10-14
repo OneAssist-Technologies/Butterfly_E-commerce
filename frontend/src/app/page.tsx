@@ -1,17 +1,17 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { HeroCarousel } from '@/components/sections/hero-carousel';
 import { SizeSelector } from '@/components/sections/size-selector';
 import { BestSelling } from '@/components/sections/best-selling';
 import { AboutSection } from '@/components/sections/about-section';
 import { TrustBar } from '@/components/sections/trust-bar';
-import { ProductModal } from '@/components/shared/product-modal';
 import { TVProduct } from '@/components/cards/product-card';
 import { useCart } from '@/providers';
 
 export default function Home() {
-  const [selectedProduct, setSelectedProduct] = useState<TVProduct | null>(null);
+  const router = useRouter();
   const [selectedSizeFilter, setSelectedSizeFilter] = useState<string | null>(null);
   const { addToCart } = useCart();
 
@@ -24,7 +24,7 @@ export default function Home() {
   };
 
   const handleViewDetails = (product: TVProduct) => {
-    setSelectedProduct(product);
+    router.push(`/products/${product.id}`);
   };
 
   const handleAddToCart = (product: TVProduct) => {
@@ -32,7 +32,7 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-white dark:bg-zinc-950 flex flex-col">
+    <main className="min-h-screen bg-white flex flex-col">
       {/* 1. Hero Carousel with luxury living room TV & cinematic transitions */}
       <HeroCarousel />
 
@@ -51,16 +51,6 @@ export default function Home() {
 
       {/* 5. Trust Bar (Warranty, Pan India Support, Dedicated Support, Trusted Brand) */}
       <TrustBar />
-
-      {/* Interactive Product Quick View Modal */}
-      <ProductModal
-        product={selectedProduct}
-        onClose={() => setSelectedProduct(null)}
-        onAddToCart={(product) => {
-          handleAddToCart(product);
-          setSelectedProduct(null);
-        }}
-      />
     </main>
   );
 }

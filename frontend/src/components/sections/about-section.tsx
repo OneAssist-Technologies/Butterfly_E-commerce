@@ -2,70 +2,48 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { ArrowRight, Award, Cpu, ShieldCheck } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 export function AboutSection() {
   return (
-    <section id="about-section" className="py-20 lg:py-28 bg-[#0b0f17] text-white relative overflow-hidden">
+    <section id="about-section" className="relative bg-[#070b14] text-white overflow-hidden py-8 sm:py-10 lg:py-12">
       
-      {/* Ambient background glow & neon aura */}
-      <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-96 h-96 bg-red-600/10 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-80 h-80 bg-red-500/15 rounded-full blur-[120px] pointer-events-none" />
+      {/* Ambient background glow matching TV & neon sign */}
+      <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-96 h-96 bg-red-600/10 rounded-full blur-[140px] pointer-events-none -z-0" />
+      <div className="absolute bottom-10 right-1/4 w-80 h-80 bg-red-500/15 rounded-full blur-[120px] pointer-events-none -z-0" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
           
-          {/* Left Column: Brand Story */}
-          <div className="lg:col-span-6 space-y-6">
+          {/* Division 1: Left Side Content */}
+          <div className="lg:col-span-5 space-y-4 z-20 py-2 lg:py-4 animate-in fade-in slide-in-from-left duration-700">
+            
+            {/* Tagline */}
             <div className="inline-flex items-center gap-2">
-              <span className="w-6 h-0.5 bg-[#E50914]" />
-              <span className="text-xs font-bold tracking-[0.2em] text-[#E50914] uppercase">
+              <span className="w-4 h-0.5 bg-[#E50914]" />
+              <span className="text-[11px] font-bold tracking-[0.2em] text-[#E50914] uppercase">
                 ABOUT BUTTERFLY
               </span>
             </div>
 
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight">
+            {/* Headline */}
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight leading-tight text-white">
               A Legacy of Quality, <br />
-              <span className="text-zinc-300">A Vision for Tomorrow</span>
+              <span className="text-zinc-200">A Vision for Tomorrow</span>
             </h2>
 
-            <p className="text-sm sm:text-base text-zinc-300 leading-relaxed max-w-xl">
+            {/* Description Paragraph */}
+            <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed font-normal max-w-md">
               Butterfly Smart TV brings you innovative technology, reliable performance
               and elegant design. We are committed to making your home entertainment
               experience better, brighter and smarter.
             </p>
 
-            {/* Pillar highlights */}
-            <div className="grid grid-cols-3 gap-4 pt-4 border-t border-zinc-800">
-              <div>
-                <div className="flex items-center gap-1.5 text-red-500 mb-1">
-                  <Cpu className="w-4 h-4" />
-                  <span className="font-bold text-xs text-white">Advanced Engine</span>
-                </div>
-                <p className="text-[11px] text-zinc-400">Quad-core 64-bit processors</p>
-              </div>
-
-              <div>
-                <div className="flex items-center gap-1.5 text-red-500 mb-1">
-                  <Award className="w-4 h-4" />
-                  <span className="font-bold text-xs text-white">Grade A+ Panel</span>
-                </div>
-                <p className="text-[11px] text-zinc-400">Zero dead pixel warranty</p>
-              </div>
-
-              <div>
-                <div className="flex items-center gap-1.5 text-red-500 mb-1">
-                  <ShieldCheck className="w-4 h-4" />
-                  <span className="font-bold text-xs text-white">Trust &amp; Service</span>
-                </div>
-                <p className="text-[11px] text-zinc-400">Trusted in 2M+ Indian homes</p>
-              </div>
-            </div>
-
-            <div className="pt-2">
+            {/* Outline Button */}
+            <div className="pt-1">
               <a
                 href="#size-selector"
-                className="group inline-flex items-center gap-2 px-6 py-3 rounded-full border border-zinc-700 bg-zinc-900/80 hover:bg-zinc-800 hover:border-zinc-500 text-white text-xs font-semibold tracking-wider uppercase transition-all duration-200"
+                className="group inline-flex items-center gap-2 px-6 py-2.5 rounded-full border border-zinc-600 bg-black/40 hover:bg-black/70 hover:border-zinc-400 text-white text-xs font-semibold tracking-wider uppercase transition-all duration-200 shadow-md hover:scale-[1.02] active:scale-[0.98]"
               >
                 Learn More
                 <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1" />
@@ -73,32 +51,45 @@ export function AboutSection() {
             </div>
           </div>
 
-          {/* Right Column: Scene with TV and Neon Butterfly on Wall */}
-          <div className="lg:col-span-6 relative">
+          {/* Division 2: Right Side Image with Seamless Left Edge Gradient Blend */}
+          <div className="lg:col-span-7 relative w-full h-[240px] sm:h-[290px] lg:h-[340px] overflow-hidden rounded-none">
             
-            {/* TV Image Setup */}
-            <div className="relative aspect-[16/10] rounded-2xl overflow-hidden border border-zinc-800/80 shadow-[0_20px_50px_rgba(0,0,0,0.8)]">
+            {/* Image Container with CSS Mask Fade on the Left Edge */}
+            <div
+              className="relative w-full h-full"
+              style={{
+                maskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.3) 12%, rgba(0,0,0,0.85) 28%, black 45%, black 100%)',
+                WebkitMaskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.3) 12%, rgba(0,0,0,0.85) 28%, black 45%, black 100%)',
+              }}
+            >
               <Image
                 src="/hero_tv.jpg"
                 alt="Butterfly TV Interior Ambiance"
                 fill
-                className="object-cover"
-                sizes="(max-width: 1024px) 100vw, 50vw"
+                className="object-cover object-center transform scale-100 hover:scale-102 transition-transform duration-1000 ease-out"
+                sizes="(max-width: 1024px) 100vw, 60vw"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0b0f17]/80 via-transparent to-transparent" />
+
+              {/* Extra gradient overlays for depth and seamless edge blending */}
+              <div className="absolute inset-y-0 left-0 w-32 sm:w-44 bg-gradient-to-r from-[#070b14] via-[#070b14]/80 to-transparent pointer-events-none" />
+              <div className="absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-[#070b14] via-[#070b14]/50 to-transparent pointer-events-none" />
+              <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[#070b14] via-[#070b14]/50 to-transparent pointer-events-none" />
+              <div className="absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[#070b14] to-transparent pointer-events-none" />
             </div>
 
-            {/* Glowing Neon Butterfly Sign floating top-right (matching reference image) */}
-            <div className="absolute -top-6 -right-4 sm:-right-6 w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-black/60 backdrop-blur-xl border border-red-500/40 p-4 shadow-[0_0_35px_rgba(229,9,20,0.6)] animate-pulse-glow flex items-center justify-center">
+            {/* Glowing Neon Butterfly Art mounted on the wall to the right of the TV */}
+            <div className="absolute top-4 sm:top-6 right-8 sm:right-14 lg:right-20 z-20 pointer-events-none animate-pulse-glow">
               <Image
                 src="/brand/butterfly-red.png"
-                alt="Neon Butterfly"
-                width={80}
-                height={80}
-                className="object-contain filter drop-shadow-[0_0_15px_#E50914]"
+                alt="Neon Butterfly Wall Sign"
+                width={64}
+                height={64}
+                style={{ width: 'auto', height: 'auto' }}
+                className="object-contain filter drop-shadow-[0_0_10px_#E50914] drop-shadow-[0_0_24px_#E50914]"
               />
             </div>
           </div>
+
         </div>
       </div>
     </section>
