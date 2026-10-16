@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, Suspense } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -40,32 +40,6 @@ function ProductsCatalogContent() {
   const [selectedSmarts, setSelectedSmarts] = useState<string[]>([]);
   const [selectedPrices, setSelectedPrices] = useState<string[]>([]);
 
-  // Sync search parameters from header dropdown and search bar
-  useEffect(() => {
-    if (resolutionParam === '4K UHD') {
-      setSelectedResolutions(['4K UHD']);
-      setSelectedSizes([]);
-      setSelectedSmarts([]);
-      setSelectedPrices([]);
-      setCurrentPage(1);
-    } else if (resolutionParam === 'Full HD') {
-      setSelectedResolutions(['Full HD', 'HD']);
-      setSelectedSizes([]);
-      setSelectedSmarts([]);
-      setSelectedPrices([]);
-      setCurrentPage(1);
-    } else if (filterParam === 'all') {
-      setSelectedResolutions([]);
-      setSelectedSizes([]);
-      setSelectedSmarts([]);
-      setSelectedPrices([]);
-      setCurrentPage(1);
-    } else if (sizeParam) {
-      setSelectedSizes([sizeParam]);
-      setCurrentPage(1);
-    }
-  }, [resolutionParam, filterParam, sizeParam]);
-
   // Sort & Pagination state
   const [sortBy, setSortBy] = useState<SortOption>('featured');
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -86,16 +60,131 @@ function ProductsCatalogContent() {
     setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
 
+  // Sync search parameters from URL into filter state
+  useEffect(() => {
+    const sizeVal = searchParams.get('size');
+    if (sizeVal) {
+      setSelectedSizes(sizeVal.split(',').map((s) => s.trim()).filter(Boolean));
+    } else {
+      setSelectedSizes([]);
+    }
+
+    const resVal = searchParams.get('resolution');
+    if (resVal === '4K UHD') {
+      setSelectedResolutions(['4K UHD']);
+    } else if (resVal === 'Full HD') {
+      setSelectedResolutions(['Full HD', 'HD']);
+    } else if (resVal) {
+      setSelectedResolutions(resVal.split(',').map((r) => r.trim()).filter(Boolean));
+    } else {
+      setSelectedResolutions([]);
+    }
+
+    const smartVal = searchParams.get('smart');
+    if (smartVal) {
+      setSelectedSmarts(smartVal.split(',').map((s) => s.trim()).filter(Boolean));
+    } else {
+      setSelectedSmarts([]);
+    }
+
+    const priceVal = searchParams.get('price');
+    if (priceVal) {
+      setSelectedPrices(priceVal.split(',').map((p) => p.trim()).filter(Boolean));
+    } else {
+      setSelectedPrices([]);
+    }
+
+    const sortVal = searchParams.get('sort') as SortOption;
+    if (sortVal && ['featured', 'price-asc', 'price-desc', 'name-asc'].includes(sortVal)) {
+      setSortBy(sortVal);
+    } else {
+      setSortBy('featured');
+    }
+
+    const pageVal = parseInt(searchParams.get('page') || '1', 10);
+    setCurrentPage(!isNaN(pageVal) && pageVal > 0 ? pageVal : 1);
+  }, [searchParams]);
+
+  // Synchronize state changes back to URL query parameters
+  const updateUrl = useCallback(
+    (newParams: {
+      sizes?: string[];
+      resolutions?: string[];
+      smarts?: string[];
+      prices?: string[];
+      sort?: SortOption;
+      page?: number;
+      reset?: boolean;
+    }) => {
+      const next = new URLSearchParams();
+
+      if (!newParams.reset) {
+        if (queryParam) next.set('q', queryParam);
+
+        const finalSizes = newParams.sizes !== undefined ? newParams.sizes : selectedSizes;
+        const finalResolutions =
+          newParams.resolutions !== undefined ? newParams.resolutions : selectedResolutions;
+        const finalSmarts = newParams.smarts !== undefined ? newParams.smarts : selectedSmarts;
+        const finalPrices = newParams.prices !== undefined ? newParams.prices : selectedPrices;
+        const finalSort = newParams.sort !== undefined ? newParams.sort : sortBy;
+        const finalPage = newParams.page !== undefined ? newParams.page : currentPage;
+
+        if (finalSizes.length > 0) next.set('size', finalSizes.join(','));
+        if (finalResolutions.length > 0) next.set('resolution', finalResolutions.join(','));
+        if (finalSmarts.length > 0) next.set('smart', finalSmarts.join(','));
+        if (finalPrices.length > 0) next.set('price', finalPrices.join(','));
+        if (finalSort && finalSort !== 'featured') next.set('sort', finalSort);
+        if (finalPage && finalPage > 1) next.set('page', String(finalPage));
+      }
+
+      const qs = next.toString();
+      router.push(qs ? `/products?${qs}` : '/products', { scroll: false });
+    },
+    [
+      queryParam,
+      selectedSizes,
+      selectedResolutions,
+      selectedSmarts,
+      selectedPrices,
+      sortBy,
+      currentPage,
+      router,
+    ]
+  );
+
   const toggleFilter = (
-    list: string[],
-    setList: React.Dispatch<React.SetStateAction<string[]>>,
+    type: 'size' | 'resolution' | 'smart' | 'price',
     value: string
   ) => {
-    setCurrentPage(1);
-    if (list.includes(value)) {
-      setList(list.filter((item) => item !== value));
-    } else {
-      setList([...list, value]);
+    let nextSizes = [...selectedSizes];
+    let nextResolutions = [...selectedResolutions];
+    let nextSmarts = [...selectedSmarts];
+    let nextPrices = [...selectedPrices];
+
+    if (type === 'size') {
+      nextSizes = nextSizes.includes(value)
+        ? nextSizes.filter((i) => i !== value)
+        : [...nextSizes, value];
+      setSelectedSizes(nextSizes);
+      updateUrl({ sizes: nextSizes, page: 1 });
+    } else if (type === 'resolution') {
+      nextResolutions = nextResolutions.includes(value)
+        ? nextResolutions.filter((i) => i !== value)
+        : [...nextResolutions, value];
+      setSelectedResolutions(nextResolutions);
+      updateUrl({ resolutions: nextResolutions, page: 1 });
+    } else if (type === 'smart') {
+      nextSmarts = nextSmarts.includes(value)
+        ? nextSmarts.filter((i) => i !== value)
+        : [...nextSmarts, value];
+      setSelectedSmarts(nextSmarts);
+      updateUrl({ smarts: nextSmarts, page: 1 });
+    } else if (type === 'price') {
+      nextPrices = nextPrices.includes(value)
+        ? nextPrices.filter((i) => i !== value)
+        : [...nextPrices, value];
+      setSelectedPrices(nextPrices);
+      updateUrl({ prices: nextPrices, page: 1 });
     }
   };
 
@@ -106,6 +195,18 @@ function ProductsCatalogContent() {
     setSelectedPrices([]);
     setSortBy('featured');
     setCurrentPage(1);
+    updateUrl({ reset: true });
+  };
+
+  const handleSortChange = (newSort: SortOption) => {
+    setSortBy(newSort);
+    setCurrentPage(1);
+    updateUrl({ sort: newSort, page: 1 });
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    updateUrl({ page: newPage });
   };
 
   // Dynamic Product Catalog State (fetched from backend API)
@@ -117,9 +218,13 @@ function ProductsCatalogContent() {
     const fetchLiveProducts = async () => {
       setIsLoadingProducts(true);
       try {
-        console.log('[ProductsPage] Fetching live products from http://localhost:3001/api/v1/products ...');
-        const liveData = await productService.getAll();
-        console.log('[ProductsPage] Received live products from DB:', liveData?.length);
+        const liveData = await productService.getAll({
+          size: searchParams.get('size') || undefined,
+          resolution: searchParams.get('resolution') || undefined,
+          smart: searchParams.get('smart') || undefined,
+          search: searchParams.get('q') || undefined,
+          sort: searchParams.get('sort') || undefined,
+        });
         if (isMounted && liveData && liveData.length > 0) {
           setProductsList(liveData);
           setIsLoadingProducts(false);
@@ -136,14 +241,12 @@ function ProductsCatalogContent() {
     fetchLiveProducts();
 
     window.addEventListener('butterfly_products_updated', fetchLiveProducts);
-    window.addEventListener('focus', fetchLiveProducts);
 
     return () => {
       isMounted = false;
       window.removeEventListener('butterfly_products_updated', fetchLiveProducts);
-      window.removeEventListener('focus', fetchLiveProducts);
     };
-  }, []);
+  }, [searchParams]);
 
   // Helper functions for dynamic attributes & categorization
   const getProductSizeLabel = (p: CatalogProduct): string => {
@@ -367,7 +470,7 @@ function ProductsCatalogContent() {
                   <input
                     type="checkbox"
                     checked={checked}
-                    onChange={() => toggleFilter(selectedSizes, setSelectedSizes, label)}
+                    onChange={() => toggleFilter('size', label)}
                     className="w-4 h-4 rounded border-zinc-300 text-[#E50914] focus:ring-[#E50914] accent-[#E50914]"
                   />
                   <span className={checked ? 'font-semibold text-zinc-900' : ''}>
@@ -406,9 +509,7 @@ function ProductsCatalogContent() {
                   <input
                     type="checkbox"
                     checked={checked}
-                    onChange={() =>
-                      toggleFilter(selectedResolutions, setSelectedResolutions, label)
-                    }
+                    onChange={() => toggleFilter('resolution', label)}
                     className="w-4 h-4 rounded border-zinc-300 text-[#E50914] focus:ring-[#E50914] accent-[#E50914]"
                   />
                   <span className={checked ? 'font-semibold text-zinc-900' : ''}>
@@ -447,7 +548,7 @@ function ProductsCatalogContent() {
                   <input
                     type="checkbox"
                     checked={checked}
-                    onChange={() => toggleFilter(selectedSmarts, setSelectedSmarts, label)}
+                    onChange={() => toggleFilter('smart', label)}
                     className="w-4 h-4 rounded border-zinc-300 text-[#E50914] focus:ring-[#E50914] accent-[#E50914]"
                   />
                   <span className={checked ? 'font-semibold text-zinc-900' : ''}>
@@ -486,7 +587,7 @@ function ProductsCatalogContent() {
                   <input
                     type="checkbox"
                     checked={checked}
-                    onChange={() => toggleFilter(selectedPrices, setSelectedPrices, label)}
+                    onChange={() => toggleFilter('price', label)}
                     className="w-4 h-4 rounded border-zinc-300 text-[#E50914] focus:ring-[#E50914] accent-[#E50914]"
                   />
                   <span className={checked ? 'font-semibold text-zinc-900' : ''}>
@@ -593,10 +694,7 @@ function ProductsCatalogContent() {
               <div className="relative">
                 <select
                   value={sortBy}
-                  onChange={(e) => {
-                    setSortBy(e.target.value as SortOption);
-                    setCurrentPage(1);
-                  }}
+                  onChange={(e) => handleSortChange(e.target.value as SortOption)}
                   className="appearance-none bg-white border border-zinc-200 rounded-lg px-3 py-1.5 pr-8 text-xs font-medium text-zinc-800 focus:outline-none focus:ring-1 focus:ring-[#E50914] cursor-pointer"
                 >
                   <option value="featured">Featured</option>
@@ -651,7 +749,7 @@ function ProductsCatalogContent() {
               <div className="flex items-center justify-center gap-2 pt-12 pb-4 select-none">
                 {/* Previous Page */}
                 <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
                   aria-label="Previous Page"
                   className="w-8 h-8 rounded-full border border-zinc-200 flex items-center justify-center text-zinc-600 hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
@@ -666,7 +764,7 @@ function ProductsCatalogContent() {
                   return (
                     <button
                       key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
+                      onClick={() => handlePageChange(pageNum)}
                       className={`w-8 h-8 rounded-full text-xs font-bold transition-all ${
                         isActive
                           ? 'bg-[#E50914] text-white shadow-xs'
@@ -680,7 +778,7 @@ function ProductsCatalogContent() {
 
                 {/* Next Page */}
                 <button
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
                   aria-label="Next Page"
                   className="w-8 h-8 rounded-full border border-zinc-200 flex items-center justify-center text-zinc-600 hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
