@@ -1,9 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { TVProduct } from '@/components/cards/product-card';
-import { X, Trash2, ArrowRight, ShoppingBag } from 'lucide-react';
+import { X, Trash2, ArrowRight, ShoppingBag, Loader2 } from 'lucide-react';
+import { orderService } from '@/services/order.service';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -20,6 +22,8 @@ export function CartDrawer({
   onRemoveItem,
   onClearCart,
 }: CartDrawerProps) {
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+
   if (!isOpen) return null;
 
   const totalAmount = cartItems.reduce((sum, item) => sum + item.numericPrice, 0);
@@ -109,37 +113,80 @@ export function CartDrawer({
             </div>
 
             <button
-              onClick={() => {
+              disabled={isCheckingOut}
+              onClick={async () => {
+                setIsCheckingOut(true);
                 try {
-                  const newOrders = cartItems.map((item, idx) => ({
-                    id: `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
-                    customerName: 'Customer (Online Checkout)',
-                    email: 'online.order@butterfly.com',
-                    model: `${item.model} (${item.name})`,
-                    amount: item.price,
-                    numericAmount: parseInt(item.price.replace(/[^0-9]/g, '')) || 0,
-                    payment: 'Prepaid (UPI)' as const,
-                    status: 'Processing' as const,
-                    date: new Date().toLocaleDateString('en-IN', {
-                      day: 'numeric',
-                      month: 'short',
-                      year: 'numeric',
-                    }),
+                  const storedUser = localStorage.getItem('butterfly_user');
+                  let customerName = 'Valued Customer';
+                  let email = 'customer@butterfly.com';
+                  if (storedUser) {
+                    try {
+                      const u = JSON.parse(storedUser);
+                      if (u.name) customerName = u.name;
+                      if (u.email) email = u.email;
+                    } catch {
+                      // ignore
+                    }
+                  }
+
+                  const firstTv = cartItems[0];
+                  const itemsPayload = cartItems.map((item) => ({
+                    productId: item.id,
+                    model: item.model,
+                    name: item.name,
+                    price: item.price,
+                    quantity: 1,
                   }));
-                  const existing = JSON.parse(localStorage.getItem('butterfly_customer_orders') || '[]');
-                  localStorage.setItem('butterfly_customer_orders', JSON.stringify([...newOrders, ...existing]));
-                } catch {
-                  // Ignore storage error
+
+                  const createdOrder = await orderService.create({
+                    customerName,
+                    email,
+                    model: firstTv ? `${firstTv.model} (${firstTv.name})` : 'Smart TV',
+                    amount: `₹ ${totalAmount.toLocaleString('en-IN')}`,
+                    payment: 'Prepaid (UPI)',
+                    items: itemsPayload,
+                  });
+
+                  // Sync to local history
+                  try {
+                    const existing = JSON.parse(localStorage.getItem('butterfly_customer_orders') || '[]');
+                    localStorage.setItem('butterfly_customer_orders', JSON.stringify([createdOrder, ...existing]));
+                  } catch {
+                    // Ignore storage error
+                  }
+
+                  alert(`Order #${createdOrder.orderNumber} placed successfully! Our sales team will connect with you.`);
+                  onClearCart();
+                  onClose();
+                } catch (err: any) {
+                  alert(err?.response?.data?.message || 'Failed to place order. Please check network connection.');
+                } finally {
+                  setIsCheckingOut(false);
                 }
-                alert('Order request placed successfully! Our sales team will connect with you.');
-                onClearCart();
-                onClose();
               }}
-              className="w-full py-3.5 px-4 rounded-xl bg-[#E50914] hover:bg-[#c70811] text-white font-bold text-xs tracking-wider uppercase flex items-center justify-center gap-2 shadow-lg shadow-red-600/30 transition-all cursor-pointer"
+              className="w-full py-3.5 px-4 rounded-xl bg-[#E50914] hover:bg-[#c70811] disabled:opacity-70 text-white font-bold text-xs tracking-wider uppercase flex items-center justify-center gap-2 shadow-lg shadow-red-600/30 transition-all cursor-pointer"
             >
-              Proceed to Checkout
-              <ArrowRight className="w-4 h-4" />
+              {isCheckingOut ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Placing Order...
+                </>
+              ) : (
+                <>
+                  Proceed to Checkout
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
+
+            <Link
+              href="/cart"
+              onClick={onClose}
+              className="w-full py-2.5 px-4 rounded-xl border border-zinc-200 hover:bg-zinc-50 text-zinc-800 text-xs font-bold text-center block transition-colors"
+            >
+              View Full Cart Page
+            </Link>
           </div>
         )}
       </div>

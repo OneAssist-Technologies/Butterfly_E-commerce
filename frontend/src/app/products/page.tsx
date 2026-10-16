@@ -14,6 +14,7 @@ import {
   X,
 } from 'lucide-react';
 import { ALL_PRODUCTS, CatalogProduct } from '@/data/products';
+import { productService } from '@/services/product.service';
 import { ProductCatalogCard } from '@/components/cards/product-catalog-card';
 import { EnquiryModal } from '@/components/shared/enquiry-modal';
 import { TVProduct } from '@/components/cards/product-card';
@@ -107,42 +108,40 @@ function ProductsCatalogContent() {
     setCurrentPage(1);
   };
 
-  // Dynamic Product Catalog State (synced with admin catalog)
+  // Dynamic Product Catalog State (fetched from backend API)
   const [productsList, setProductsList] = useState<CatalogProduct[]>(ALL_PRODUCTS);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
 
   useEffect(() => {
-    const syncProducts = () => {
+    let isMounted = true;
+    const fetchLiveProducts = async () => {
+      setIsLoadingProducts(true);
       try {
-        const stored = localStorage.getItem('butterfly_admin_products');
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setProductsList(parsed);
-            return;
-          }
+        console.log('[ProductsPage] Fetching live products from http://localhost:3001/api/v1/products ...');
+        const liveData = await productService.getAll();
+        console.log('[ProductsPage] Received live products from DB:', liveData?.length);
+        if (isMounted && liveData && liveData.length > 0) {
+          setProductsList(liveData);
+          setIsLoadingProducts(false);
+          return;
         }
-      } catch (e) {
-        console.error('Error syncing products from admin catalog:', e);
+      } catch (e: any) {
+        console.error('[ProductsPage] Error fetching products from backend API:', e?.message || e);
       }
-      setProductsList(ALL_PRODUCTS);
-    };
-
-    syncProducts();
-
-    const handleStorage = (e: StorageEvent) => {
-      if (!e.key || e.key === 'butterfly_admin_products') {
-        syncProducts();
+      if (isMounted) {
+        setIsLoadingProducts(false);
       }
     };
 
-    window.addEventListener('storage', handleStorage);
-    window.addEventListener('butterfly_products_updated', syncProducts);
-    window.addEventListener('focus', syncProducts);
+    fetchLiveProducts();
+
+    window.addEventListener('butterfly_products_updated', fetchLiveProducts);
+    window.addEventListener('focus', fetchLiveProducts);
 
     return () => {
-      window.removeEventListener('storage', handleStorage);
-      window.removeEventListener('butterfly_products_updated', syncProducts);
-      window.removeEventListener('focus', syncProducts);
+      isMounted = false;
+      window.removeEventListener('butterfly_products_updated', fetchLiveProducts);
+      window.removeEventListener('focus', fetchLiveProducts);
     };
   }, []);
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -24,16 +24,19 @@ import {
   Phone,
   Mail,
   MapPin,
-  RefreshCw,
-  Activity,
-  Server,
-  Database,
   ArrowUpRight,
   UserPlus,
+  UploadCloud,
+  Image as ImageIcon,
+  Star,
 } from 'lucide-react';
 import { ALL_PRODUCTS, CatalogProduct } from '@/data/products';
+import { productService } from '@/services/product.service';
+import { orderService } from '@/services/order.service';
+import { enquiryService } from '@/services/enquiry.service';
+import { authService } from '@/services/auth.service';
 
-type AdminTab = 'overview' | 'products' | 'enquiries' | 'orders' | 'users' | 'system';
+type AdminTab = 'overview' | 'products' | 'enquiries' | 'orders' | 'users';
 
 export interface CustomerEnquiry {
   id: string;
@@ -75,9 +78,9 @@ export default function AdminDashboardPage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [currentUser, setCurrentUser] = useState<{ name: string; email: string; role: string }>({
-    name: 'Super Admin',
-    email: 'admin@buttterfly.com',
-    role: 'SUPER_ADMIN',
+    name: 'Administrator',
+    email: '',
+    role: 'ADMIN',
   });
 
   // Dynamic Data States (Zero hardcoded data)
@@ -110,8 +113,218 @@ export default function AdminDashboardPage() {
     sound: '',
     displayTech: 'Ultra Bright D-LED',
     smartOS: 'Google TV',
-    image: '/products_hero.jpg',
+    image: '',
   });
+
+  // Multi-image upload & drag-drop state for TV adding popup modal
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const dragCounterRef = useRef(0);
+  const [imageDragActive, setImageDragActive] = useState(false);
+  const [uploadedImages, setUploadedImages] = useState<{
+    id: string;
+    url: string;
+    name: string;
+    size: string;
+    isPrimary: boolean;
+  }[]>([]);
+  const [imageError, setImageError] = useState<string>('');
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
+
+  const resetImageState = useCallback(() => {
+    setUploadedImages([]);
+    setImageError('');
+    setImageDragActive(false);
+    dragCounterRef.current = 0;
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, []);
+
+  const processSingleFile = (file: File): Promise<{ id: string; url: string; name: string; size: string; isPrimary: boolean } | null> => {
+    return new Promise((resolve) => {
+      if (!file.type.startsWith('image/')) {
+        resolve(null);
+        return;
+      }
+      if (file.size > 15 * 1024 * 1024) {
+        resolve(null);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const rawDataUrl = e.target?.result as string;
+        const img = new (window as any).Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 1600;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          let finalUrl = rawDataUrl;
+          let finalSize = `${Math.round(file.size / 1024)} KB`;
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            finalUrl = canvas.toDataURL('image/jpeg', 0.88);
+            const sizeKb = Math.round((finalUrl.length * 3) / 4 / 1024);
+            finalSize = sizeKb > 1024 ? `${(sizeKb / 1024).toFixed(1)} MB` : `${sizeKb} KB`;
+          }
+          resolve({
+            id: `img-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+            url: finalUrl,
+            name: file.name,
+            size: finalSize,
+            isPrimary: false,
+          });
+        };
+        img.onerror = () => {
+          resolve({
+            id: `img-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+            url: rawDataUrl,
+            name: file.name,
+            size: `${Math.round(file.size / 1024)} KB`,
+            isPrimary: false,
+          });
+        };
+        img.src = rawDataUrl;
+      };
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleImageFiles = useCallback(async (files: File[]) => {
+    setImageError('');
+    if (!files || files.length === 0) return;
+
+    setIsProcessingImage(true);
+    const validFiles = files.filter((f) => f.type.startsWith('image/'));
+    if (validFiles.length === 0) {
+      setImageError('Please upload valid image files (PNG, JPG, WEBP, or SVG).');
+      setIsProcessingImage(false);
+      return;
+    }
+
+    try {
+      const results = await Promise.all(validFiles.map(processSingleFile));
+      const successfulImages = results.filter((img): img is { id: string; url: string; name: string; size: string; isPrimary: boolean } => img !== null);
+
+      if (successfulImages.length === 0) {
+        setImageError('Could not process the selected image(s). Ensure files are under 15MB.');
+        setIsProcessingImage(false);
+        return;
+      }
+
+      setUploadedImages((prev) => {
+        const hasPrimary = prev.some((img) => img.isPrimary);
+        const newImages = successfulImages.map((img, idx) => ({
+          ...img,
+          isPrimary: !hasPrimary && idx === 0,
+        }));
+        const combined = [...prev, ...newImages];
+        const primary = combined.find((img) => img.isPrimary) || combined[0];
+        if (primary) {
+          setNewProduct((p) => ({ ...p, image: primary.url }));
+        }
+        return combined;
+      });
+    } catch {
+      setImageError('Failed to upload image(s). Please try again.');
+    } finally {
+      setIsProcessingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }, []);
+
+  const handleSetPrimaryImage = useCallback((id: string) => {
+    setUploadedImages((prev) => {
+      const updated = prev.map((img) => ({
+        ...img,
+        isPrimary: img.id === id,
+      }));
+      const primary = updated.find((img) => img.isPrimary);
+      if (primary) {
+        setNewProduct((p) => ({ ...p, image: primary.url }));
+      }
+      return updated;
+    });
+  }, []);
+
+  const handleRemoveImage = useCallback((id: string) => {
+    setUploadedImages((prev) => {
+      const filtered = prev.filter((img) => img.id !== id);
+      if (filtered.length > 0 && !filtered.some((img) => img.isPrimary)) {
+        filtered[0].isPrimary = true;
+      }
+      const primary = filtered.find((img) => img.isPrimary);
+      setNewProduct((p) => ({ ...p, image: primary ? primary.url : '' }));
+      return filtered;
+    });
+  }, []);
+
+  const handleAddPresetImage = useCallback((preset: { label: string; src: string }) => {
+    setImageError('');
+    setUploadedImages((prev) => {
+      if (prev.some((img) => img.url === preset.src)) {
+        const updated = prev.map((img) => ({ ...img, isPrimary: img.url === preset.src }));
+        setNewProduct((p) => ({ ...p, image: preset.src }));
+        return updated;
+      }
+      const hasPrimary = prev.some((img) => img.isPrimary);
+      const newImg = {
+        id: `preset-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        url: preset.src,
+        name: preset.label,
+        size: 'Preset Catalog Asset',
+        isPrimary: !hasPrimary,
+      };
+      const combined = [...prev, newImg];
+      const primary = combined.find((img) => img.isPrimary) || combined[0];
+      if (primary) {
+        setNewProduct((p) => ({ ...p, image: primary.url }));
+      }
+      return combined;
+    });
+  }, []);
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current += 1;
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setImageDragActive(true);
+    }
+  };
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current -= 1;
+    if (dragCounterRef.current <= 0) {
+      dragCounterRef.current = 0;
+      setImageDragActive(false);
+    }
+  };
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current = 0;
+    setImageDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleImageFiles(Array.from(e.dataTransfer.files));
+    }
+  };
 
   const [newEnquiryForm, setNewEnquiryForm] = useState({
     name: '',
@@ -137,23 +350,6 @@ export default function AdminDashboardPage() {
     department: 'Operations & Support',
   });
 
-  // System Health Dynamic State
-  const [systemHealth, setSystemHealth] = useState<{
-    status: string;
-    uptimeSec: number;
-    dbStatus: string;
-    timestamp: string;
-    latencyMs: number;
-    isChecking: boolean;
-  }>({
-    status: 'Checking...',
-    uptimeSec: 0,
-    dbStatus: 'Checking...',
-    timestamp: 'Syncing...',
-    latencyMs: 12,
-    isChecking: false,
-  });
-
   // 1. Auth Guard & Initial Data Hydration
   useEffect(() => {
     const token = localStorage.getItem('butterfly_admin_token');
@@ -163,125 +359,88 @@ export default function AdminDashboardPage() {
     }
     setIsAuthenticated(true);
 
-    // Load active user session info
-    let adminEmail = 'admin@buttterfly.com';
-    let adminName = 'Super Admin';
+    // Load active user session info dynamically from stored session
     const storedUser = localStorage.getItem('butterfly_admin_user');
     if (storedUser) {
       try {
         const u = JSON.parse(storedUser);
-        if (u.email) adminEmail = u.email;
-        if (u.name) adminName = u.name;
-        setCurrentUser(u);
-      } catch {
-        // Fallback default
-      }
-    }
-
-    // Hydrate Products from localStorage or ALL_PRODUCTS
-    const storedProducts = localStorage.getItem('butterfly_admin_products');
-    if (storedProducts) {
-      try {
-        const parsed = JSON.parse(storedProducts);
-        setProductsList(parsed.length > 0 ? parsed : ALL_PRODUCTS);
-      } catch {
-        setProductsList(ALL_PRODUCTS);
-      }
-    } else {
-      localStorage.setItem('butterfly_admin_products', JSON.stringify(ALL_PRODUCTS));
-    }
-
-    // Hydrate Real Customer Enquiries (filter out previous mock test data)
-    const storedEnquiries = localStorage.getItem('butterfly_customer_enquiries');
-    if (storedEnquiries) {
-      try {
-        const parsed: CustomerEnquiry[] = JSON.parse(storedEnquiries);
-        const real = Array.isArray(parsed)
-          ? parsed.filter((e) => !['ENQ-8901', 'ENQ-8902', 'ENQ-8903', 'ENQ-8904'].includes(e.id))
-          : [];
-        setEnquiries(real);
-        localStorage.setItem('butterfly_customer_enquiries', JSON.stringify(real));
-      } catch {
-        setEnquiries([]);
-      }
-    } else {
-      setEnquiries([]);
-    }
-
-    // Hydrate Real Customer Orders (filter out previous mock test data)
-    const storedOrders = localStorage.getItem('butterfly_customer_orders');
-    if (storedOrders) {
-      try {
-        const parsed: OrderRecord[] = JSON.parse(storedOrders);
-        const real = Array.isArray(parsed)
-          ? parsed.filter((o) => !['ORD-7741', 'ORD-7740', 'ORD-7739', 'ORD-7738', 'ORD-7737'].includes(o.id))
-          : [];
-        setOrders(real);
-        localStorage.setItem('butterfly_customer_orders', JSON.stringify(real));
-      } catch {
-        setOrders([]);
-      }
-    } else {
-      setOrders([]);
-    }
-
-    // Hydrate Users (authenticated Super Admin only, no fake accounts)
-    const storedUsers = localStorage.getItem('butterfly_admin_users');
-    if (storedUsers) {
-      try {
-        const parsed: AdminUserAccount[] = JSON.parse(storedUsers);
-        const real = Array.isArray(parsed)
-          ? parsed.filter((u) => !['USR-002', 'USR-003'].includes(u.id))
-          : [];
-        if (real.length > 0) {
-          setTeamUsers(real);
-          localStorage.setItem('butterfly_admin_users', JSON.stringify(real));
-        } else {
-          const root: AdminUserAccount[] = [
-            {
-              id: 'USR-001',
-              name: adminName,
-              email: adminEmail,
-              role: 'SUPER_ADMIN',
-              department: 'Executive Administration',
-              lastLogin: 'Active Now',
-              status: 'Active',
-            },
-          ];
-          setTeamUsers(root);
-          localStorage.setItem('butterfly_admin_users', JSON.stringify(root));
+        if (u) {
+          setCurrentUser(u);
         }
       } catch {
-        setTeamUsers([
-          {
-            id: 'USR-001',
-            name: adminName,
-            email: adminEmail,
-            role: 'SUPER_ADMIN',
-            department: 'Executive Administration',
-            lastLogin: 'Active Now',
-            status: 'Active',
-          },
-        ]);
+        // Fallback
       }
-    } else {
-      const root: AdminUserAccount[] = [
-        {
-          id: 'USR-001',
-          name: adminName,
-          email: adminEmail,
-          role: 'SUPER_ADMIN',
-          department: 'Executive Administration',
-          lastLogin: 'Active Now',
-          status: 'Active',
-        },
-      ];
-      setTeamUsers(root);
-      localStorage.setItem('butterfly_admin_users', JSON.stringify(root));
     }
 
-    // Perform live health check on mount
-    fetchSystemHealth();
+    // Fetch live data from backend APIs with fallback
+    const fetchAdminDashboardData = async () => {
+      try {
+        const [liveProducts, liveOrders, liveEnquiries, liveUsers] = await Promise.allSettled([
+          productService.getAll(),
+          orderService.getAll(),
+          enquiryService.getAll(),
+          authService.getUsers(),
+        ]);
+
+        if (liveProducts.status === 'fulfilled' && liveProducts.value.length > 0) {
+          setProductsList(liveProducts.value);
+        } else {
+          const stored = localStorage.getItem('butterfly_admin_products');
+          if (stored) {
+            try { setProductsList(JSON.parse(stored)); } catch { setProductsList(ALL_PRODUCTS); }
+          }
+        }
+
+        if (liveOrders.status === 'fulfilled' && Array.isArray(liveOrders.value)) {
+          const mappedOrders: OrderRecord[] = liveOrders.value.map((o: any) => ({
+            id: o.orderNumber || o.id,
+            customerName: o.customerName,
+            email: o.email,
+            model: o.items?.[0] ? `${o.items[0].productModel} (${o.items[0].productName})` : 'Smart TV',
+            amount: o.amount,
+            numericAmount: o.numericAmount,
+            payment: o.payment,
+            status: o.status,
+            date: o.date,
+          }));
+          setOrders(mappedOrders);
+        }
+
+        if (liveEnquiries.status === 'fulfilled' && Array.isArray(liveEnquiries.value)) {
+          const mappedEnquiries: CustomerEnquiry[] = liveEnquiries.value.map((e: any) => ({
+            id: e.enquiryNumber || e.id,
+            name: e.name,
+            phone: e.phone,
+            email: e.email,
+            city: e.city,
+            message: e.message || undefined,
+            productModel: e.productModel,
+            productPrice: e.productPrice || undefined,
+            date: e.date,
+            status: e.status,
+          }));
+          setEnquiries(mappedEnquiries);
+        }
+
+        if (liveUsers.status === 'fulfilled' && Array.isArray(liveUsers.value)) {
+          const mappedUsers: AdminUserAccount[] = liveUsers.value.map((u: any) => ({
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            role: u.role,
+            department: u.department || 'Operations',
+            lastLogin: u.role === 'SUPER_ADMIN' ? 'Active Now' : 'Registered',
+            status: 'Active',
+          }));
+          setTeamUsers(mappedUsers);
+        }
+      } catch (err) {
+        console.error('Error fetching admin dashboard data from API:', err);
+      }
+    };
+
+    fetchAdminDashboardData();
+
   }, [router]);
 
   // Set default model on modals when products load
@@ -299,47 +458,6 @@ export default function AdminDashboardPage() {
       }));
     }
   }, [productsList]);
-
-  // Live Backend Health Check
-  const fetchSystemHealth = async () => {
-    setSystemHealth((prev) => ({ ...prev, isChecking: true }));
-    const startTime = performance.now();
-    try {
-      const res = await fetch('http://localhost:3001/api/v1/health');
-      const endTime = performance.now();
-      const latency = Math.round(endTime - startTime);
-
-      if (res.ok) {
-        const data = await res.json();
-        setSystemHealth({
-          status: data.status === 'ok' ? 'HEALTHY' : 'DEGRADED',
-          uptimeSec: data.uptime || Math.floor(performance.now() / 1000),
-          dbStatus: data.services?.database?.status === 'up' ? 'ONLINE (Port 5432)' : 'STANDBY',
-          timestamp: new Date().toLocaleTimeString(),
-          latencyMs: latency,
-          isChecking: false,
-        });
-      } else {
-        setSystemHealth({
-          status: 'ONLINE (Fallback)',
-          uptimeSec: 3600,
-          dbStatus: 'LOCAL POSTGRES ACTIVE',
-          timestamp: new Date().toLocaleTimeString(),
-          latencyMs: latency,
-          isChecking: false,
-        });
-      }
-    } catch {
-      setSystemHealth({
-        status: 'ONLINE (Port 3001)',
-        uptimeSec: 3600,
-        dbStatus: 'POSTGRES CONNECTED',
-        timestamp: new Date().toLocaleTimeString(),
-        latencyMs: 15,
-        isChecking: false,
-      });
-    }
-  };
 
   // Sign out handler
   const handleSignOut = () => {
@@ -387,7 +505,7 @@ export default function AdminDashboardPage() {
   }, [orders, enquiries, productsList]);
 
   // Product CRUD
-  const handleToggleProductStock = (id: string) => {
+  const handleToggleProductStock = async (id: string) => {
     const updated = productsList.map((p) =>
       p.id === id ? { ...p, inStock: p.inStock === false ? true : false } : p
     );
@@ -396,9 +514,14 @@ export default function AdminDashboardPage() {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new Event('butterfly_products_updated'));
     }
+    try {
+      await productService.toggleStock(id);
+    } catch (e) {
+      console.warn('Backend stock toggle failed, retained local update:', e);
+    }
   };
 
-  const handleDeleteProduct = (id: string) => {
+  const handleDeleteProduct = async (id: string) => {
     if (confirm('Are you sure you want to delete this TV model from the catalog?')) {
       const updated = productsList.filter((p) => p.id !== id);
       setProductsList(updated);
@@ -406,10 +529,15 @@ export default function AdminDashboardPage() {
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new Event('butterfly_products_updated'));
       }
+      try {
+        await productService.delete(id);
+      } catch (e) {
+        console.warn('Backend delete product failed:', e);
+      }
     }
   };
 
-  const handleAddProductSubmit = (e: React.FormEvent) => {
+  const handleAddProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const priceNum = parseInt(newProduct.price.replace(/[^0-9]/g, '')) || 24990;
     const newId = `tv-${newProduct.model.toLowerCase().replace(/[^a-z0-9]/g, '-') || Date.now()}`;
@@ -431,7 +559,8 @@ export default function AdminDashboardPage() {
       smartOS: newProduct.smartOS,
       os: newProduct.smartOS || 'Google TV',
       smartCategory: newProduct.smartOS.includes('Android') ? 'Android TV' : newProduct.smartOS.includes('WebOS') ? 'WebOS' : newProduct.smartOS.includes('Tizen') ? 'Tizen' : 'Google TV',
-      image: newProduct.image || '/products_hero.jpg',
+      image: uploadedImages.find((img) => img.isPrimary)?.url || uploadedImages[0]?.url || newProduct.image || '/products_hero.jpg',
+      images: uploadedImages.length > 0 ? uploadedImages.map((img) => img.url) : [newProduct.image || '/products_hero.jpg'],
       inStock: true,
       features: ['Dolby Audio', 'Google Assistant', 'Bezel-less Design', 'HDR10 Support'],
     };
@@ -442,6 +571,13 @@ export default function AdminDashboardPage() {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new Event('butterfly_products_updated'));
     }
+
+    try {
+      await productService.create(addedProduct);
+    } catch (err) {
+      console.warn('Backend product creation warning:', err);
+    }
+
     setShowAddProductModal(false);
     setNewProduct({
       model: '',
@@ -452,33 +588,61 @@ export default function AdminDashboardPage() {
       sound: '',
       displayTech: 'Ultra Bright D-LED',
       smartOS: 'Google TV',
-      image: '/products_hero.jpg',
+      image: '',
     });
+    resetImageState();
   };
 
   // Enquiry Status Update & Create
-  const handleUpdateEnquiryStatus = (id: string, status: CustomerEnquiry['status']) => {
+  const handleUpdateEnquiryStatus = async (id: string, status: CustomerEnquiry['status']) => {
     const updated = enquiries.map((enq) => (enq.id === id ? { ...enq, status } : enq));
     setEnquiries(updated);
     localStorage.setItem('butterfly_customer_enquiries', JSON.stringify(updated));
+    try {
+      await enquiryService.updateStatus(id, status);
+    } catch (e) {
+      console.warn('Backend update enquiry status failed:', e);
+    }
   };
 
-  const handleDeleteEnquiry = (id: string) => {
+  const handleDeleteEnquiry = async (id: string) => {
     const updated = enquiries.filter((enq) => enq.id !== id);
     setEnquiries(updated);
     localStorage.setItem('butterfly_customer_enquiries', JSON.stringify(updated));
+    try {
+      await enquiryService.delete(id);
+    } catch (e) {
+      console.warn('Backend delete enquiry failed:', e);
+    }
   };
 
-  const handleAddEnquirySubmit = (e: React.FormEvent) => {
+  const handleAddEnquirySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const modelStr = newEnquiryForm.productModel || (productsList[0] ? `${productsList[0].model} - ${productsList[0].name}` : 'Smart TV');
+    
+    let createdEnquiry: any = null;
+    try {
+      createdEnquiry = await enquiryService.create({
+        name: newEnquiryForm.name,
+        phone: newEnquiryForm.phone,
+        email: newEnquiryForm.email,
+        city: newEnquiryForm.city,
+        message: newEnquiryForm.message,
+        productModel: modelStr,
+        productPrice: productsList[0]?.price,
+      });
+    } catch (err) {
+      console.warn('Backend add enquiry fallback to local:', err);
+    }
+
     const addedEnquiry: CustomerEnquiry = {
-      id: `ENQ-${Math.floor(1000 + Math.random() * 9000)}`,
+      id: createdEnquiry?.enquiryNumber || `ENQ-${Math.floor(1000 + Math.random() * 9000)}`,
       name: newEnquiryForm.name,
       phone: newEnquiryForm.phone,
       email: newEnquiryForm.email,
       city: newEnquiryForm.city,
       message: newEnquiryForm.message,
-      productModel: newEnquiryForm.productModel || (productsList[0] ? `${productsList[0].model} - ${productsList[0].name}` : 'Smart TV'),
+      productModel: modelStr,
       date: new Date().toLocaleString('en-IN', {
         day: 'numeric',
         month: 'short',
@@ -503,26 +667,51 @@ export default function AdminDashboardPage() {
   };
 
   // Order Status Update & Create
-  const handleUpdateOrderStatus = (id: string, status: OrderRecord['status']) => {
+  const handleUpdateOrderStatus = async (id: string, status: OrderRecord['status']) => {
     const updated = orders.map((o) => (o.id === id ? { ...o, status } : o));
     setOrders(updated);
     localStorage.setItem('butterfly_customer_orders', JSON.stringify(updated));
+    try {
+      await orderService.updateStatus(id, status);
+    } catch (e) {
+      console.warn('Backend order update status failed:', e);
+    }
   };
 
-  const handleDeleteOrder = (id: string) => {
+  const handleDeleteOrder = async (id: string) => {
     const updated = orders.filter((o) => o.id !== id);
     setOrders(updated);
     localStorage.setItem('butterfly_customer_orders', JSON.stringify(updated));
+    try {
+      await orderService.delete(id);
+    } catch (e) {
+      console.warn('Backend order delete failed:', e);
+    }
   };
 
-  const handleAddOrderSubmit = (e: React.FormEvent) => {
+  const handleAddOrderSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const numAmount = parseInt(newOrderForm.amount.replace(/[^0-9]/g, '')) || 24990;
+    const modelStr = newOrderForm.model || (productsList[0] ? `${productsList[0].model} (${productsList[0].name})` : 'Smart TV');
+
+    let createdOrder: any = null;
+    try {
+      createdOrder = await orderService.create({
+        customerName: newOrderForm.customerName,
+        email: newOrderForm.email,
+        model: modelStr,
+        amount: newOrderForm.amount.startsWith('₹') ? newOrderForm.amount : `₹ ${newOrderForm.amount}`,
+        payment: newOrderForm.payment,
+      });
+    } catch (err) {
+      console.warn('Backend order creation warning:', err);
+    }
+
     const addedOrder: OrderRecord = {
-      id: `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
+      id: createdOrder?.orderNumber || `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
       customerName: newOrderForm.customerName,
       email: newOrderForm.email,
-      model: newOrderForm.model || (productsList[0] ? `${productsList[0].model} (${productsList[0].name})` : 'Smart TV'),
+      model: modelStr,
       amount: newOrderForm.amount.startsWith('₹') ? newOrderForm.amount : `₹ ${newOrderForm.amount}`,
       numericAmount: numAmount,
       payment: newOrderForm.payment,
@@ -547,10 +736,22 @@ export default function AdminDashboardPage() {
   };
 
   // User Accounts CRUD
-  const handleAddUserSubmit = (e: React.FormEvent) => {
+  const handleAddUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    let created: any = null;
+    try {
+      created = await authService.createUser({
+        name: newUserForm.name,
+        email: newUserForm.email,
+        role: newUserForm.role,
+        department: newUserForm.department,
+      });
+    } catch (err: any) {
+      console.warn('Backend create user warning:', err);
+    }
+
     const addedUser: AdminUserAccount = {
-      id: `USR-${Math.floor(100 + Math.random() * 900)}`,
+      id: created?.id || `USR-${Math.floor(100 + Math.random() * 900)}`,
       name: newUserForm.name,
       email: newUserForm.email,
       role: newUserForm.role,
@@ -570,14 +771,19 @@ export default function AdminDashboardPage() {
     });
   };
 
-  const handleDeleteUser = (id: string) => {
-    if (id === 'USR-001') {
+  const handleDeleteUser = async (id: string) => {
+    if (id === 'USR-001' || id === 'super-admin-001') {
       alert('Cannot delete primary Super Admin account.');
       return;
     }
     const updated = teamUsers.filter((u) => u.id !== id);
     setTeamUsers(updated);
     localStorage.setItem('butterfly_admin_users', JSON.stringify(updated));
+    try {
+      await authService.deleteUser(id);
+    } catch (e) {
+      console.warn('Backend delete user warning:', e);
+    }
   };
 
   // Filtered Lists
@@ -741,21 +947,6 @@ export default function AdminDashboardPage() {
                 {teamUsers.length}
               </span>
             </button>
-
-            <button
-              onClick={() => setActiveTab('system')}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'system'
-                  ? 'bg-red-50 text-[#E50914] border border-red-200 shadow-xs'
-                  : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Settings className="w-4 h-4" />
-                <span>System & Database</span>
-              </div>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            </button>
           </nav>
         </div>
 
@@ -806,23 +997,11 @@ export default function AdminDashboardPage() {
               {activeTab === 'enquiries' && 'Customer Inquiries & Quotes'}
               {activeTab === 'orders' && 'Orders & Dispatch Management'}
               {activeTab === 'users' && 'Staff Accounts & Privileges'}
-              {activeTab === 'system' && 'Infrastructure & Database Health'}
             </h1>
           </div>
 
           {/* Quick Header Actions */}
           <div className="flex items-center gap-3">
-            {/* Live DB indicator */}
-            <div
-              onClick={fetchSystemHealth}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold cursor-pointer hover:bg-emerald-100 transition-colors"
-              title="Click to re-ping database health"
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>{systemHealth.dbStatus}</span>
-              <RefreshCw className={`w-3 h-3 text-emerald-600 ${systemHealth.isChecking ? 'animate-spin' : ''}`} />
-            </div>
-
             <Link
               href="/"
               target="_blank"
@@ -1168,13 +1347,6 @@ export default function AdminDashboardPage() {
                   <span className="text-xs font-bold text-zinc-700">
                     Showing {filteredProducts.length} of {productsList.length} television models
                   </span>
-                  <button
-                    onClick={() => setShowAddProductModal(true)}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#E50914] hover:underline cursor-pointer"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Add New Model</span>
-                  </button>
                 </div>
 
                 <div className="overflow-x-auto">
@@ -1204,6 +1376,7 @@ export default function AdminDashboardPage() {
                                   fill
                                   sizes="56px"
                                   className="object-contain"
+                                  unoptimized={typeof tv.image === 'string' && tv.image.startsWith('data:')}
                                 />
                               </div>
                             </td>
@@ -1602,146 +1775,296 @@ export default function AdminDashboardPage() {
               </div>
             </div>
           )}
-
-          {/* ================= TAB 6: SYSTEM & DATABASE HEALTH ================= */}
-          {activeTab === 'system' && (
-            <div className="space-y-6 animate-in fade-in duration-150">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                {/* Live Backend Service Card */}
-                <div className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-xs space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
-                      NestJS Backend API
-                    </span>
-                    <Server className="w-4 h-4 text-zinc-400" />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-lg font-black text-zinc-900">{systemHealth.status}</span>
-                  </div>
-                  <p className="text-xs text-zinc-500">
-                    Listening on <strong className="text-zinc-800">http://localhost:3001</strong> &bull; Response latency:{' '}
-                    <span className="font-mono text-emerald-600 font-bold">{systemHealth.latencyMs}ms</span>
-                  </p>
-                </div>
-
-                {/* PostgreSQL Database Card */}
-                <div className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-xs space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
-                      PostgreSQL Database
-                    </span>
-                    <Database className="w-4 h-4 text-zinc-400" />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                    <span className="text-lg font-black text-zinc-900">{systemHealth.dbStatus}</span>
-                  </div>
-                  <p className="text-xs text-zinc-500">
-                    Prisma ORM connected to database <strong className="text-zinc-800">butterfly_ecommerce</strong>
-                  </p>
-                </div>
-
-                {/* Next.js Frontend Card */}
-                <div className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-xs space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
-                      Next.js Frontend Client
-                    </span>
-                    <Activity className="w-4 h-4 text-zinc-400" />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                    <span className="text-lg font-black text-zinc-900">App Router 15.3</span>
-                  </div>
-                  <p className="text-xs text-zinc-500">
-                    Running on <strong className="text-zinc-800">http://localhost:3000</strong> &bull; Last sync:{' '}
-                    <span className="font-mono text-zinc-700">{systemHealth.timestamp}</span>
-                  </p>
-                </div>
-              </div>
-
-              {/* System Diagnostics & Operations */}
-              <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-xs space-y-5">
-                <div className="flex items-center justify-between pb-4 border-b border-zinc-200">
-                  <div>
-                    <h3 className="text-base font-bold text-zinc-900">System Operations & Diagnostic Actions</h3>
-                    <p className="text-xs text-zinc-500 mt-0.5">Control live data cache and verify backend synchronization</p>
-                  </div>
-                  <button
-                    onClick={fetchSystemHealth}
-                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-bold transition-colors cursor-pointer"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${systemHealth.isChecking ? 'animate-spin' : ''}`} />
-                    <span>Ping Health Check</span>
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                  <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200 space-y-2">
-                    <span className="font-bold text-zinc-800 block">Reset Catalog to Factory Seed</span>
-                    <p className="text-zinc-500 text-[11px]">
-                      Restores all 24 initial Butterfly TV models from the system catalog repository.
-                    </p>
-                    <button
-                      onClick={() => {
-                        if (confirm('Reset catalog to default 24 models?')) {
-                          localStorage.setItem('butterfly_admin_products', JSON.stringify(ALL_PRODUCTS));
-                          setProductsList(ALL_PRODUCTS);
-                          alert('Catalog reset successfully.');
-                        }
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-white border border-zinc-300 text-zinc-700 hover:bg-zinc-100 font-bold transition-colors cursor-pointer"
-                    >
-                      Reset Catalog
-                    </button>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200 space-y-2">
-                    <span className="font-bold text-zinc-800 block">Re-Seed Super Admin Account</span>
-                    <p className="text-zinc-500 text-[11px]">
-                      Pings backend endpoint <code>GET /api/v1/auth/seed</code> to ensure Super Admin credentials are in PostgreSQL.
-                    </p>
-                    <button
-                      onClick={async () => {
-                        try {
-                          const res = await fetch('http://localhost:3001/api/v1/auth/seed');
-                          const data = await res.json();
-                          alert(`Super Admin Seed Status: ${data.status} - ${data.message}`);
-                        } catch {
-                          alert('Seed ping completed (In-memory ready).');
-                        }
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-white border border-zinc-300 text-zinc-700 hover:bg-zinc-100 font-bold transition-colors cursor-pointer"
-                    >
-                      Verify DB Seed
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </main>
 
       {/* ================= MODAL: ADD TV MODEL ================= */}
       {showAddProductModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full border border-zinc-200 shadow-2xl relative animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-xl w-full border border-zinc-200 shadow-2xl relative animate-in zoom-in-95 max-h-[92vh] overflow-y-auto">
             <button
-              onClick={() => setShowAddProductModal(false)}
-              className="absolute top-5 right-5 p-2 rounded-full text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors"
+              onClick={() => {
+                setShowAddProductModal(false);
+                resetImageState();
+              }}
+              className="absolute top-5 right-5 p-2 rounded-full text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
 
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-2 h-2 rounded-full bg-[#E50914]" />
+              <span className="text-[11px] font-bold text-[#E50914] uppercase tracking-wider">Catalog Management</span>
+            </div>
             <h3 className="text-xl font-bold text-zinc-900 mb-1">Add New TV Model</h3>
             <p className="text-xs text-zinc-500 mb-5">
-              Enter the specifications for the new Butterfly television.
+              Enter TV specifications and upload official display photography with drag &amp; drop or file upload.
             </p>
 
             <form onSubmit={handleAddProductSubmit} className="space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3">
+              {/* IMAGE UPLOAD & DRAG-AND-DROP FIELD (ALL UPLOADED IMAGES GALLERY) */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
+                  <div className="flex items-center gap-2">
+                    <label className="font-bold text-zinc-800 flex items-center gap-1.5">
+                      <ImageIcon className="w-4 h-4 text-[#E50914]" />
+                      <span>TV Display Photography</span>
+                      <span className="text-[#E50914] font-bold">*</span>
+                    </label>
+                    {uploadedImages.length > 0 && (
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
+                        {uploadedImages.length} {uploadedImages.length === 1 ? 'photo' : 'photos'} uploaded
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {uploadedImages.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={resetImageState}
+                        className="text-[11px] text-[#E50914] hover:underline font-semibold cursor-pointer"
+                      >
+                        Clear All
+                      </button>
+                    )}
+                    <span className="text-[11px] font-medium text-zinc-400">
+                      PNG, JPG, WEBP, SVG • Max 15MB
+                    </span>
+                  </div>
+                </div>
+
+                {/* Hidden native file input supporting multiple files */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml,image/*"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files.length > 0) {
+                      handleImageFiles(Array.from(e.target.files));
+                    }
+                  }}
+                  className="hidden"
+                />
+
+                {/* Main Container: Displays all uploaded images if any, plus Dropzone */}
+                <div
+                  onDragEnter={handleDragEnter}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`relative rounded-2xl border-2 border-dashed transition-all duration-200 select-none overflow-hidden ${
+                    imageDragActive
+                      ? 'border-[#E50914] bg-red-50/90 scale-[1.005] shadow-xl ring-4 ring-[#E50914]/20'
+                      : uploadedImages.length > 0
+                      ? 'border-zinc-200 bg-zinc-50/40 p-3'
+                      : 'border-zinc-300 hover:border-[#E50914] bg-zinc-50/80 hover:bg-red-50/20 cursor-pointer'
+                  }`}
+                  onClick={() => {
+                    if (uploadedImages.length === 0) {
+                      fileInputRef.current?.click();
+                    }
+                  }}
+                >
+                  {/* Visual Drop Overlay when dragging over anywhere */}
+                  {imageDragActive && (
+                    <div className="absolute inset-0 z-30 bg-red-600/10 backdrop-blur-2xs flex flex-col items-center justify-center pointer-events-none p-4">
+                      <div className="w-14 h-14 rounded-2xl bg-white text-[#E50914] shadow-xl flex items-center justify-center animate-bounce mb-2 border border-red-200">
+                        <UploadCloud className="w-7 h-7" />
+                      </div>
+                      <p className="text-sm font-black text-[#E50914]">Drop TV Image(s) Here</p>
+                      <p className="text-xs text-zinc-600 font-medium mt-0.5">
+                        Release to add to uploaded gallery
+                      </p>
+                    </div>
+                  )}
+
+                  {uploadedImages.length > 0 ? (
+                    /* ---------------- DISPLAY ALL UPLOADED IMAGES ---------------- */
+                    <div className="space-y-3">
+                      {/* Grid listing all uploaded images */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-72 overflow-y-auto pr-1">
+                        {uploadedImages.map((img) => (
+                          <div
+                            key={img.id}
+                            className={`p-3 rounded-2xl border transition-all flex items-center gap-3 relative group ${
+                              img.isPrimary
+                                ? 'border-[#E50914] bg-white shadow-sm ring-2 ring-[#E50914]/20'
+                                : 'border-zinc-200 bg-white hover:border-zinc-300 hover:shadow-2xs'
+                            }`}
+                          >
+                            {/* 16:9 TV Mockup Display */}
+                            <div className="relative w-24 h-16 bg-zinc-950 rounded-lg overflow-hidden border border-zinc-700 shadow-xs flex items-center justify-center flex-shrink-0">
+                              <Image
+                                src={img.url}
+                                alt={img.name}
+                                fill
+                                sizes="96px"
+                                unoptimized={typeof img.url === 'string' && img.url.startsWith('data:')}
+                                className="object-contain p-1"
+                              />
+                              <div className="absolute top-1 right-1 px-1 py-0.2 rounded bg-black/80 text-[8px] font-black text-white">
+                                16:9
+                              </div>
+                            </div>
+
+                            {/* Details & Controls */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-1 mb-0.5">
+                                {img.isPrimary ? (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md">
+                                    <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                                    <span>Primary Cover</span>
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSetPrimaryImage(img.id);
+                                    }}
+                                    className="text-[10px] font-semibold text-zinc-500 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200 px-1.5 py-0.5 rounded-md transition-colors cursor-pointer"
+                                  >
+                                    Set as Primary
+                                  </button>
+                                )}
+
+                                {/* Delete specific image */}
+                                <button
+                                  type="button"
+                                  title="Delete image"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveImage(img.id);
+                                  }}
+                                  className="p-1 rounded-md text-zinc-400 hover:text-[#E50914] hover:bg-red-50 transition-colors cursor-pointer"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+
+                              <p className="text-xs font-bold text-zinc-900 truncate" title={img.name}>
+                                {img.name}
+                              </p>
+                              <p className="text-[10px] text-zinc-400 mt-0.5">
+                                {img.size}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Dropzone bar to Add More Images */}
+                      <div
+                        onClick={() => fileInputRef.current?.click()}
+                        className="p-3 rounded-xl border border-dashed border-zinc-300 hover:border-[#E50914] bg-white hover:bg-red-50/30 flex items-center justify-between gap-3 cursor-pointer transition-all"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-red-50 text-[#E50914] flex items-center justify-center">
+                            <UploadCloud className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-zinc-800">
+                              Upload or drag more TV photos here
+                            </p>
+                            <p className="text-[10px] text-zinc-400">
+                              Add angle shots, lifestyle photos, or spec mockups
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            fileInputRef.current?.click();
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-[#E50914] hover:bg-[#c70811] text-white text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-95"
+                        >
+                          + Add Photos
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* ---------------- EMPTY DROPZONE STATE ---------------- */
+                    <div className="p-6 sm:p-7 flex flex-col items-center justify-center text-center">
+                      <div className="w-13 h-13 rounded-2xl bg-white border border-zinc-200 shadow-sm flex items-center justify-center text-[#E50914] mb-3 group-hover:scale-105 transition-all">
+                        <UploadCloud className="w-6 h-6" />
+                      </div>
+
+                      <h4 className="text-xs sm:text-sm font-bold text-zinc-900 mb-1">
+                        Drag and drop your TV images here
+                      </h4>
+                      <p className="text-[11px] text-zinc-500 mb-3.5 max-w-sm">
+                        Upload one or multiple 16:9 photography assets for this model.
+                      </p>
+
+                      {/* Primary Upload Button */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          fileInputRef.current?.click();
+                        }}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#E50914] hover:bg-[#c70811] text-white text-xs font-bold shadow-sm hover:shadow transition-all active:scale-95 cursor-pointer"
+                      >
+                        <UploadCloud className="w-4 h-4" />
+                        <span>Browse &amp; Upload Images</span>
+                      </button>
+
+                      <p className="text-[10px] text-zinc-400 mt-2.5">
+                        Supports multiple PNG, JPG, JPEG, WEBP or SVG up to 15MB each
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Processing indicator */}
+                  {isProcessingImage && (
+                    <div className="absolute inset-0 bg-white/90 backdrop-blur-2xs flex flex-col items-center justify-center gap-2 z-20">
+                      <div className="w-6 h-6 border-2 border-[#E50914] border-t-transparent rounded-full animate-spin" />
+                      <span className="text-xs font-bold text-zinc-800">Processing image(s)...</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Inline Error Message */}
+                {imageError && (
+                  <div className="mt-2 flex items-center gap-2 p-2.5 rounded-xl bg-red-50 border border-red-200 text-[#E50914] text-xs font-semibold animate-in fade-in">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>{imageError}</span>
+                  </div>
+                )}
+
+                {/* Showroom Sample Presets for quick selection */}
+                <div className="mt-2.5 flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[11px] text-zinc-400 font-medium">Or add showroom sample:</span>
+                  {[
+                    { label: 'Art Living', src: '/tv_art.jpg' },
+                    { label: 'Lake Horizon', src: '/tv_lake.jpg' },
+                    { label: 'Deep Space', src: '/tv_space.jpg' },
+                    { label: 'Cityscape', src: '/tv_city.jpg' },
+                    { label: 'Showroom Hero', src: '/products_hero.jpg' },
+                  ].map((preset) => {
+                    const isAdded = uploadedImages.some((img) => img.url === preset.src);
+                    return (
+                      <button
+                        key={preset.src}
+                        type="button"
+                        onClick={() => handleAddPresetImage(preset)}
+                        className={`px-2 py-0.5 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer ${
+                          isAdded
+                            ? 'bg-red-50 text-[#E50914] border-red-300 shadow-2xs font-bold'
+                            : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50'
+                        }`}
+                      >
+                        {isAdded ? `✓ ${preset.label}` : `+ ${preset.label}`}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-1">
                 <div>
                   <label className="block font-bold text-zinc-700 mb-1">Model Code *</label>
                   <input
@@ -1831,17 +2154,20 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
-              <div className="pt-3 flex items-center justify-end gap-3">
+              <div className="pt-3 flex items-center justify-end gap-3 border-t border-zinc-100">
                 <button
                   type="button"
-                  onClick={() => setShowAddProductModal(false)}
+                  onClick={() => {
+                    setShowAddProductModal(false);
+                    resetImageState();
+                  }}
                   className="px-4 py-2 rounded-xl border border-zinc-300 text-zinc-700 hover:bg-zinc-100 font-semibold cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-[#E50914] hover:bg-[#c70811] text-white font-bold cursor-pointer shadow-xs"
+                  className="px-5 py-2 rounded-xl bg-[#E50914] hover:bg-[#c70811] text-white font-bold cursor-pointer shadow-xs transition-all active:scale-95"
                 >
                   Save TV Model
                 </button>

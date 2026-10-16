@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { X, CheckCircle2, Send, PhoneCall } from 'lucide-react';
+import { X, CheckCircle2, Send, PhoneCall, AlertCircle } from 'lucide-react';
 import { TVProduct } from '@/components/cards/product-card';
+import { enquiryService } from '@/services/enquiry.service';
 
 interface EnquiryModalProps {
   product: TVProduct | null;
@@ -19,14 +20,18 @@ export function EnquiryModal({ product, onClose }: EnquiryModalProps) {
     message: '',
   });
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   if (!product) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
+    setErrorMessage('');
+
     try {
-      const newEnquiry = {
-        id: `ENQ-${Math.floor(1000 + Math.random() * 9000)}`,
+      await enquiryService.create({
         name: formData.name,
         phone: formData.phone,
         email: formData.email,
@@ -34,25 +39,46 @@ export function EnquiryModal({ product, onClose }: EnquiryModalProps) {
         message: formData.message,
         productModel: `${product.model} - ${product.name}`,
         productPrice: product.price,
-        date: new Date().toLocaleString('en-IN', {
-          day: 'numeric',
-          month: 'short',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true,
-        }),
-        status: 'New' as const,
-      };
-      const existing = JSON.parse(localStorage.getItem('butterfly_customer_enquiries') || '[]');
-      localStorage.setItem('butterfly_customer_enquiries', JSON.stringify([newEnquiry, ...existing]));
-    } catch {
-      // Ignore storage errors
+      });
+
+      // Keep localStorage in sync for admin offline tab if needed
+      try {
+        const newEnquiry = {
+          id: `ENQ-${Math.floor(1000 + Math.random() * 9000)}`,
+          name: formData.name,
+          phone: formData.phone,
+          email: formData.email,
+          city: formData.city,
+          message: formData.message,
+          productModel: `${product.model} - ${product.name}`,
+          productPrice: product.price,
+          date: new Date().toLocaleString('en-IN', {
+            day: 'numeric',
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true,
+          }),
+          status: 'New' as const,
+        };
+        const existing = JSON.parse(localStorage.getItem('butterfly_customer_enquiries') || '[]');
+        localStorage.setItem('butterfly_customer_enquiries', JSON.stringify([newEnquiry, ...existing]));
+      } catch {
+        // ignore
+      }
+
+      setSubmitted(true);
+      setTimeout(() => {
+        setSubmitted(false);
+        onClose();
+      }, 2500);
+    } catch (err: any) {
+      setErrorMessage(
+        err?.response?.data?.message || 'Failed to submit enquiry. Please verify your details.'
+      );
+    } finally {
+      setIsSubmitting(false);
     }
-    setSubmitted(true);
-    setTimeout(() => {
-      setSubmitted(false);
-      onClose();
-    }, 2500);
   };
 
   return (

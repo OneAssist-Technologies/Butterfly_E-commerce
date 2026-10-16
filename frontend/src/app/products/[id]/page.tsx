@@ -2,7 +2,7 @@ import React from 'react';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ALL_PRODUCTS, getProductById, getSimilarProducts } from '@/data/products';
+import { ALL_PRODUCTS, CatalogProduct, getProductById, getSimilarProducts } from '@/data/products';
 import { ProductDetailsClient } from '@/components/products/product-details-client';
 import { ArrowLeft, Tv } from 'lucide-react';
 
@@ -49,13 +49,27 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export const instant = false;
 
+async function getLiveProduct(id: string): Promise<CatalogProduct | undefined> {
+  try {
+    const res = await fetch(`http://localhost:3001/api/v1/products/${id}`, {
+      next: { revalidate: 60 },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // Fall back to fixture
+  }
+  return getProductById(id);
+}
+
 async function ProductDetailsContent({
   paramsPromise,
 }: {
   paramsPromise: Promise<{ id: string }>;
 }) {
   const { id } = await paramsPromise;
-  const product = getProductById(id);
+  const product = await getLiveProduct(id);
 
   if (!product) {
     return (

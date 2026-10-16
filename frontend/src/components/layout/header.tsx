@@ -229,9 +229,9 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
             <User className="w-5 h-5" />
           </Link>
 
-          {/* Cart Icon with badge */}
-          <button
-            onClick={handleOpenCart}
+          {/* Cart Icon with badge linking to full-page cart */}
+          <Link
+            href="/cart"
             aria-label="Shopping Cart"
             className="relative p-2 rounded-full text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 transition-colors cursor-pointer"
           >
@@ -239,7 +239,7 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
             <span className="absolute top-0.5 right-0.5 bg-[#E50914] text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center animate-pulse">
               {activeCount}
             </span>
-          </button>
+          </Link>
 
           {/* Mobile Menu Button */}
           <button

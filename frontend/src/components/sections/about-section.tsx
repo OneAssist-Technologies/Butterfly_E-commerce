@@ -78,14 +78,13 @@ export function AboutSection() {
             </div>
 
             {/* Glowing Neon Butterfly Art mounted on the wall to the right of the TV */}
-            <div className="absolute top-4 sm:top-6 right-8 sm:right-14 lg:right-20 z-20 pointer-events-none animate-pulse-glow">
+            <div className="absolute top-4 sm:top-6 right-8 sm:right-14 lg:right-20 z-20 pointer-events-none animate-pulse-glow w-16 h-16">
               <Image
                 src="/brand/butterfly-red.png"
                 alt="Neon Butterfly Wall Sign"
                 width={64}
                 height={64}
-                style={{ width: 'auto', height: 'auto' }}
-                className="object-contain filter drop-shadow-[0_0_10px_#E50914] drop-shadow-[0_0_24px_#E50914]"
+                className="w-full h-full object-contain filter drop-shadow-[0_0_10px_#E50914] drop-shadow-[0_0_24px_#E50914]"
               />
             </div>
           </div>

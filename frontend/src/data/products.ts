@@ -13,6 +13,7 @@ export interface CatalogProduct extends TVProduct {
   displayTech?: string;
   smartOS?: string;
   features?: string[];
+  images?: string[];
 }
 
 export const ALL_PRODUCTS: CatalogProduct[] = [

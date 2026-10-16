@@ -11,6 +11,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { AuthTvShowcase } from '@/components/auth/auth-tv-showcase';
+import { authService } from '@/services/auth.service';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -26,7 +27,7 @@ export default function SignupPage() {
   const [successMsg, setSuccessMsg] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
       setErrorMsg('Passwords do not match');
@@ -35,13 +36,32 @@ export default function SignupPage() {
     setErrorMsg('');
     setIsLoading(true);
 
-    setTimeout(() => {
+    try {
+      const data = await authService.register({
+        name: fullName.trim(),
+        email: email.trim().toLowerCase(),
+        password,
+      });
+
+      if (!data?.token || !data?.user || data?.success !== true) {
+        throw new Error('Registration failed: Invalid response format from server.');
+      }
+
+      // Save user session
+      localStorage.setItem('butterfly_user_token', data.token);
+      localStorage.setItem('butterfly_user', JSON.stringify(data.user));
+
       setIsLoading(false);
       setSuccessMsg(true);
       setTimeout(() => {
-        router.push('/login');
-      }, 1500);
-    }, 900);
+        router.push('/');
+      }, 1000);
+    } catch (err: any) {
+      setIsLoading(false);
+      setErrorMsg(
+        err?.response?.data?.message || 'Registration failed. Please check your information.'
+      );
+    }
   };
 
   return (
