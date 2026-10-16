@@ -14,6 +14,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { AuthTvShowcase } from '@/components/auth/auth-tv-showcase';
+import { authService } from '@/services/auth.service';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -26,7 +27,7 @@ export default function LoginPage() {
   const [successMsg, setSuccessMsg] = useState('');
 
   const handleAdminAutofill = () => {
-    setEmail('admin@buttterfly.com');
+    setEmail('admin@butterfly.com');
     setPassword('Butterfly@2026');
     setErrorMessage('');
   };
@@ -37,73 +38,40 @@ export default function LoginPage() {
     setIsLoading(true);
 
     const inputEmail = email.trim().toLowerCase();
-    const isSuperAdminEmail =
-      inputEmail === 'admin@buttterfly.com' || inputEmail === 'admin@butterfly.com';
 
-    // Check if logging in as Admin
-    if (isSuperAdminEmail) {
-      if (password !== 'Butterfly@2026') {
-        setIsLoading(false);
-        setErrorMessage('Incorrect password for Super Admin account. Please verify.');
-        return;
+    try {
+      const data = await authService.customerLogin({ email: inputEmail, password });
+      if (!data?.token || !data?.user || data?.success !== true) {
+        throw new Error('Authentication failed: Invalid response format from server.');
       }
 
-      try {
-        // Authenticate with backend API
-        const res = await fetch('http://localhost:3001/api/v1/auth/admin/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: inputEmail, password }),
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          localStorage.setItem('butterfly_admin_token', data.token || 'butterfly_admin_session_token');
-          localStorage.setItem(
-            'butterfly_admin_user',
-            JSON.stringify(data.user || { name: 'Super Admin', email: inputEmail, role: 'SUPER_ADMIN' })
-          );
-        } else {
-          // Client fallback token
-          localStorage.setItem('butterfly_admin_token', `butterfly_admin_token_${Date.now()}`);
-          localStorage.setItem(
-            'butterfly_admin_user',
-            JSON.stringify({ name: 'Super Admin', email: inputEmail, role: 'SUPER_ADMIN' })
-          );
-        }
-      } catch {
-        // Network/offline fallback
-        localStorage.setItem('butterfly_admin_token', `butterfly_admin_token_${Date.now()}`);
-        localStorage.setItem(
-          'butterfly_admin_user',
-          JSON.stringify({ name: 'Super Admin', email: inputEmail, role: 'SUPER_ADMIN' })
-        );
-      }
-
-      setIsLoading(false);
-      setSuccessMsg('Super Admin authenticated! Entering Admin Dashboard...');
-      setTimeout(() => {
-        router.push('/admin');
-      }, 900);
-      return;
-    }
-
-    // Standard Customer Login
-    setTimeout(() => {
-      localStorage.setItem(
-        'butterfly_user',
-        JSON.stringify({
-          email: inputEmail,
-          name: inputEmail.split('@')[0],
-          role: 'CUSTOMER',
-        })
+      const isAdmin = ['SUPER_ADMIN', 'ADMIN', 'OPERATOR', 'CATALOG_MANAGER'].includes(
+        data.user.role
       );
+
+      if (isAdmin) {
+        localStorage.setItem('butterfly_admin_token', data.token);
+        localStorage.setItem('butterfly_admin_user', JSON.stringify(data.user));
+        setIsLoading(false);
+        setSuccessMsg(`Welcome, ${data.user.name || 'Admin'}! Entering Admin Dashboard...`);
+        setTimeout(() => {
+          router.push('/admin');
+        }, 600);
+      } else {
+        localStorage.setItem('butterfly_user_token', data.token);
+        localStorage.setItem('butterfly_user', JSON.stringify(data.user));
+        setIsLoading(false);
+        setSuccessMsg(`Welcome, ${data.user.name || 'Member'}! Redirecting you to home...`);
+        setTimeout(() => {
+          router.push('/');
+        }, 700);
+      }
+    } catch (err: any) {
       setIsLoading(false);
-      setSuccessMsg('Signed in successfully! Redirecting you to home...');
-      setTimeout(() => {
-        router.push('/');
-      }, 1000);
-    }, 700);
+      setErrorMessage(
+        err?.response?.data?.message || err?.message || 'Login failed. Please verify email and password.'
+      );
+    }
   };
 
   return (

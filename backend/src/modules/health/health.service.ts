@@ -9,6 +9,7 @@ export interface HealthCheckResult {
   services: {
     database: {
       status: 'up' | 'down';
+      databaseName?: string;
       message?: string;
     };
   };
@@ -30,14 +31,19 @@ export class HealthService {
       dbMessage = error instanceof Error ? error.message : 'Database ping failed';
     }
 
+    const dbUrl = process.env.DATABASE_URL || '';
+    const dbNameMatch = dbUrl.match(/\/([^/?]+)(\?|$)/);
+    const databaseName = dbNameMatch ? dbNameMatch[1] : undefined;
+
     return {
-      status: 'ok',
+      status: dbStatus === 'up' ? 'ok' : 'error',
       timestamp: new Date().toISOString(),
       uptime: Math.floor(process.uptime()),
       environment: process.env.NODE_ENV ?? 'development',
       services: {
         database: {
           status: dbStatus,
+          ...(databaseName ? { databaseName } : {}),
           ...(dbMessage ? { message: dbMessage } : {}),
         },
       },

@@ -11,6 +11,14 @@ export const apiClient = axios.create({
 
 apiClient.interceptors.request.use(
   (config) => {
+    if (typeof window !== 'undefined') {
+      const token =
+        localStorage.getItem('butterfly_admin_token') ||
+        localStorage.getItem('butterfly_user_token');
+      if (token && !config.headers.Authorization) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
     return config;
   },
   (error) => {
