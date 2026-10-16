@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Search, User, ShoppingBag, ChevronDown, Menu, X } from 'lucide-react';
+import { Search, User, ShoppingBag, ChevronDown, Menu, X, ArrowRight } from 'lucide-react';
 import { useCart } from '@/providers';
 
 import { usePathname, useRouter } from 'next/navigation';
@@ -31,6 +31,9 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
 
   const isProductsActive = pathname?.startsWith('/products');
   const isHomeActive = pathname === '/';
+  const isAboutActive = pathname === '/about';
+  const isSupportActive = pathname === '/support';
+  const isContactActive = pathname === '/contact';
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,7 +45,10 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-zinc-200/80 shadow-xs">
+    <header
+      className="sticky top-0 z-50 bg-white border-b border-zinc-200/80 shadow-xs relative"
+      onMouseLeave={() => setActiveDropdown(null)}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
         
         {/* Official Butterfly Brand Logo */}
@@ -77,18 +83,17 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
             Home
           </Link>
 
-          {/* Products Nav & Dropdown */}
+          {/* Products Nav Item */}
           <div
-            className="relative"
+            className="relative py-2"
             onMouseEnter={() => setActiveDropdown('products')}
-            onMouseLeave={() => setActiveDropdown(null)}
           >
             <div className="flex items-center">
               <Link
                 href="/products"
                 onClick={() => setActiveDropdown(null)}
                 className={`flex items-center gap-1.5 text-sm font-semibold transition-colors py-2 cursor-pointer ${
-                  isProductsActive
+                  isProductsActive || activeDropdown === 'products'
                     ? 'text-[#E50914] relative after:content-[\'\'] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#E50914]'
                     : 'text-zinc-700 hover:text-[#E50914]'
                 }`}
@@ -109,40 +114,15 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
                 }`} />
               </button>
             </div>
-
-            {activeDropdown === 'products' && (
-              <div className="absolute top-full left-0 w-64 bg-white border border-zinc-200 rounded-xl shadow-xl py-2 animate-in fade-in slide-in-from-top-2 duration-200 z-50">
-                <Link
-                  href="/products?filter=all"
-                  onClick={() => setActiveDropdown(null)}
-                  className="block px-4 py-2.5 text-sm text-zinc-800 hover:bg-zinc-50 hover:text-[#E50914] transition-colors"
-                >
-                  <span className="font-semibold block">All Smart TVs</span>
-                  <span className="text-xs text-zinc-500">Explore complete TV line-up</span>
-                </Link>
-                <Link
-                  href="/products?resolution=4K%20UHD"
-                  onClick={() => setActiveDropdown(null)}
-                  className="block px-4 py-2.5 text-sm text-zinc-800 hover:bg-zinc-50 hover:text-[#E50914] transition-colors"
-                >
-                  <span className="font-semibold block">4K UHD Smart Series</span>
-                  <span className="text-xs text-zinc-500">Ultra-sharp Dolby sound</span>
-                </Link>
-                <Link
-                  href="/products?resolution=Full%20HD"
-                  onClick={() => setActiveDropdown(null)}
-                  className="block px-4 py-2.5 text-sm text-zinc-800 hover:bg-zinc-50 hover:text-[#E50914] transition-colors"
-                >
-                  <span className="font-semibold block">Full HD &amp; HD Ready</span>
-                  <span className="text-xs text-zinc-500">Budget-friendly smart models</span>
-                </Link>
-              </div>
-            )}
           </div>
 
           <Link
-            href="/#about-section"
-            className="text-sm font-medium text-zinc-700 hover:text-[#E50914] transition-colors py-2"
+            href="/about"
+            className={`text-sm font-semibold relative py-2 transition-colors ${
+              isAboutActive
+                ? 'text-[#E50914] after:content-[\'\'] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#E50914]'
+                : 'text-zinc-700 hover:text-[#E50914]'
+            }`}
           >
             About Us
           </Link>
@@ -153,47 +133,70 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
             onMouseEnter={() => setActiveDropdown('support')}
             onMouseLeave={() => setActiveDropdown(null)}
           >
-            <button
-              type="button"
-              onClick={() => setActiveDropdown(activeDropdown === 'support' ? null : 'support')}
-              className="flex items-center gap-1.5 text-sm font-medium text-zinc-700 hover:text-[#E50914] transition-colors py-2 cursor-pointer"
-            >
-              Support
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                activeDropdown === 'support' ? 'rotate-180 text-[#E50914]' : 'text-zinc-400'
-              }`} />
-            </button>
+            <div className="flex items-center">
+              <Link
+                href="/support"
+                onClick={() => setActiveDropdown(null)}
+                className={`flex items-center gap-1.5 text-sm font-semibold transition-colors py-2 cursor-pointer ${
+                  isSupportActive
+                    ? 'text-[#E50914] relative after:content-[\'\'] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#E50914]'
+                    : 'text-zinc-700 hover:text-[#E50914]'
+                }`}
+              >
+                Support
+              </Link>
+              <button
+                type="button"
+                aria-label="Toggle Support Dropdown"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveDropdown(activeDropdown === 'support' ? null : 'support');
+                }}
+                className="py-2 pl-0.5 pr-1 text-zinc-400 hover:text-[#E50914] cursor-pointer"
+              >
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                  activeDropdown === 'support' ? 'rotate-180 text-[#E50914]' : isSupportActive ? 'text-[#E50914]' : 'text-zinc-400'
+                }`} />
+              </button>
+            </div>
 
             {activeDropdown === 'support' && (
-              <div className="absolute top-full left-0 w-56 bg-white border border-zinc-200 rounded-xl shadow-xl py-2 animate-in fade-in slide-in-from-top-2 duration-200 z-50">
+              <div className="absolute top-full left-0 w-60 bg-white border border-zinc-200 rounded-xl shadow-xl py-2 animate-in fade-in slide-in-from-top-2 duration-200 z-50">
                 <Link
-                  href="/#trust-bar"
+                  href="/support"
                   onClick={() => setActiveDropdown(null)}
-                  className="block px-4 py-2 text-sm text-zinc-800 hover:bg-zinc-50 hover:text-[#E50914] transition-colors"
+                  className="block px-4 py-2.5 text-sm text-zinc-800 hover:bg-zinc-50 hover:text-[#E50914] transition-colors"
                 >
-                  Warranty Registration
+                  <span className="font-semibold block">Help Center &amp; FAQs</span>
+                  <span className="text-xs text-zinc-500">Guides, manuals &amp; setup</span>
                 </Link>
                 <Link
-                  href="/#trust-bar"
+                  href="/support#service-centers"
                   onClick={() => setActiveDropdown(null)}
-                  className="block px-4 py-2 text-sm text-zinc-800 hover:bg-zinc-50 hover:text-[#E50914] transition-colors"
+                  className="block px-4 py-2.5 text-sm text-zinc-800 hover:bg-zinc-50 hover:text-[#E50914] transition-colors"
                 >
-                  Service Centers (Pan India)
+                  <span className="font-semibold block">Service Centers</span>
+                  <span className="text-xs text-zinc-500">Pan-India authorized support</span>
                 </Link>
                 <Link
-                  href="/#footer"
+                  href="/support#warranty"
                   onClick={() => setActiveDropdown(null)}
-                  className="block px-4 py-2 text-sm text-zinc-800 hover:bg-zinc-50 hover:text-[#E50914] transition-colors"
+                  className="block px-4 py-2.5 text-sm text-zinc-800 hover:bg-zinc-50 hover:text-[#E50914] transition-colors"
                 >
-                  User Manuals &amp; Downloads
+                  <span className="font-semibold block">Warranty Registration</span>
+                  <span className="text-xs text-zinc-500">Register &amp; claim warranty</span>
                 </Link>
               </div>
             )}
           </div>
 
           <Link
-            href="/#footer"
-            className="text-sm font-medium text-zinc-700 hover:text-[#E50914] transition-colors py-2"
+            href="/contact"
+            className={`text-sm font-semibold relative py-2 transition-colors ${
+              isContactActive
+                ? 'text-[#E50914] after:content-[\'\'] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#E50914]'
+                : 'text-zinc-700 hover:text-[#E50914]'
+            }`}
           >
             Contact
           </Link>
@@ -252,6 +255,194 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
         </div>
       </div>
 
+      {/* Hisense-Style Full-Width TV Inches Mega Menu Drawer */}
+      {activeDropdown === 'products' && (
+        <div
+          onMouseEnter={() => setActiveDropdown('products')}
+          onMouseLeave={() => setActiveDropdown(null)}
+          className="hidden lg:block absolute top-full left-0 right-0 w-full bg-white border-b border-zinc-200 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-200 z-50"
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+            {/* Header bar of mega menu with quick title and "View All" */}
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-zinc-100">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-black uppercase tracking-widest text-[#E50914]">
+                  SMART TV LINEUP
+                </span>
+                <span className="text-zinc-300">•</span>
+                <span className="text-xs text-zinc-500 font-medium">
+                  Select by screen size &amp; technology
+                </span>
+              </div>
+              <Link
+                href="/products"
+                onClick={() => setActiveDropdown(null)}
+                className="text-xs font-bold text-zinc-600 hover:text-[#E50914] flex items-center gap-1.5 transition-colors group"
+              >
+                <span>View All Smart TVs (36 Models)</span>
+                <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+            </div>
+
+            {/* 6 Column Horizontal TV Cards Grid - Exactly matching Hisense UI */}
+            <div className="grid grid-cols-6 gap-3 lg:gap-4 items-stretch">
+              {/* Laser TV (Featured item like Hisense Laser TV teal block, in Butterfly signature red) */}
+              <Link
+                href="/products?filter=all"
+                onClick={() => setActiveDropdown(null)}
+                className="group relative rounded-2xl p-3 bg-gradient-to-b from-[#E50914] to-[#B80710] text-white flex flex-col justify-between overflow-hidden shadow-md hover:shadow-xl hover:scale-[1.02] transition-all cursor-pointer"
+              >
+                <div className="relative aspect-[16/10] w-full rounded-xl overflow-hidden bg-black/20 p-1 mb-2">
+                  <Image
+                    src="/menu_laser_tv.jpg"
+                    alt="Laser TV"
+                    fill
+                    sizes="200px"
+                    className="object-contain group-hover:scale-105 transition-transform duration-300"
+                  />
+                  <span className="absolute top-1.5 left-1.5 bg-white text-[#E50914] text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider shadow-xs">
+                    FLAGSHIP
+                  </span>
+                </div>
+                <div className="text-center w-full pt-1">
+                  <span className="block text-sm font-black tracking-tight text-white uppercase">
+                    Laser TV
+                  </span>
+                  <span className="block text-[10px] text-red-100 font-medium mt-0.5">
+                    100&quot; Ultra Cinema
+                  </span>
+                </div>
+              </Link>
+
+              {/* 32" Smart TV */}
+              <Link
+                href="/products?size=32%22"
+                onClick={() => setActiveDropdown(null)}
+                className="group flex flex-col justify-between p-3 rounded-2xl bg-white hover:bg-zinc-50 border border-zinc-100 hover:border-zinc-200/80 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer text-center"
+              >
+                <div className="relative aspect-[16/10] w-full mb-2">
+                  <Image
+                    src="/menu_tv_32.jpg"
+                    alt='32" Smart TV'
+                    fill
+                    sizes="200px"
+                    className="object-contain group-hover:scale-105 transition-transform duration-300"
+                  />
+                </div>
+                <div className="pt-1">
+                  <span className="block text-sm font-black text-zinc-900 group-hover:text-[#E50914] transition-colors">
+                    32&quot; Smart TV
+                  </span>
+                  <span className="block text-[11px] text-zinc-500 font-medium mt-0.5">
+                    HD Ready • Android TV
+                  </span>
+                </div>
+              </Link>
+
+              {/* 43" UHD TV */}
+              <Link
+                href="/products?size=43%22"
+                onClick={() => setActiveDropdown(null)}
+                className="group flex flex-col justify-between p-3 rounded-2xl bg-white hover:bg-zinc-50 border border-zinc-100 hover:border-zinc-200/80 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer text-center"
+              >
+                <div className="relative aspect-[16/10] w-full mb-2">
+                  <Image
+                    src="/menu_tv_43.jpg"
+                    alt='43" UHD TV'
+                    fill
+                    sizes="200px"
+                    className="object-contain group-hover:scale-105 transition-transform duration-300"
+                  />
+                </div>
+                <div className="pt-1">
+                  <span className="block text-sm font-black text-zinc-900 group-hover:text-[#E50914] transition-colors">
+                    43&quot; UHD TV
+                  </span>
+                  <span className="block text-[11px] text-zinc-500 font-medium mt-0.5">
+                    4K UHD • HDR10
+                  </span>
+                </div>
+              </Link>
+
+              {/* 50" UHD TV */}
+              <Link
+                href="/products?size=50%22"
+                onClick={() => setActiveDropdown(null)}
+                className="group flex flex-col justify-between p-3 rounded-2xl bg-white hover:bg-zinc-50 border border-zinc-100 hover:border-zinc-200/80 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer text-center"
+              >
+                <div className="relative aspect-[16/10] w-full mb-2">
+                  <Image
+                    src="/menu_tv_50.jpg"
+                    alt='50" UHD TV'
+                    fill
+                    sizes="200px"
+                    className="object-contain group-hover:scale-105 transition-transform duration-300"
+                  />
+                </div>
+                <div className="pt-1">
+                  <span className="block text-sm font-black text-zinc-900 group-hover:text-[#E50914] transition-colors">
+                    50&quot; UHD TV
+                  </span>
+                  <span className="block text-[11px] text-zinc-500 font-medium mt-0.5">
+                    4K UHD • Dolby Audio
+                  </span>
+                </div>
+              </Link>
+
+              {/* 55" QLED TV */}
+              <Link
+                href="/products?size=55%22"
+                onClick={() => setActiveDropdown(null)}
+                className="group flex flex-col justify-between p-3 rounded-2xl bg-white hover:bg-zinc-50 border border-zinc-100 hover:border-zinc-200/80 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer text-center"
+              >
+                <div className="relative aspect-[16/10] w-full mb-2">
+                  <Image
+                    src="/menu_tv_55.jpg"
+                    alt='55" QLED TV'
+                    fill
+                    sizes="200px"
+                    className="object-contain group-hover:scale-105 transition-transform duration-300"
+                  />
+                </div>
+                <div className="pt-1">
+                  <span className="block text-sm font-black text-zinc-900 group-hover:text-[#E50914] transition-colors">
+                    55&quot; QLED TV
+                  </span>
+                  <span className="block text-[11px] text-zinc-500 font-medium mt-0.5">
+                    Quantum Dot • Google TV
+                  </span>
+                </div>
+              </Link>
+
+              {/* 65" QLED TV */}
+              <Link
+                href="/products?size=65%22"
+                onClick={() => setActiveDropdown(null)}
+                className="group flex flex-col justify-between p-3 rounded-2xl bg-white hover:bg-zinc-50 border border-zinc-100 hover:border-zinc-200/80 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer text-center"
+              >
+                <div className="relative aspect-[16/10] w-full mb-2">
+                  <Image
+                    src="/menu_tv_65.jpg"
+                    alt='65" QLED TV'
+                    fill
+                    sizes="200px"
+                    className="object-contain group-hover:scale-105 transition-transform duration-300"
+                  />
+                </div>
+                <div className="pt-1">
+                  <span className="block text-sm font-black text-zinc-900 group-hover:text-[#E50914] transition-colors">
+                    65&quot; QLED TV
+                  </span>
+                  <span className="block text-[11px] text-zinc-500 font-medium mt-0.5">
+                    Cinema • Dolby Atmos
+                  </span>
+                </div>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Mobile Menu Dropdown */}
       {mobileMenuOpen && (
         <div className="lg:hidden bg-white border-b border-zinc-200 px-6 py-4 space-y-3">
@@ -264,33 +455,87 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
           >
             Home
           </Link>
+
+          {/* Mobile Products with TV Inches Quick Select */}
+          <div>
+            <Link
+              href="/products"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`block py-2 text-base font-semibold ${
+                isProductsActive ? 'text-[#E50914]' : 'text-zinc-800 hover:text-[#E50914]'
+              }`}
+            >
+              Products
+            </Link>
+            <div className="grid grid-cols-3 gap-2 py-2 pl-2 border-l-2 border-red-200 mb-2">
+              <Link
+                href="/products?size=32%22"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-xs font-bold text-zinc-600 hover:text-[#E50914] bg-zinc-50 p-2 rounded-lg text-center"
+              >
+                32&quot; TV
+              </Link>
+              <Link
+                href="/products?size=43%22"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-xs font-bold text-zinc-600 hover:text-[#E50914] bg-zinc-50 p-2 rounded-lg text-center"
+              >
+                43&quot; TV
+              </Link>
+              <Link
+                href="/products?size=50%22"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-xs font-bold text-zinc-600 hover:text-[#E50914] bg-zinc-50 p-2 rounded-lg text-center"
+              >
+                50&quot; TV
+              </Link>
+              <Link
+                href="/products?size=55%22"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-xs font-bold text-zinc-600 hover:text-[#E50914] bg-zinc-50 p-2 rounded-lg text-center"
+              >
+                55&quot; TV
+              </Link>
+              <Link
+                href="/products?size=65%22"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-xs font-bold text-zinc-600 hover:text-[#E50914] bg-zinc-50 p-2 rounded-lg text-center"
+              >
+                65&quot; TV
+              </Link>
+              <Link
+                href="/products?filter=all"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-xs font-bold text-[#E50914] bg-red-50 p-2 rounded-lg text-center"
+              >
+                Laser TV
+              </Link>
+            </div>
+          </div>
           <Link
-            href="/products"
+            href="/about"
             onClick={() => setMobileMenuOpen(false)}
             className={`block py-2 text-base font-semibold ${
-              isProductsActive ? 'text-[#E50914]' : 'text-zinc-800 hover:text-[#E50914]'
+              isAboutActive ? 'text-[#E50914]' : 'text-zinc-800 hover:text-[#E50914]'
             }`}
-          >
-            Products
-          </Link>
-          <Link
-            href="/#about-section"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block py-2 text-base text-zinc-800 hover:text-[#E50914]"
           >
             About Us
           </Link>
           <Link
-            href="/#trust-bar"
+            href="/support"
             onClick={() => setMobileMenuOpen(false)}
-            className="block py-2 text-base text-zinc-800 hover:text-[#E50914]"
+            className={`block py-2 text-base font-semibold ${
+              isSupportActive ? 'text-[#E50914]' : 'text-zinc-800 hover:text-[#E50914]'
+            }`}
           >
             Support
           </Link>
           <Link
-            href="/#footer"
+            href="/contact"
             onClick={() => setMobileMenuOpen(false)}
-            className="block py-2 text-base text-zinc-800 hover:text-[#E50914]"
+            className={`block py-2 text-base font-semibold ${
+              isContactActive ? 'text-[#E50914]' : 'text-zinc-800 hover:text-[#E50914]'
+            }`}
           >
             Contact
           </Link>
