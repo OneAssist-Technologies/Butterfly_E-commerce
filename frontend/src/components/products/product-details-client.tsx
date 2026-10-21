@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -24,12 +24,19 @@ import {
   Wifi,
   Sliders,
   Award,
+  Lock,
+  CheckCircle2,
+  AlertCircle,
+  X,
+  MessageSquare,
+  Loader2,
 } from 'lucide-react';
 import { CatalogProduct, ALL_PRODUCTS } from '@/data/products';
 import { ProductCatalogCard } from '@/components/cards/product-catalog-card';
 import { EnquiryModal } from '@/components/shared/enquiry-modal';
 import { useCart } from '@/providers';
 import { TVProduct } from '@/components/cards/product-card';
+import { productService } from '@/services/product.service';
 
 interface ProductDetailsClientProps {
   product: CatalogProduct;
@@ -57,6 +64,139 @@ export function ProductDetailsClient({
   const [quantity, setQuantity] = useState(1);
   const [addedToast, setAddedToast] = useState(false);
   const [activeTab, setActiveTab] = useState<'highlights' | 'specs' | 'installation' | 'reviews'>('highlights');
+
+  // Customer Reviews State (Dynamic from Database)
+  const [reviews, setReviews] = useState<Array<{
+    id: string;
+    rating: number;
+    title?: string;
+    comment: string;
+    userName: string;
+    userEmail?: string;
+    createdAt: string;
+  }>>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<{ name?: string; email?: string } | null>(null);
+
+  // Review Modals & Submission
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showLoginRequiredModal, setShowLoginRequiredModal] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewHoverRating, setReviewHoverRating] = useState(0);
+  const [reviewTitle, setReviewTitle] = useState('');
+  const [reviewComment, setReviewComment] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [reviewSuccessMsg, setReviewSuccessMsg] = useState('');
+  const [reviewErrorMsg, setReviewErrorMsg] = useState('');
+
+  // Check login and fetch live reviews from backend
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const userStr = localStorage.getItem('butterfly_user') || localStorage.getItem('butterfly_admin_user');
+      if (userStr) {
+        try {
+          setCurrentUser(JSON.parse(userStr));
+        } catch {
+          // ignore
+        }
+      }
+    }
+
+    const fetchLiveReviews = async () => {
+      try {
+        setReviewsLoading(true);
+        const data = await productService.getReviews(product.id);
+        if (data && Array.isArray(data.reviews)) {
+          setReviews(data.reviews);
+        }
+      } catch (err) {
+        console.warn('Backend reviews fetch notice:', err);
+      } finally {
+        setReviewsLoading(false);
+      }
+    };
+
+    fetchLiveReviews();
+  }, [product.id]);
+
+  // Dynamic reviews metrics
+  const totalReviewsCount = reviews.length;
+  const dynamicAverageRating = totalReviewsCount > 0
+    ? Number((reviews.reduce((acc, r) => acc + r.rating, 0) / totalReviewsCount).toFixed(1))
+    : 0;
+
+  const ratingDistribution = [5, 4, 3, 2, 1].map((star) => {
+    const count = reviews.filter((r) => r.rating === star).length;
+    const percentage = totalReviewsCount > 0 ? Math.round((count / totalReviewsCount) * 100) : 0;
+    return { star, count, percentage };
+  });
+
+  const handleOpenReviewModal = () => {
+    const userStr = typeof window !== 'undefined'
+      ? localStorage.getItem('butterfly_user') || localStorage.getItem('butterfly_admin_user')
+      : null;
+    const token = typeof window !== 'undefined'
+      ? localStorage.getItem('butterfly_user_token') || localStorage.getItem('butterfly_admin_token')
+      : null;
+
+    if (!userStr || !token) {
+      setShowLoginRequiredModal(true);
+    } else {
+      try {
+        setCurrentUser(JSON.parse(userStr));
+      } catch {
+        // ignore
+      }
+      setShowReviewModal(true);
+      setReviewErrorMsg('');
+      setReviewSuccessMsg('');
+    }
+  };
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reviewComment.trim()) {
+      setReviewErrorMsg('Please write your review feedback.');
+      return;
+    }
+
+    setIsSubmittingReview(true);
+    setReviewErrorMsg('');
+
+    try {
+      const created = await productService.addReview(product.id, {
+        rating: reviewRating,
+        title: reviewTitle.trim() || undefined,
+        comment: reviewComment.trim(),
+      });
+
+      const newRev = created || {
+        id: `rev-${Date.now()}`,
+        rating: reviewRating,
+        title: reviewTitle.trim() || undefined,
+        comment: reviewComment.trim(),
+        userName: currentUser?.name || currentUser?.email || 'Verified Customer',
+        createdAt: new Date().toISOString(),
+      };
+
+      const updated = [newRev, ...reviews.filter((r) => r.id !== newRev.id)];
+      setReviews(updated);
+      setReviewSuccessMsg('Thank you! Your verified review has been published.');
+      setTimeout(() => {
+        setShowReviewModal(false);
+        setReviewTitle('');
+        setReviewComment('');
+        setReviewRating(5);
+        setReviewSuccessMsg('');
+      }, 1200);
+    } catch (err: any) {
+      setReviewErrorMsg(
+        err?.response?.data?.message || err?.message || 'Failed to submit review. Please try again.'
+      );
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
 
   // Enquiry Modal state
   const [enquiryProduct, setEnquiryProduct] = useState<TVProduct | null>(null);
@@ -103,6 +243,12 @@ export function ProductDetailsClient({
             <p className="text-xs font-bold text-white">Added to Cart!</p>
             <p className="text-[11px] text-zinc-400">{product.name} ({quantity} item{quantity > 1 ? 's' : ''})</p>
           </div>
+          <Link
+            href="/cart"
+            className="text-xs font-bold text-white bg-[#E50914] hover:bg-[#c70811] px-3 py-1.5 rounded-lg ml-2 transition-colors"
+          >
+            View Cart
+          </Link>
         </div>
       )}
 
@@ -195,6 +341,7 @@ export function ProductDetailsClient({
                     priority
                     className="object-cover transition-all duration-500 group-hover:scale-105"
                     sizes="(max-width: 1024px) 100vw, 55vw"
+                    unoptimized={true}
                   />
                   {/* Subtle TV screen gloss reflection overlay */}
                   <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/10 pointer-events-none" />
@@ -226,6 +373,7 @@ export function ProductDetailsClient({
                         fill
                         className="object-cover"
                         sizes="(max-width: 768px) 25vw, 15vw"
+                        unoptimized={true}
                       />
                     </div>
                   </button>
@@ -275,15 +423,21 @@ export function ProductDetailsClient({
                 {product.name}
               </h1>
 
-              {/* Rating & Review stats */}
+              {/* Dynamic Rating & Review stats */}
               <div className="flex items-center gap-3 mt-3">
-                <div className="flex items-center gap-1 bg-emerald-500 text-white text-xs font-bold px-2 py-0.5 rounded-md">
-                  <span>4.8</span>
+                <div className="flex items-center gap-1 bg-emerald-600 text-white text-xs font-bold px-2 py-0.5 rounded-md">
+                  <span>{dynamicAverageRating > 0 ? dynamicAverageRating.toFixed(1) : 'New'}</span>
                   <Star className="w-3 h-3 fill-white" />
                 </div>
-                <span className="text-xs text-zinc-500 font-medium">
-                  142 Ratings &bull; 38 Verified Reviews
-                </span>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('reviews')}
+                  className="text-xs text-zinc-500 hover:text-zinc-900 transition-colors font-medium cursor-pointer"
+                >
+                  {totalReviewsCount > 0
+                    ? `${totalReviewsCount} Verified Customer ${totalReviewsCount === 1 ? 'Review' : 'Reviews'}`
+                    : 'Be the first to review'}
+                </button>
               </div>
             </div>
 
@@ -412,18 +566,33 @@ export function ProductDetailsClient({
                 <button
                   type="button"
                   onClick={handleAddToCart}
-                  className="flex-1 py-3 px-5 rounded-xl bg-[#E50914] text-white hover:bg-[#c70811] text-xs font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shadow-md hover:shadow-lg active:scale-[0.99]"
+                  className="flex-1 py-3 px-5 rounded-xl border border-zinc-900 bg-white text-zinc-900 hover:bg-zinc-100 text-xs font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shadow-sm active:scale-[0.99]"
                 >
                   <ShoppingBag className="w-4 h-4" />
                   <span>Add to Cart ({quantity})</span>
                 </button>
               </div>
 
+              {/* Buy Now Button -> directly navigates to /cart for instant checkout */}
+              <button
+                type="button"
+                onClick={() => {
+                  for (let i = 0; i < quantity; i++) {
+                    addToCart(product);
+                  }
+                  router.push('/cart');
+                }}
+                className="w-full py-3.5 px-5 rounded-xl bg-[#E50914] text-white hover:bg-[#c70811] text-xs font-bold tracking-wider uppercase flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shadow-lg shadow-red-600/25 active:scale-[0.99]"
+              >
+                <Zap className="w-4 h-4 fill-white" />
+                <span>Buy Now &bull; Instant Checkout</span>
+              </button>
+
               {/* Secondary Action: Request a Quote / Enquire Now */}
               <button
                 type="button"
                 onClick={() => setEnquiryProduct(product)}
-                className="w-full py-3 px-5 rounded-xl border border-zinc-300 text-zinc-800 hover:bg-zinc-50 hover:border-zinc-400 text-xs font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer"
+                className="w-full py-2.5 px-5 rounded-xl border border-zinc-200 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50 text-xs font-medium flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer"
               >
                 <span>Request Best Price / Bulk Enquiry</span>
               </button>
@@ -459,6 +628,8 @@ export function ProductDetailsClient({
           {/* Tab Navigation Header */}
           <div className="flex border-b border-zinc-200 bg-zinc-50/70 overflow-x-auto scrollbar-none">
             <button
+              id="tab-btn-highlights"
+              type="button"
               onClick={() => setActiveTab('highlights')}
               className={`py-4 px-6 text-xs sm:text-sm font-bold border-b-2 whitespace-nowrap transition-colors cursor-pointer ${
                 activeTab === 'highlights'
@@ -469,6 +640,8 @@ export function ProductDetailsClient({
               Key Features
             </button>
             <button
+              id="tab-btn-specs"
+              type="button"
               onClick={() => setActiveTab('specs')}
               className={`py-4 px-6 text-xs sm:text-sm font-bold border-b-2 whitespace-nowrap transition-colors cursor-pointer ${
                 activeTab === 'specs'
@@ -479,6 +652,8 @@ export function ProductDetailsClient({
               Technical Specifications
             </button>
             <button
+              id="tab-btn-installation"
+              type="button"
               onClick={() => setActiveTab('installation')}
               className={`py-4 px-6 text-xs sm:text-sm font-bold border-b-2 whitespace-nowrap transition-colors cursor-pointer ${
                 activeTab === 'installation'
@@ -489,6 +664,8 @@ export function ProductDetailsClient({
               Installation & Warranty
             </button>
             <button
+              id="tab-btn-reviews"
+              type="button"
               onClick={() => setActiveTab('reviews')}
               className={`py-4 px-6 text-xs sm:text-sm font-bold border-b-2 whitespace-nowrap transition-colors cursor-pointer ${
                 activeTab === 'reviews'
@@ -496,62 +673,94 @@ export function ProductDetailsClient({
                   : 'border-transparent text-zinc-600 hover:text-zinc-900'
               }`}
             >
-              Customer Reviews (38)
+              Customer Reviews ({reviews.length})
             </button>
           </div>
 
           {/* Tab Content Body */}
           <div className="p-6 sm:p-10">
+            {/* Dynamic Tab 1: Key Features */}
             {activeTab === 'highlights' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-4">
-                  <h3 className="text-lg font-bold text-zinc-900">
-                    Cinema-Grade Visuals & Brilliant Contrast
-                  </h3>
-                  <p className="text-sm text-zinc-600 leading-relaxed">
-                    Powered by Butterfly’s proprietary VividColour Engine, this {product.size} {product.resolution} Smart TV delivers over a billion shades of lifelike colours with dynamic frame-by-frame optimization. Every movie, sporting event, and gaming title unfolds with crystal clarity and razor-sharp contrast.
-                  </p>
-                  <ul className="space-y-2 text-xs text-zinc-700">
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-emerald-500" />
-                      <span>Ultra-wide 178° viewing angle for everyone in the room</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-emerald-500" />
-                      <span>HDR10 and HLG decoding for stunning highlights</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-emerald-500" />
-                      <span>MEMC Motion Engine prevents blur during fast sports</span>
-                    </li>
-                  </ul>
-                </div>
+              <div className="space-y-6">
+                {product.keyFeatures && product.keyFeatures.length > 0 ? (
+                  <div>
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#E50914]" />
+                      <h3 className="text-lg font-bold text-zinc-900">
+                        Highlights & Engineered Features for {product.name}
+                      </h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {product.keyFeatures.map((feat, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-start gap-3 p-4 rounded-2xl bg-zinc-50 border border-zinc-200/80 hover:border-zinc-300 transition-colors"
+                        >
+                          <div className="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                            <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold text-zinc-800 leading-relaxed">
+                              {feat}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-bold text-zinc-900">
+                        Cinema-Grade Visuals & Brilliant Contrast
+                      </h3>
+                      <p className="text-sm text-zinc-600 leading-relaxed">
+                        Powered by Butterfly’s proprietary VividColour Engine, this {product.size} {product.resolution} Smart TV delivers over a billion shades of lifelike colours with dynamic frame-by-frame optimization. Every movie, sporting event, and gaming title unfolds with crystal clarity and razor-sharp contrast.
+                      </p>
+                      <ul className="space-y-2 text-xs text-zinc-700">
+                        <li className="flex items-center gap-2">
+                          <Check className="w-4 h-4 text-emerald-500" />
+                          <span>Ultra-wide 178° viewing angle for everyone in the room</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="w-4 h-4 text-emerald-500" />
+                          <span>HDR10 and HLG decoding for stunning highlights</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="w-4 h-4 text-emerald-500" />
+                          <span>MEMC Motion Engine prevents blur during fast sports</span>
+                        </li>
+                      </ul>
+                    </div>
 
-                <div className="space-y-4">
-                  <h3 className="text-lg font-bold text-zinc-900">
-                    Smart Ecosystem with {product.os}
-                  </h3>
-                  <p className="text-sm text-zinc-600 leading-relaxed">
-                    Access over 10,000+ apps directly from Google Play / Smart Store, including Netflix, Prime Video, YouTube, Hotstar, and Zee5. Built-in Chromecast allows seamless casting from your smartphone or tablet with single-tap ease.
-                  </p>
-                  <ul className="space-y-2 text-xs text-zinc-700">
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-emerald-500" />
-                      <span>Voice Remote with built-in Assistant microphone</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-emerald-500" />
-                      <span>Bluetooth 5.0 two-way audio for wireless headphones</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-emerald-500" />
-                      <span>Auto low-latency Game Mode for console gaming</span>
-                    </li>
-                  </ul>
-                </div>
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-bold text-zinc-900">
+                        Smart Ecosystem with {product.os}
+                      </h3>
+                      <p className="text-sm text-zinc-600 leading-relaxed">
+                        Access over 10,000+ apps directly from Google Play / Smart Store, including Netflix, Prime Video, YouTube, Hotstar, and Zee5. Built-in Chromecast allows seamless casting from your smartphone or tablet with single-tap ease.
+                      </p>
+                      <ul className="space-y-2 text-xs text-zinc-700">
+                        <li className="flex items-center gap-2">
+                          <Check className="w-4 h-4 text-emerald-500" />
+                          <span>Voice Remote with built-in Assistant microphone</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="w-4 h-4 text-emerald-500" />
+                          <span>Bluetooth 5.0 two-way audio for wireless headphones</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="w-4 h-4 text-emerald-500" />
+                          <span>Auto low-latency Game Mode for console gaming</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
+            {/* Dynamic Tab 2: Technical Specifications */}
             {activeTab === 'specs' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-xs">
                 <div>
@@ -561,7 +770,7 @@ export function ProductDetailsClient({
                   <dl className="space-y-2.5">
                     <div className="flex justify-between py-1 border-b border-zinc-100">
                       <dt className="text-zinc-500">Screen Diagonal</dt>
-                      <dd className="font-bold text-zinc-900">{product.size} (108 cm)</dd>
+                      <dd className="font-bold text-zinc-900">{product.size}</dd>
                     </div>
                     <div className="flex justify-between py-1 border-b border-zinc-100">
                       <dt className="text-zinc-500">Resolution</dt>
@@ -569,11 +778,15 @@ export function ProductDetailsClient({
                     </div>
                     <div className="flex justify-between py-1 border-b border-zinc-100">
                       <dt className="text-zinc-500">Refresh Rate</dt>
-                      <dd className="font-bold text-zinc-900">60 Hz Native</dd>
+                      <dd className="font-bold text-zinc-900">
+                        {product.technicalSpecs?.refreshRate || '60 Hz Native'}
+                      </dd>
                     </div>
                     <div className="flex justify-between py-1 border-b border-zinc-100">
                       <dt className="text-zinc-500">Panel Type</dt>
-                      <dd className="font-bold text-zinc-900">A+ Grade IPS Bezel-Less</dd>
+                      <dd className="font-bold text-zinc-900">
+                        {product.technicalSpecs?.panelType || product.displayTech || 'A+ Grade IPS Bezel-Less'}
+                      </dd>
                     </div>
                   </dl>
                 </div>
@@ -585,34 +798,42 @@ export function ProductDetailsClient({
                   <dl className="space-y-2.5">
                     <div className="flex justify-between py-1 border-b border-zinc-100">
                       <dt className="text-zinc-500">Audio Configuration</dt>
-                      <dd className="font-bold text-zinc-900">{product.sound}</dd>
+                      <dd className="font-bold text-zinc-900">{product.sound || '2 x 10W Stereo Speakers'}</dd>
                     </div>
                     <div className="flex justify-between py-1 border-b border-zinc-100">
                       <dt className="text-zinc-500">HDMI Ports</dt>
-                      <dd className="font-bold text-zinc-900">3 x HDMI (ARC Supported)</dd>
+                      <dd className="font-bold text-zinc-900">
+                        {product.technicalSpecs?.hdmiPorts || '3 x HDMI (ARC Supported)'}
+                      </dd>
                     </div>
                     <div className="flex justify-between py-1 border-b border-zinc-100">
                       <dt className="text-zinc-500">USB Ports</dt>
-                      <dd className="font-bold text-zinc-900">2 x USB 2.0 High Speed</dd>
+                      <dd className="font-bold text-zinc-900">
+                        {product.technicalSpecs?.usbPorts || '2 x USB 2.0 High Speed'}
+                      </dd>
                     </div>
                     <div className="flex justify-between py-1 border-b border-zinc-100">
                       <dt className="text-zinc-500">Wireless</dt>
-                      <dd className="font-bold text-zinc-900">Dual-band Wi-Fi & Bluetooth 5.0</dd>
+                      <dd className="font-bold text-zinc-900">
+                        {product.technicalSpecs?.wireless || 'Dual-band Wi-Fi & Bluetooth 5.0'}
+                      </dd>
                     </div>
                   </dl>
                 </div>
               </div>
             )}
 
+            {/* Dynamic Tab 3: Installation & Warranty */}
             {activeTab === 'installation' && (
               <div className="space-y-5 text-xs text-zinc-700">
                 <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-4 text-amber-900">
                   <h4 className="font-bold text-sm mb-1 flex items-center gap-2">
                     <Wrench className="w-4 h-4 text-amber-600" />
-                    Complimentary Doorstep Installation Process
+                    Complimentary Doorstep Installation Process & Official Warranty
                   </h4>
                   <p className="text-xs leading-relaxed text-amber-800">
-                    Once your Butterfly TV arrives at your doorstep, a certified Butterfly brand technician will contact you to schedule an installation time slot within 48 hours. Both tabletop setup and standard wall-mount installations are 100% free of cost.
+                    {product.warrantyInstallation ||
+                      'Once your Butterfly TV arrives at your doorstep, a certified Butterfly brand technician will contact you to schedule an installation time slot within 48 hours. Both tabletop setup and standard wall-mount installations are 100% free of cost with 1 Year Comprehensive Brand Warranty + 1 Year Additional on Display Panel.'}
                   </p>
                 </div>
 
@@ -633,61 +854,346 @@ export function ProductDetailsClient({
               </div>
             )}
 
+            {/* Dynamic Tab 4: Customer Reviews */}
             {activeTab === 'reviews' && (
-              <div className="space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-zinc-200 gap-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-3xl font-extrabold text-zinc-900">4.8</span>
-                      <div className="flex text-amber-400">
-                        {'★★★★★'.split('').map((c, i) => (
-                          <span key={i} className="text-lg">{c}</span>
-                        ))}
-                      </div>
-                    </div>
-                    <span className="text-xs text-zinc-500">Based on 142 customer reviews</span>
+              <div className="space-y-8">
+                {/* Header Summary */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-zinc-200/80 gap-4">
+                  <div className="space-y-1">
+                    <h3 className="text-xl font-extrabold text-zinc-900 tracking-tight flex items-center gap-2">
+                      <span>Customer Reviews</span>
+                      <span className="text-xs font-bold text-zinc-500 bg-zinc-100 px-2.5 py-0.5 rounded-full">
+                        {totalReviewsCount} {totalReviewsCount === 1 ? 'review' : 'reviews'}
+                      </span>
+                    </h3>
+                    <p className="text-xs text-zinc-500">
+                      Ratings and real feedback from verified Butterfly Smart TV owners
+                    </p>
                   </div>
+
                   <button
+                    id="btn-write-review"
                     type="button"
-                    onClick={() => alert('Review submission is available after order delivery.')}
-                    className="py-2.5 px-4 rounded-xl bg-zinc-900 text-white text-xs font-bold hover:bg-zinc-800 transition-colors"
+                    onClick={handleOpenReviewModal}
+                    className="inline-flex items-center justify-center gap-2 py-2.5 px-5 rounded-xl bg-zinc-900 hover:bg-[#E50914] text-white text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95 self-start sm:self-auto"
                   >
-                    Write a Review
+                    <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                    <span>Write a Review</span>
                   </button>
                 </div>
 
-                <div className="space-y-4 text-xs">
-                  <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-100">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-zinc-900">Rahul Sharma</span>
-                        <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-semibold">Verified Buyer</span>
-                      </div>
-                      <span className="text-zinc-400">3 days ago</span>
-                    </div>
-                    <p className="text-zinc-600">
-                      Picture quality on this TV is breathtaking! Colors are vibrant, blacks are deep, and sound fills my whole living room without needing a separate soundbar. Free installation happened on time.
-                    </p>
+                {reviewsLoading ? (
+                  <div className="py-14 text-center space-y-3">
+                    <Loader2 className="w-7 h-7 animate-spin text-[#E50914] mx-auto" />
+                    <p className="text-xs font-semibold text-zinc-500">Loading verified customer reviews...</p>
                   </div>
+                ) : totalReviewsCount === 0 ? (
+                  <div className="text-center py-14 px-6 bg-zinc-50 rounded-3xl border border-zinc-200/80 max-w-md mx-auto">
+                    <div className="w-14 h-14 rounded-2xl bg-red-50 text-[#E50914] flex items-center justify-center mx-auto mb-4 border border-red-100">
+                      <MessageSquare className="w-7 h-7" />
+                    </div>
+                    <h4 className="text-base font-extrabold text-zinc-900 mb-1">
+                      No reviews yet for {product.name}
+                    </h4>
+                    <p className="text-xs text-zinc-500 mb-6 leading-relaxed">
+                      Be the first verified customer to share your thoughts and help others make the best choice.
+                    </p>
+                    <button
+                      id="btn-write-first-review"
+                      type="button"
+                      onClick={handleOpenReviewModal}
+                      className="inline-flex items-center gap-2 py-2.5 px-6 rounded-xl bg-[#E50914] hover:bg-[#c70811] text-white text-xs font-bold transition-all shadow-md cursor-pointer active:scale-95"
+                    >
+                      <Star className="w-3.5 h-3.5 fill-white" />
+                      <span>Write the First Review</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-8">
+                    {/* Overall Score & Distribution Breakdown */}
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-6 p-6 rounded-3xl bg-zinc-50 border border-zinc-200/80 items-center">
+                      {/* Left: Overall Score */}
+                      <div className="md:col-span-4 text-center md:text-left md:border-r md:border-zinc-200/80 md:pr-6 space-y-2">
+                        <span className="text-4xl sm:text-5xl font-black text-zinc-900 tracking-tight">
+                          {dynamicAverageRating.toFixed(1)}
+                        </span>
+                        <div className="flex items-center justify-center md:justify-start gap-1 text-amber-400">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              className={`w-5 h-5 ${
+                                star <= Math.round(dynamicAverageRating)
+                                  ? 'fill-amber-400 text-amber-400'
+                                  : 'text-zinc-300'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <p className="text-xs text-zinc-500 font-medium">
+                          Based on {totalReviewsCount} verified {totalReviewsCount === 1 ? 'rating' : 'ratings'}
+                        </p>
+                      </div>
 
-                  <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-100">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-zinc-900">Pooja Venkatesh</span>
-                        <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-semibold">Verified Buyer</span>
+                      {/* Right: Distribution Bars */}
+                      <div className="md:col-span-8 space-y-2">
+                        {ratingDistribution.map((dist) => (
+                          <div key={dist.star} className="flex items-center gap-3 text-xs">
+                            <span className="w-12 font-bold text-zinc-600 flex items-center gap-1">
+                              <span>{dist.star}</span>
+                              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                            </span>
+                            <div className="flex-1 h-2 rounded-full bg-zinc-200 overflow-hidden">
+                              <div
+                                className="h-full bg-amber-400 rounded-full transition-all duration-500"
+                                style={{ width: `${dist.percentage}%` }}
+                              />
+                            </div>
+                            <span className="w-10 text-right font-medium text-zinc-400 text-[11px]">
+                              {dist.count}
+                            </span>
+                          </div>
+                        ))}
                       </div>
-                      <span className="text-zinc-400">1 week ago</span>
                     </div>
-                    <p className="text-zinc-600">
-                      Hands down the best value TV in this price bracket. Android TV runs butter-smooth, Netflix 4K streaming looks amazing, and the slim bezel looks very premium on the wall.
-                    </p>
+
+                    {/* Customer Review Cards List */}
+                    <div className="space-y-4">
+                      {reviews.map((rev) => (
+                        <div
+                          key={rev.id}
+                          className="p-5 rounded-2xl bg-white border border-zinc-200/80 shadow-xs hover:border-zinc-300 transition-all space-y-3"
+                        >
+                          <div className="flex items-center justify-between flex-wrap gap-2">
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-full bg-red-50 text-[#E50914] font-black text-xs flex items-center justify-center border border-red-100 uppercase">
+                                {rev.userName ? rev.userName.charAt(0) : 'U'}
+                              </div>
+                              <div>
+                                <h5 className="font-extrabold text-xs text-zinc-900 leading-tight">
+                                  {rev.userName}
+                                </h5>
+                                <span className="inline-flex items-center gap-1 text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full mt-0.5 border border-emerald-100">
+                                  <Check className="w-2.5 h-2.5 stroke-[3]" />
+                                  <span>Verified Buyer</span>
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <div className="flex text-amber-400">
+                                {[1, 2, 3, 4, 5].map((st) => (
+                                  <Star
+                                    key={st}
+                                    className={`w-3.5 h-3.5 ${
+                                      st <= rev.rating ? 'fill-amber-400 text-amber-400' : 'text-zinc-200'
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                              <span className="text-zinc-400 text-[11px]">
+                                {rev.createdAt
+                                  ? new Date(rev.createdAt).toLocaleDateString('en-IN', {
+                                      day: 'numeric',
+                                      month: 'short',
+                                      year: 'numeric',
+                                    })
+                                  : 'Recent'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {rev.title && (
+                            <h6 className="font-bold text-zinc-900 text-xs sm:text-sm">
+                              {rev.title}
+                            </h6>
+                          )}
+
+                          <p className="text-xs text-zinc-600 leading-relaxed">
+                            {rev.comment}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
           </div>
         </div>
       </section>
+
+      {/* ================= MODAL: CUSTOMER LOGIN REQUIRED ================= */}
+      {showLoginRequiredModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full border border-zinc-200 shadow-2xl relative animate-in zoom-in-95 text-center">
+            <button
+              onClick={() => setShowLoginRequiredModal(false)}
+              className="absolute top-5 right-5 p-2 rounded-full text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="w-14 h-14 rounded-2xl bg-red-50 text-[#E50914] flex items-center justify-center mx-auto mb-4 border border-red-100">
+              <Lock className="w-7 h-7" />
+            </div>
+
+            <div className="flex items-center justify-center gap-2 mb-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#E50914]" />
+              <span className="text-[11px] font-bold text-[#E50914] uppercase tracking-wider">
+                Customer Authentication
+              </span>
+            </div>
+
+            <h3 className="text-xl font-extrabold text-zinc-900 mb-2">
+              Sign In to Write a Review
+            </h3>
+
+            <p className="text-xs text-zinc-600 leading-relaxed mb-6 max-w-sm mx-auto">
+              To guarantee that all reviews come from real customers, you must be logged into your Butterfly customer account to share your verified review.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center gap-3 justify-center">
+              <button
+                type="button"
+                onClick={() => setShowLoginRequiredModal(false)}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-zinc-200 text-zinc-600 hover:bg-zinc-100 text-xs font-semibold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <Link
+                id="btn-login-to-review"
+                href={`/login?redirect=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname : `/products/${product.id}`)}`}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-[#E50914] hover:bg-[#c70811] text-white text-xs font-bold shadow-md cursor-pointer transition-transform active:scale-95"
+              >
+                <span>Customer Sign In</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: SUBMIT CUSTOMER REVIEW ================= */}
+      {showReviewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full border border-zinc-200 shadow-2xl relative animate-in zoom-in-95">
+            <button
+              onClick={() => setShowReviewModal(false)}
+              className="absolute top-5 right-5 p-2 rounded-full text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-2 h-2 rounded-full bg-[#E50914]" />
+              <span className="text-[11px] font-bold text-[#E50914] uppercase tracking-wider">
+                Verified Customer Feedback
+              </span>
+            </div>
+
+            <h3 className="text-xl font-extrabold text-zinc-900 mb-1">
+              Review {product.name}
+            </h3>
+            <p className="text-xs text-zinc-500 mb-4">
+              Model: <span className="font-mono font-bold text-zinc-700">{product.model}</span> • Posting as{' '}
+              <span className="font-semibold text-zinc-800">{currentUser?.name || currentUser?.email || 'Verified Customer'}</span>
+            </p>
+
+            {reviewSuccessMsg && (
+              <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center gap-2 text-xs font-semibold">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{reviewSuccessMsg}</span>
+              </div>
+            )}
+
+            {reviewErrorMsg && (
+              <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-[#E50914] flex items-center gap-2 text-xs font-semibold">
+                <AlertCircle className="w-4 h-4 text-[#E50914] shrink-0" />
+                <span>{reviewErrorMsg}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmitReview} className="space-y-4 text-xs">
+              {/* Star Rating Selector */}
+              <div>
+                <label className="block font-bold text-zinc-800 mb-1.5">Overall Rating *</label>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => {
+                      const isHighlighted = (reviewHoverRating || reviewRating) >= star;
+                      return (
+                        <button
+                          key={star}
+                          type="button"
+                          onMouseEnter={() => setReviewHoverRating(star)}
+                          onMouseLeave={() => setReviewHoverRating(0)}
+                          onClick={() => setReviewRating(star)}
+                          className="p-1 rounded-md hover:scale-110 transition-transform cursor-pointer"
+                        >
+                          <Star
+                            className={`w-6 h-6 transition-colors ${
+                              isHighlighted ? 'fill-amber-400 text-amber-400' : 'text-zinc-300'
+                            }`}
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <span className="text-xs font-bold text-zinc-700 ml-2">
+                    {reviewRating === 5 && '★★★★★ Outstanding'}
+                    {reviewRating === 4 && '★★★★ Very Good'}
+                    {reviewRating === 3 && '★★★ Good'}
+                    {reviewRating === 2 && '★★ Fair'}
+                    {reviewRating === 1 && '★ Needs Improvement'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Review Title */}
+              <div>
+                <label className="block font-bold text-zinc-800 mb-1">Review Headline (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Cinema sound and crisp 4K display!"
+                  value={reviewTitle}
+                  onChange={(e) => setReviewTitle(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#E50914]/20 focus:border-[#E50914]"
+                />
+              </div>
+
+              {/* Review Comment */}
+              <div>
+                <label className="block font-bold text-zinc-800 mb-1">Your Detailed Experience *</label>
+                <textarea
+                  rows={4}
+                  required
+                  placeholder="Tell us about the colors, black levels, audio clarity, app experience, and doorstep installation..."
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#E50914]/20 focus:border-[#E50914] leading-relaxed"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-3 border-t border-zinc-100">
+                <button
+                  type="button"
+                  onClick={() => setShowReviewModal(false)}
+                  className="px-4 py-2 rounded-xl border border-zinc-200 text-zinc-600 hover:bg-zinc-100 font-semibold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingReview}
+                  className="px-6 py-2 rounded-xl bg-[#E50914] hover:bg-[#c70811] text-white font-bold cursor-pointer shadow-md transition-all active:scale-95 disabled:opacity-50"
+                >
+                  {isSubmittingReview ? 'Submitting...' : 'Submit Verified Review'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Similar Products Section (Explicit User Request) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 sm:pt-20">

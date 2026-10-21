@@ -10,9 +10,14 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  Res,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { ProductsService } from './products.service.js';
-import { CreateProductDto, UpdateProductDto } from './dto/product.dto.js';
+import { CreateProductDto, UpdateProductDto, CreateReviewDto } from './dto/product.dto.js';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
 
 @Controller('products')
 export class ProductsController {
@@ -25,6 +30,33 @@ export class ProductsController {
     @Query('search') search?: string,
   ) {
     return this.productsService.findAll({ size, resolution, search });
+  }
+
+  @Get(':id/image')
+  async getImage(@Param('id') id: string, @Res() res: Response) {
+    const { buffer, mimeType } = await this.productsService.getImageBuffer(id);
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
+    res.send(buffer);
+  }
+
+  @Get(':id/reviews')
+  async getReviews(@Param('id') id: string) {
+    return this.productsService.getReviews(id);
+  }
+
+  @Post(':id/reviews')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.CREATED)
+  async addReview(
+    @Param('id') id: string,
+    @Req() req: any,
+    @Body() dto: CreateReviewDto,
+  ) {
+    const userId = req.user?.sub || req.user?.id || null;
+    const userName = req.user?.name || req.user?.email || 'Verified Customer';
+    const userEmail = req.user?.email || null;
+    return this.productsService.addReview(id, userId, userName, userEmail, dto);
   }
 
   @Get(':id')
@@ -53,3 +85,4 @@ export class ProductsController {
     return this.productsService.remove(id);
   }
 }
+

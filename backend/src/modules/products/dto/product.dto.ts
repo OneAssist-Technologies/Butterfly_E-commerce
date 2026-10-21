@@ -92,6 +92,17 @@ export class CreateProductDto {
   @IsArray()
   @IsOptional()
   features?: string[];
+
+  @IsArray()
+  @IsOptional()
+  keyFeatures?: string[];
+
+  @IsOptional()
+  technicalSpecs?: any;
+
+  @IsString()
+  @IsOptional()
+  warrantyInstallation?: string;
 }
 
 export class UpdateProductDto {
@@ -138,4 +149,30 @@ export class UpdateProductDto {
   @IsString()
   @IsOptional()
   smartOS?: string;
+
+  @IsArray()
+  @IsOptional()
+  keyFeatures?: string[];
+
+  @IsOptional()
+  technicalSpecs?: any;
+
+  @IsString()
+  @IsOptional()
+  warrantyInstallation?: string;
 }
+
+export class CreateReviewDto {
+  @IsNumber()
+  @IsNotEmpty()
+  rating!: number;
+
+  @IsString()
+  @IsOptional()
+  title?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  comment!: string;
+}
+

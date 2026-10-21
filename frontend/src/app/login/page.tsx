@@ -61,9 +61,12 @@ export default function LoginPage() {
         localStorage.setItem('butterfly_user_token', data.token);
         localStorage.setItem('butterfly_user', JSON.stringify(data.user));
         setIsLoading(false);
-        setSuccessMsg(`Welcome, ${data.user.name || 'Member'}! Redirecting you to home...`);
+        const redirectParam = typeof window !== 'undefined'
+          ? new URLSearchParams(window.location.search).get('redirect')
+          : null;
+        setSuccessMsg(`Welcome, ${data.user.name || 'Member'}! Redirecting...`);
         setTimeout(() => {
-          router.push('/');
+          router.push(redirectParam || '/');
         }, 700);
       }
     } catch (err: any) {

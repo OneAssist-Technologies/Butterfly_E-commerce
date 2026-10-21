@@ -13,6 +13,7 @@ interface CartContextType {
   openCart: () => void;
   closeCart: () => void;
   cartCount: number;
+  isHydrated: boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -50,7 +51,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [cartItems, isHydrated]);
 
   const addToCart = (product: TVProduct) => {
-    setCartItems((prev) => [...prev, product]);
+    setCartItems((prev) => {
+      const existingIdx = prev.findIndex((i) => i.id === product.id);
+      if (existingIdx > -1) {
+        const updated = [...prev];
+        const currentQty = (updated[existingIdx] as any).quantity || 1;
+        updated[existingIdx] = { ...updated[existingIdx], quantity: currentQty + 1 } as any;
+        return updated;
+      }
+      return [...prev, { ...product, quantity: 1 } as any];
+    });
   };
 
   const removeFromCart = (index: number) => {
@@ -65,7 +75,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setCartItems((prev) => {
       const updated = [...prev];
       if (updated[index]) {
-        (updated[index] as any).quantity = qty;
+        updated[index] = { ...updated[index], quantity: qty } as any;
       }
       return updated;
     });
@@ -78,6 +88,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const openCart = () => setIsCartOpen(true);
   const closeCart = () => setIsCartOpen(false);
 
+  const totalItemCount = cartItems.reduce(
+    (acc, item) => acc + ((item as any).quantity || 1),
+    0
+  );
+
   return (
     <CartContext.Provider
       value={{
@@ -89,7 +104,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         isCartOpen,
         openCart,
         closeCart,
-        cartCount: cartItems.length,
+        cartCount: totalItemCount,
+        isHydrated,
       }}
     >
       {children}

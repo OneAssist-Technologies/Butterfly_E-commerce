@@ -119,6 +119,7 @@ export function EnquiryModal({ product, onClose }: EnquiryModalProps) {
                   fill
                   sizes="80px"
                   className="object-contain"
+                  unoptimized={true}
                 />
               </div>
               <div>

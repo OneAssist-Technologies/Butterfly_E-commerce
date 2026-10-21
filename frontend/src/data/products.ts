@@ -13,6 +13,16 @@ export interface CatalogProduct extends TVProduct {
   displayTech?: string;
   smartOS?: string;
   features?: string[];
+  keyFeatures?: string[];
+  technicalSpecs?: {
+    refreshRate?: string;
+    panelType?: string;
+    hdmiPorts?: string;
+    usbPorts?: string;
+    wireless?: string;
+    [key: string]: any;
+  };
+  warrantyInstallation?: string;
   images?: string[];
 }
 

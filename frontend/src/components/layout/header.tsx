@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Search, User, ShoppingBag, ChevronDown, Menu, X } from 'lucide-react';
 import { useCart } from '@/providers';
 
+import { ProductsMegaMenu, MEGA_MENU_ITEMS } from './products-mega-menu';
 import { usePathname, useRouter } from 'next/navigation';
 
 interface HeaderProps {
@@ -24,6 +25,35 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Close dropdown on route change
+  React.useEffect(() => {
+    setActiveDropdown(null);
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
+  const handleMouseEnterProducts = () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setActiveDropdown('products');
+  };
+
+  const handleMouseLeaveProducts = () => {
+    timeoutRef.current = setTimeout(() => {
+      setActiveDropdown(null);
+    }, 200);
+  };
+
+  const handleMouseEnterSupport = () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setActiveDropdown('support');
+  };
+
+  const handleMouseLeaveSupport = () => {
+    timeoutRef.current = setTimeout(() => {
+      setActiveDropdown(null);
+    }, 200);
+  };
 
   if (pathname === '/login' || pathname === '/signup' || pathname?.startsWith('/admin')) {
     return null;
@@ -42,7 +72,7 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-zinc-200/80 shadow-xs">
+    <header className="sticky top-0 z-50 bg-white border-b border-zinc-200/80 shadow-xs relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
         
         {/* Official Butterfly Brand Logo */}
@@ -65,7 +95,7 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
         </Link>
 
         {/* Desktop Navigation Links */}
-        <nav className="hidden lg:flex items-center gap-8">
+        <nav className="hidden lg:flex items-center gap-8 h-full">
           <Link
             href="/"
             className={`text-sm font-semibold relative py-2 transition-colors ${
@@ -77,18 +107,18 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
             Home
           </Link>
 
-          {/* Products Nav & Dropdown */}
+          {/* Products Nav with Mega Menu Trigger */}
           <div
-            className="relative"
-            onMouseEnter={() => setActiveDropdown('products')}
-            onMouseLeave={() => setActiveDropdown(null)}
+            className="h-full flex items-center relative"
+            onMouseEnter={handleMouseEnterProducts}
+            onMouseLeave={handleMouseLeaveProducts}
           >
             <div className="flex items-center">
               <Link
                 href="/products"
                 onClick={() => setActiveDropdown(null)}
                 className={`flex items-center gap-1.5 text-sm font-semibold transition-colors py-2 cursor-pointer ${
-                  isProductsActive
+                  isProductsActive || activeDropdown === 'products'
                     ? 'text-[#E50914] relative after:content-[\'\'] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#E50914]'
                     : 'text-zinc-700 hover:text-[#E50914]'
                 }`}
@@ -97,7 +127,7 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
               </Link>
               <button
                 type="button"
-                aria-label="Toggle Products Dropdown"
+                aria-label="Toggle Products Mega Menu"
                 onClick={(e) => {
                   e.stopPropagation();
                   setActiveDropdown(activeDropdown === 'products' ? null : 'products');
@@ -109,35 +139,6 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
                 }`} />
               </button>
             </div>
-
-            {activeDropdown === 'products' && (
-              <div className="absolute top-full left-0 w-64 bg-white border border-zinc-200 rounded-xl shadow-xl py-2 animate-in fade-in slide-in-from-top-2 duration-200 z-50">
-                <Link
-                  href="/products?filter=all"
-                  onClick={() => setActiveDropdown(null)}
-                  className="block px-4 py-2.5 text-sm text-zinc-800 hover:bg-zinc-50 hover:text-[#E50914] transition-colors"
-                >
-                  <span className="font-semibold block">All Smart TVs</span>
-                  <span className="text-xs text-zinc-500">Explore complete TV line-up</span>
-                </Link>
-                <Link
-                  href="/products?resolution=4K%20UHD"
-                  onClick={() => setActiveDropdown(null)}
-                  className="block px-4 py-2.5 text-sm text-zinc-800 hover:bg-zinc-50 hover:text-[#E50914] transition-colors"
-                >
-                  <span className="font-semibold block">4K UHD Smart Series</span>
-                  <span className="text-xs text-zinc-500">Ultra-sharp Dolby sound</span>
-                </Link>
-                <Link
-                  href="/products?resolution=Full%20HD"
-                  onClick={() => setActiveDropdown(null)}
-                  className="block px-4 py-2.5 text-sm text-zinc-800 hover:bg-zinc-50 hover:text-[#E50914] transition-colors"
-                >
-                  <span className="font-semibold block">Full HD &amp; HD Ready</span>
-                  <span className="text-xs text-zinc-500">Budget-friendly smart models</span>
-                </Link>
-              </div>
-            )}
           </div>
 
           <Link
@@ -149,9 +150,9 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
 
           {/* Support Dropdown */}
           <div
-            className="relative"
-            onMouseEnter={() => setActiveDropdown('support')}
-            onMouseLeave={() => setActiveDropdown(null)}
+            className="h-full flex items-center relative"
+            onMouseEnter={handleMouseEnterSupport}
+            onMouseLeave={handleMouseLeaveSupport}
           >
             <button
               type="button"
@@ -165,7 +166,11 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
             </button>
 
             {activeDropdown === 'support' && (
-              <div className="absolute top-full left-0 w-56 bg-white border border-zinc-200 rounded-xl shadow-xl py-2 animate-in fade-in slide-in-from-top-2 duration-200 z-50">
+              <div
+                onMouseEnter={handleMouseEnterSupport}
+                onMouseLeave={handleMouseLeaveSupport}
+                className="absolute top-full left-0 w-56 bg-white border border-zinc-200 rounded-xl shadow-xl py-2 animate-in fade-in slide-in-from-top-2 duration-200 z-50"
+              >
                 <Link
                   href="/#trust-bar"
                   onClick={() => setActiveDropdown(null)}
@@ -236,9 +241,11 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
             className="relative p-2 rounded-full text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 transition-colors cursor-pointer"
           >
             <ShoppingBag className="w-5 h-5" />
-            <span className="absolute top-0.5 right-0.5 bg-[#E50914] text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center animate-pulse">
-              {activeCount}
-            </span>
+            {activeCount > 0 && (
+              <span className="absolute top-0.5 right-0.5 bg-[#E50914] text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center animate-pulse">
+                {activeCount}
+              </span>
+            )}
           </Link>
 
           {/* Mobile Menu Button */}
@@ -252,6 +259,14 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
         </div>
       </div>
 
+      {/* Full-width Products Mega Menu */}
+      <ProductsMegaMenu
+        isOpen={activeDropdown === 'products'}
+        onClose={() => setActiveDropdown(null)}
+        onMouseEnter={handleMouseEnterProducts}
+        onMouseLeave={handleMouseLeaveProducts}
+      />
+
       {/* Mobile Menu Dropdown */}
       {mobileMenuOpen && (
         <div className="lg:hidden bg-white border-b border-zinc-200 px-6 py-4 space-y-3">
@@ -264,15 +279,32 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
           >
             Home
           </Link>
-          <Link
-            href="/products"
-            onClick={() => setMobileMenuOpen(false)}
-            className={`block py-2 text-base font-semibold ${
-              isProductsActive ? 'text-[#E50914]' : 'text-zinc-800 hover:text-[#E50914]'
-            }`}
-          >
-            Products
-          </Link>
+
+          <div>
+            <Link
+              href="/products"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`block py-2 text-base font-semibold ${
+                isProductsActive ? 'text-[#E50914]' : 'text-zinc-800 hover:text-[#E50914]'
+              }`}
+            >
+              Products / TV Series
+            </Link>
+            {/* Quick TV series grid in mobile */}
+            <div className="grid grid-cols-2 gap-2 pt-1 pb-2">
+              {MEGA_MENU_ITEMS.map((item) => (
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2 rounded-lg text-xs font-bold border transition-colors bg-zinc-50 text-zinc-800 border-zinc-200 hover:bg-red-50 hover:text-[#E50914] hover:border-[#E50914]/30"
+                >
+                  {item.title}
+                </Link>
+              ))}
+            </div>
+          </div>
+
           <Link
             href="/#about-section"
             onClick={() => setMobileMenuOpen(false)}
