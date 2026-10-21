@@ -16,7 +16,7 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { ProductsService } from './products.service.js';
-import { CreateProductDto, UpdateProductDto, CreateReviewDto } from './dto/product.dto.js';
+import { CreateProductDto, CreateReviewDto, UpdateProductDto } from './dto/product.dto.js';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
 
 @Controller('products')
@@ -27,9 +27,21 @@ export class ProductsController {
   async getAll(
     @Query('size') size?: string,
     @Query('resolution') resolution?: string,
+    @Query('smart') smart?: string,
+    @Query('minPrice') minPrice?: string,
+    @Query('maxPrice') maxPrice?: string,
     @Query('search') search?: string,
+    @Query('sort') sort?: string,
   ) {
-    return this.productsService.findAll({ size, resolution, search });
+    return this.productsService.findAll({
+      size,
+      resolution,
+      smart,
+      minPrice,
+      maxPrice,
+      search,
+      sort,
+    });
   }
 
   @Get(':id/image')

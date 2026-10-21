@@ -47,22 +47,107 @@ export class ProductsService implements OnModuleInit {
   async findAll(query?: {
     size?: string;
     resolution?: string;
+    smart?: string;
+    minPrice?: string | number;
+    maxPrice?: string | number;
     search?: string;
+    sort?: string;
   }) {
-    const where: Record<string, unknown> = {};
+    const where: any = {};
+    const andConditions: any[] = [];
 
+    // Filter by screen size(s) - e.g. "55"" or "43",55""
     if (query?.size && query.size !== 'All') {
-      where.size = query.size;
+      const sizes = query.size.split(',').map((s) => s.trim()).filter(Boolean);
+      if (sizes.length === 1) {
+        andConditions.push({
+          OR: [
+            { size: sizes[0] },
+            { screenSizeCategory: sizes[0] },
+          ],
+        });
+      } else if (sizes.length > 1) {
+        andConditions.push({
+          OR: [
+            { size: { in: sizes } },
+            { screenSizeCategory: { in: sizes } },
+          ],
+        });
+      }
     }
+
+    // Filter by resolution(s) - e.g. "4K UHD" or "Full HD"
     if (query?.resolution && query.resolution !== 'All') {
-      where.resolution = { contains: query.resolution, mode: 'insensitive' };
+      const resList = query.resolution.split(',').map((r) => r.trim()).filter(Boolean);
+      if (resList.length === 1) {
+        andConditions.push({
+          OR: [
+            { resolution: { contains: resList[0], mode: 'insensitive' } },
+            { resolutionCategory: { contains: resList[0], mode: 'insensitive' } },
+          ],
+        });
+      } else if (resList.length > 1) {
+        andConditions.push({
+          OR: resList.flatMap((r) => [
+            { resolution: { contains: r, mode: 'insensitive' } },
+            { resolutionCategory: { contains: r, mode: 'insensitive' } },
+          ]),
+        });
+      }
     }
-    if (query?.search) {
-      where.OR = [
-        { name: { contains: query.search, mode: 'insensitive' } },
-        { model: { contains: query.search, mode: 'insensitive' } },
-        { size: { contains: query.search, mode: 'insensitive' } },
-      ];
+
+    // Filter by smart OS/feature - e.g. "Google TV" or "Android TV"
+    if (query?.smart && query.smart !== 'All') {
+      const smartList = query.smart.split(',').map((s) => s.trim()).filter(Boolean);
+      const smartConditions = smartList.flatMap((s) => [
+        { smartCategory: { contains: s, mode: 'insensitive' } },
+        { smartOS: { contains: s, mode: 'insensitive' } },
+        { os: { contains: s, mode: 'insensitive' } },
+      ]);
+      andConditions.push({ OR: smartConditions });
+    }
+
+    // Filter by price bounds
+    if (query?.minPrice !== undefined || query?.maxPrice !== undefined) {
+      const priceFilter: any = {};
+      if (query.minPrice !== undefined && query.minPrice !== '') {
+        const min = parseInt(String(query.minPrice).replace(/[^0-9]/g, ''), 10);
+        if (!isNaN(min)) priceFilter.gte = min;
+      }
+      if (query.maxPrice !== undefined && query.maxPrice !== '') {
+        const max = parseInt(String(query.maxPrice).replace(/[^0-9]/g, ''), 10);
+        if (!isNaN(max)) priceFilter.lte = max;
+      }
+      if (Object.keys(priceFilter).length > 0) {
+        andConditions.push({ numericPrice: priceFilter });
+      }
+    }
+
+    // Search keyword in name, model, size, or resolution
+    if (query?.search && query.search.trim()) {
+      const s = query.search.trim();
+      andConditions.push({
+        OR: [
+          { name: { contains: s, mode: 'insensitive' } },
+          { model: { contains: s, mode: 'insensitive' } },
+          { size: { contains: s, mode: 'insensitive' } },
+          { resolution: { contains: s, mode: 'insensitive' } },
+        ],
+      });
+    }
+
+    if (andConditions.length > 0) {
+      where.AND = andConditions;
+    }
+
+    // Sorting order
+    let orderBy: any = [{ featuredRank: 'asc' }, { createdAt: 'desc' }];
+    if (query?.sort === 'price-asc') {
+      orderBy = [{ numericPrice: 'asc' }];
+    } else if (query?.sort === 'price-desc') {
+      orderBy = [{ numericPrice: 'desc' }];
+    } else if (query?.sort === 'name-asc') {
+      orderBy = [{ name: 'asc' }];
     }
 
     const products = await this.prisma.product.findMany({
@@ -96,10 +181,7 @@ export class ProductsService implements OnModuleInit {
         createdAt: true,
         updatedAt: true,
       },
-      orderBy: [
-        { featuredRank: 'asc' },
-        { createdAt: 'desc' },
-      ],
+      orderBy,
     });
 
     return products.map((p) => ({
