@@ -866,7 +866,7 @@ export default function AdminDashboardPage() {
   // Loading state
   if (isAuthenticated === null) {
     return (
-      <div className="h-screen w-screen bg-slate-50 flex items-center justify-center" suppressHydrationWarning>
+      <div className="h-screen w-screen bg-[#F8F9FA] flex items-center justify-center" suppressHydrationWarning>
         <div className="flex items-center gap-3 text-zinc-600 text-sm font-semibold">
           <div className="w-5 h-5 border-2 border-[#E50914] border-t-transparent rounded-full animate-spin" />
           <span>Loading Butterfly Admin Console...</span>
@@ -876,7 +876,7 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-[#F1F5F9] text-zinc-900 flex flex-col md:flex-row font-sans" suppressHydrationWarning>
+    <div className="h-screen w-screen overflow-hidden bg-[#F8F9FA] text-zinc-900 flex flex-col md:flex-row font-sans" suppressHydrationWarning>
       {/* ================= LIGHT THEME SIDEBAR ================= */}
       <aside className="w-full md:w-64 h-auto md:h-screen bg-white border-r border-slate-200/90 flex flex-col justify-between p-5 flex-shrink-0 shadow-sm z-20 select-none md:overflow-hidden text-slate-800">
         <div>
@@ -1053,7 +1053,7 @@ export default function AdminDashboardPage() {
       </aside>
 
       {/* ================= LIGHT THEME MAIN CONTENT (INDEPENDENT SCROLL) ================= */}
-      <main className="flex-1 h-full max-h-screen overflow-y-auto flex flex-col min-w-0 bg-[#F1F5F9]">
+      <main className="flex-1 h-full max-h-screen overflow-y-auto flex flex-col min-w-0 bg-[#F8F9FA]">
         {/* Top Header Bar */}
         <header className="bg-white border-b border-zinc-200 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-0 z-10 shadow-xs">
           <div>
