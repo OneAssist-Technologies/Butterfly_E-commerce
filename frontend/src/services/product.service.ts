@@ -41,4 +41,39 @@ export const productService = {
     const response = await apiClient.delete<{ id: string }>(`/products/${id}`);
     return response.data;
   },
+
+  async getReviews(id: string): Promise<{
+    productId: string;
+    productModel: string;
+    totalReviews: number;
+    averageRating: number;
+    reviews: Array<{
+      id: string;
+      rating: number;
+      title?: string;
+      comment: string;
+      userName: string;
+      userEmail?: string;
+      createdAt: string;
+    }>;
+  }> {
+    const response = await apiClient.get(`/products/${id}/reviews`);
+    return response.data;
+  },
+
+  async addReview(
+    id: string,
+    review: { rating: number; title?: string; comment: string },
+  ): Promise<any> {
+    const token =
+      typeof window !== 'undefined'
+        ? localStorage.getItem('butterfly_user_token') || localStorage.getItem('butterfly_admin_token')
+        : null;
+
+    const response = await apiClient.post(`/products/${id}/reviews`, review, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    return response.data;
+  },
 };
+

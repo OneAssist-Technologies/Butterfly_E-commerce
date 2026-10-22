@@ -89,13 +89,7 @@ butterfly_E-commerce/
 
 ## 3. Environment Variable Configuration
 
-### Frontend Setup
-Copy `frontend/.env.example` to `frontend/.env.local`:
-
-```bash
-# In frontend directory
-NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
-```
+All environment configuration is managed centrally in the **backend** (`backend/.env`). The frontend runs zero-config with built-in defaults (`http://localhost:3001/api/v1`).
 
 ### Backend Setup
 Copy `backend/.env.example` to `backend/.env`:
@@ -106,6 +100,10 @@ PORT=3001
 FRONTEND_URL=http://localhost:3000
 DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@localhost:5432/butterfly_ecommerce?schema=public"
 NODE_ENV=development
+JWT_SECRET=butterfly_super_secret_jwt_key_2026
+ADMIN_EMAIL=admin@buttterfly.com
+ADMIN_PASSWORD=Butterfly@2026
+ADMIN_NAME=Super Admin
 ```
 > Replace `YOUR_PASSWORD` with your local PostgreSQL password.
 

@@ -617,8 +617,31 @@ export const SEED_PRODUCTS = [
   },
 ];
 
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+function resolveImageBase64(imagePath: string): string {
+  if (!imagePath || !imagePath.startsWith('/')) return imagePath;
+  try {
+    const currentDir = path.dirname(fileURLToPath(import.meta.url));
+    const publicPath = path.resolve(currentDir, '../../../../frontend/public', imagePath.slice(1));
+    if (fs.existsSync(publicPath)) {
+      const buf = fs.readFileSync(publicPath);
+      const ext = path.extname(imagePath).toLowerCase().replace('.', '');
+      const mime = ext === 'png' ? 'image/png' : 'image/jpeg';
+      return `data:${mime};base64,${buf.toString('base64')}`;
+    }
+  } catch {
+    // Return original path if resolution fails
+  }
+  return imagePath;
+}
+
 export async function seedProductsIfEmpty(prisma: PrismaService) {
   for (const prod of SEED_PRODUCTS) {
+    const image = resolveImageBase64(prod.image);
+    const images = Array.isArray(prod.images) ? prod.images.map(resolveImageBase64) : [image];
     await prisma.product.upsert({
       where: { model: prod.model },
       update: {
@@ -626,8 +649,8 @@ export async function seedProductsIfEmpty(prisma: PrismaService) {
         size: prod.size,
         screenSizeCategory: prod.screenSizeCategory,
         badge: prod.badge,
-        image: prod.image,
-        images: prod.images,
+        image,
+        images,
         resolution: prod.resolution,
         resolutionCategory: prod.resolutionCategory,
         os: prod.os,
@@ -652,8 +675,8 @@ export async function seedProductsIfEmpty(prisma: PrismaService) {
         size: prod.size,
         screenSizeCategory: prod.screenSizeCategory,
         badge: prod.badge,
-        image: prod.image,
-        images: prod.images,
+        image,
+        images,
         resolution: prod.resolution,
         resolutionCategory: prod.resolutionCategory,
         os: prod.os,
@@ -674,3 +697,4 @@ export async function seedProductsIfEmpty(prisma: PrismaService) {
     });
   }
 }
+

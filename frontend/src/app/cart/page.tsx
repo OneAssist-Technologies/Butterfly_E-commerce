@@ -26,7 +26,7 @@ import { orderService } from '@/services/order.service';
 
 export default function CartPage() {
   const router = useRouter();
-  const { cartItems, removeFromCart, updateQuantity, clearCart, addToCart } = useCart();
+  const { cartItems, removeFromCart, updateQuantity, clearCart, addToCart, closeCart, isHydrated } = useCart();
 
   // Local state for quantities if item doesn't have internal qty
   const [quantities, setQuantities] = useState<{ [key: number]: number }>({});
@@ -42,6 +42,11 @@ export default function CartPage() {
   const [paymentMethod, setPaymentMethod] = useState<'UPI' | 'COD'>('UPI');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState<any>(null);
+
+  // Close slide-over drawer when viewing the full cart page
+  useEffect(() => {
+    closeCart();
+  }, [closeCart]);
 
   // Initialize customer information from session
   useEffect(() => {
@@ -67,7 +72,7 @@ export default function CartPage() {
   }, [cartItems]);
 
   const handleQtyChange = (index: number, delta: number) => {
-    const current = quantities[index] || 1;
+    const current = quantities[index] || (cartItems[index] as any)?.quantity || 1;
     const next = current + delta;
     if (next <= 0) {
       removeFromCart(index);
@@ -77,14 +82,24 @@ export default function CartPage() {
     }
   };
 
+  const getItemPrice = (item: any) => {
+    if (typeof item?.numericPrice === 'number' && !isNaN(item.numericPrice) && item.numericPrice > 0) {
+      return item.numericPrice;
+    }
+    const parsed = parseInt(String(item?.price || '').replace(/[^0-9]/g, ''));
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
   // Calculations
   const subtotal = cartItems.reduce((sum, item, idx) => {
     const qty = quantities[idx] || (item as any).quantity || 1;
-    return sum + (item.numericPrice || 0) * qty;
+    return sum + getItemPrice(item) * qty;
   }, 0);
 
   const discountAmount = appliedDiscount
-    ? appliedDiscount.amount || Math.round((subtotal * appliedDiscount.percent) / 100)
+    ? appliedDiscount.percent > 0
+      ? Math.round((subtotal * appliedDiscount.percent) / 100)
+      : appliedDiscount.amount
     : 0;
 
   const totalAmount = Math.max(0, subtotal - discountAmount);
@@ -219,6 +234,17 @@ export default function CartPage() {
     );
   }
 
+  if (!isHydrated) {
+    return (
+      <main className="min-h-screen bg-[#F8FAFC] flex items-center justify-center py-24">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-[#E50914]" />
+          <p className="text-xs font-semibold text-zinc-500">Loading your cart...</p>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-[#F8FAFC] text-zinc-900">
       {/* Top Banner / Breadcrumbs */}
@@ -319,6 +345,7 @@ export default function CartPage() {
                             fill
                             sizes="112px"
                             className="object-contain p-1"
+                            unoptimized={true}
                           />
                         </div>
 
@@ -690,6 +717,7 @@ export default function CartPage() {
                         fill
                         sizes="(max-width: 640px) 100vw, 33vw"
                         className="object-contain"
+                        unoptimized={true}
                       />
                     </div>
                     <div className="flex items-center justify-between gap-2 mb-1">

@@ -60,6 +60,7 @@ export function ProductCard({
             fill
             className="object-contain"
             sizes="(max-width: 768px) 100vw, 25vw"
+            unoptimized={true}
           />
         </div>
       </div>

@@ -38,6 +38,7 @@ model User {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   orders     Order[]
+  reviews    Review[]
 
   @@map("users")
 }
@@ -67,11 +68,32 @@ model Product {
   featuredRank       Int?
   inStock            Boolean     @default(true)
   features           String[]    @default([])
+  keyFeatures        String[]    @default([])
+  technicalSpecs     Json?
+  warrantyInstallation String?
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
   orderItems         OrderItem[]
+  reviews            Review[]
 
   @@map("products")
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  rating    Int      @default(5)
+  title     String?
+  comment   String
+  userName  String
+  userEmail String?
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("reviews")
 }
 
 model Order {

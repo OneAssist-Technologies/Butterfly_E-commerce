@@ -5,7 +5,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Search, User, ShoppingBag, ChevronDown, Menu, X, ArrowRight } from 'lucide-react';
 import { useCart } from '@/providers';
-
 import { usePathname, useRouter } from 'next/navigation';
 
 interface HeaderProps {
@@ -24,6 +23,35 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Close dropdown on route change
+  React.useEffect(() => {
+    setActiveDropdown(null);
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
+  const handleMouseEnterProducts = () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setActiveDropdown('products');
+  };
+
+  const handleMouseLeaveProducts = () => {
+    timeoutRef.current = setTimeout(() => {
+      setActiveDropdown(null);
+    }, 200);
+  };
+
+  const handleMouseEnterSupport = () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setActiveDropdown('support');
+  };
+
+  const handleMouseLeaveSupport = () => {
+    timeoutRef.current = setTimeout(() => {
+      setActiveDropdown(null);
+    }, 200);
+  };
 
   if (pathname === '/login' || pathname === '/signup' || pathname?.startsWith('/admin')) {
     return null;
@@ -71,7 +99,7 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
         </Link>
 
         {/* Desktop Navigation Links */}
-        <nav className="hidden lg:flex items-center gap-8">
+        <nav className="hidden lg:flex items-center gap-8 h-full">
           <Link
             href="/"
             className={`text-sm font-semibold relative py-2 transition-colors ${
@@ -86,7 +114,8 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
           {/* Products Nav Item */}
           <div
             className="relative py-2"
-            onMouseEnter={() => setActiveDropdown('products')}
+            onMouseEnter={handleMouseEnterProducts}
+            onMouseLeave={handleMouseLeaveProducts}
           >
             <div className="flex items-center">
               <Link
@@ -102,7 +131,7 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
               </Link>
               <button
                 type="button"
-                aria-label="Toggle Products Dropdown"
+                aria-label="Toggle Products Mega Menu"
                 onClick={(e) => {
                   e.stopPropagation();
                   setActiveDropdown(activeDropdown === 'products' ? null : 'products');
@@ -129,9 +158,9 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
 
           {/* Support Dropdown */}
           <div
-            className="relative"
-            onMouseEnter={() => setActiveDropdown('support')}
-            onMouseLeave={() => setActiveDropdown(null)}
+            className="h-full flex items-center relative"
+            onMouseEnter={handleMouseEnterSupport}
+            onMouseLeave={handleMouseLeaveSupport}
           >
             <div className="flex items-center">
               <Link
@@ -161,7 +190,11 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
             </div>
 
             {activeDropdown === 'support' && (
-              <div className="absolute top-full left-0 w-60 bg-white border border-zinc-200 rounded-xl shadow-xl py-2 animate-in fade-in slide-in-from-top-2 duration-200 z-50">
+              <div
+                onMouseEnter={handleMouseEnterSupport}
+                onMouseLeave={handleMouseLeaveSupport}
+                className="absolute top-full left-0 w-60 bg-white border border-zinc-200 rounded-xl shadow-xl py-2 animate-in fade-in slide-in-from-top-2 duration-200 z-50"
+              >
                 <Link
                   href="/support"
                   onClick={() => setActiveDropdown(null)}
@@ -239,9 +272,11 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
             className="relative p-2 rounded-full text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 transition-colors cursor-pointer"
           >
             <ShoppingBag className="w-5 h-5" />
-            <span className="absolute top-0.5 right-0.5 bg-[#E50914] text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center animate-pulse">
-              {activeCount}
-            </span>
+            {activeCount > 0 && (
+              <span className="absolute top-0.5 right-0.5 bg-[#E50914] text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center animate-pulse">
+                {activeCount}
+              </span>
+            )}
           </Link>
 
           {/* Mobile Menu Button */}
@@ -258,8 +293,8 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
       {/* Hisense-Style Full-Width TV Inches Mega Menu Drawer */}
       {activeDropdown === 'products' && (
         <div
-          onMouseEnter={() => setActiveDropdown('products')}
-          onMouseLeave={() => setActiveDropdown(null)}
+          onMouseEnter={handleMouseEnterProducts}
+          onMouseLeave={handleMouseLeaveProducts}
           className="hidden lg:block absolute top-full left-0 right-0 w-full bg-white border-b border-zinc-200 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-200 z-50"
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">

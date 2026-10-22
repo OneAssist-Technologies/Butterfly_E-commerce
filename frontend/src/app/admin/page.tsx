@@ -29,6 +29,8 @@ import {
   UploadCloud,
   Image as ImageIcon,
   Star,
+  LayoutGrid,
+  List,
 } from 'lucide-react';
 import { ALL_PRODUCTS, CatalogProduct } from '@/data/products';
 import { productService } from '@/services/product.service';
@@ -97,23 +99,34 @@ export default function AdminDashboardPage() {
   const [orderSearch, setOrderSearch] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState<'All' | 'Processing' | 'Dispatched' | 'Delivered'>('All');
 
+  // View Modes & Overview Cards Filters
+  const [overviewTvSize, setOverviewTvSize] = useState<string>('All');
+  const [overviewOrderView, setOverviewOrderView] = useState<'cards' | 'table'>('cards');
+  const [productsViewMode, setProductsViewMode] = useState<'cards' | 'table'>('cards');
+
   // Modals
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [showAddEnquiryModal, setShowAddEnquiryModal] = useState(false);
   const [showAddOrderModal, setShowAddOrderModal] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
 
-  // New item form states
   const [newProduct, setNewProduct] = useState({
     model: '',
     name: '',
     size: '43"',
     resolution: '4K UHD Resolution',
     price: '',
-    sound: '',
+    sound: '2 x 10W Stereo Speakers',
     displayTech: 'Ultra Bright D-LED',
     smartOS: 'Google TV',
     image: '',
+    keyFeaturesText: 'Cinema-Grade Visuals & Brilliant Contrast\nUltra-wide 178° viewing angle for everyone in the room\nHDR10 and HLG decoding for stunning highlights\nMEMC Motion Engine prevents blur during fast sports\nSmart Ecosystem with Google Play Store & 10,000+ apps\nVoice Remote with built-in Assistant microphone',
+    refreshRate: '60 Hz Native',
+    panelType: 'A+ Grade IPS Bezel-Less',
+    hdmiPorts: '3 x HDMI (ARC Supported)',
+    usbPorts: '2 x USB 2.0 High Speed',
+    wireless: 'Dual-band Wi-Fi & Bluetooth 5.0',
+    warrantyInstallation: 'Complimentary Doorstep Installation Process within 48 hours. 1 Year Comprehensive Brand Warranty + 1 Year Additional on Display Panel. Official Butterfly brand technician visits for free tabletop setup or standard wall-mounting.',
   });
 
   // Multi-image upload & drag-drop state for TV adding popup modal
@@ -541,6 +554,18 @@ export default function AdminDashboardPage() {
     e.preventDefault();
     const priceNum = parseInt(newProduct.price.replace(/[^0-9]/g, '')) || 24990;
     const newId = `tv-${newProduct.model.toLowerCase().replace(/[^a-z0-9]/g, '-') || Date.now()}`;
+    const keyFeaturesList = newProduct.keyFeaturesText
+      ? newProduct.keyFeaturesText.split('\n').map((s) => s.trim()).filter(Boolean)
+      : ['Cinema-Grade Visuals & Brilliant Contrast', 'Ultra-wide 178° viewing angle', 'HDR10 and HLG decoding'];
+
+    const technicalSpecs = {
+      refreshRate: newProduct.refreshRate || '60 Hz Native',
+      panelType: newProduct.panelType || 'A+ Grade IPS Bezel-Less',
+      hdmiPorts: newProduct.hdmiPorts || '3 x HDMI (ARC Supported)',
+      usbPorts: newProduct.usbPorts || '2 x USB 2.0 High Speed',
+      wireless: newProduct.wireless || 'Dual-band Wi-Fi & Bluetooth 5.0',
+    };
+
     const addedProduct: CatalogProduct = {
       id: newId,
       model: newProduct.model || `BF${newProduct.size.replace(/[^0-9]/g, '')}X1`,
@@ -562,7 +587,10 @@ export default function AdminDashboardPage() {
       image: uploadedImages.find((img) => img.isPrimary)?.url || uploadedImages[0]?.url || newProduct.image || '/products_hero.jpg',
       images: uploadedImages.length > 0 ? uploadedImages.map((img) => img.url) : [newProduct.image || '/products_hero.jpg'],
       inStock: true,
-      features: ['Dolby Audio', 'Google Assistant', 'Bezel-less Design', 'HDR10 Support'],
+      features: keyFeaturesList,
+      keyFeatures: keyFeaturesList,
+      technicalSpecs,
+      warrantyInstallation: newProduct.warrantyInstallation,
     };
 
     const updated = [addedProduct, ...productsList];
@@ -585,10 +613,17 @@ export default function AdminDashboardPage() {
       size: '43"',
       resolution: '4K UHD Resolution',
       price: '',
-      sound: '',
+      sound: '2 x 10W Stereo Speakers',
       displayTech: 'Ultra Bright D-LED',
       smartOS: 'Google TV',
       image: '',
+      keyFeaturesText: 'Cinema-Grade Visuals & Brilliant Contrast\nUltra-wide 178° viewing angle for everyone in the room\nHDR10 and HLG decoding for stunning highlights\nMEMC Motion Engine prevents blur during fast sports\nSmart Ecosystem with Google Play Store & 10,000+ apps\nVoice Remote with built-in Assistant microphone',
+      refreshRate: '60 Hz Native',
+      panelType: 'A+ Grade IPS Bezel-Less',
+      hdmiPorts: '3 x HDMI (ARC Supported)',
+      usbPorts: '2 x USB 2.0 High Speed',
+      wireless: 'Dual-band Wi-Fi & Bluetooth 5.0',
+      warrantyInstallation: 'Complimentary Doorstep Installation Process within 48 hours. 1 Year Comprehensive Brand Warranty + 1 Year Additional on Display Panel. Official Butterfly brand technician visits for free tabletop setup or standard wall-mounting.',
     });
     resetImageState();
   };
@@ -822,6 +857,12 @@ export default function AdminDashboardPage() {
     });
   }, [orders, orderSearch, orderStatusFilter]);
 
+  const overviewProducts = useMemo(() => {
+    return productsList
+      .filter((p) => overviewTvSize === 'All' || p.size === overviewTvSize)
+      .slice(0, 8);
+  }, [productsList, overviewTvSize]);
+
   // Loading state
   if (isAuthenticated === null) {
     return (
@@ -835,37 +876,37 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-[#F8FAFC] text-zinc-900 flex flex-col md:flex-row font-sans" suppressHydrationWarning>
-      {/* ================= LIGHT THEME SIDEBAR (STRICTLY UNSCROLLABLE & FIXED) ================= */}
-      <aside className="w-full md:w-64 h-auto md:h-screen bg-white border-r border-zinc-200 flex flex-col justify-between p-5 flex-shrink-0 shadow-sm z-20 select-none md:overflow-hidden">
+    <div className="h-screen w-screen overflow-hidden bg-[#F1F5F9] text-zinc-900 flex flex-col md:flex-row font-sans" suppressHydrationWarning>
+      {/* ================= LIGHT THEME SIDEBAR ================= */}
+      <aside className="w-full md:w-64 h-auto md:h-screen bg-white border-r border-slate-200/90 flex flex-col justify-between p-5 flex-shrink-0 shadow-sm z-20 select-none md:overflow-hidden text-slate-800">
         <div>
           {/* Brand Header */}
-          <div className="flex items-center justify-between pb-6 border-b border-zinc-100">
-            <Link href="/" className="flex items-center gap-2 group">
-              <div className="relative h-7 w-36">
+          <div className="flex items-center justify-between pb-6 border-b border-slate-100">
+            <Link href="/" className="flex items-center gap-2.5 group">
+              <div className="relative h-7 w-32">
                 <Image
                   src="/brand/butterfly-wordmark-red.png"
                   alt="Butterfly Logo"
                   fill
-                  sizes="144px"
-                  className="object-contain object-left"
+                  sizes="128px"
+                  className="object-contain object-left group-hover:opacity-90 transition-opacity"
                   priority
                 />
               </div>
-              <span className="px-2 py-0.5 rounded-md bg-red-50 text-[#E50914] font-black text-[10px] tracking-wider uppercase border border-red-200">
+              <span className="px-2 py-0.5 rounded-md bg-[#E50914] text-white font-black text-[9px] tracking-wider uppercase shadow-xs">
                 ADMIN
               </span>
             </Link>
           </div>
 
           {/* Navigation Items */}
-          <nav className="mt-6 space-y-1">
+          <nav className="mt-6 space-y-1.5">
             <button
               onClick={() => setActiveTab('overview')}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'overview'
-                  ? 'bg-red-50 text-[#E50914] border border-red-200 shadow-xs'
-                  : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
+                  ? 'bg-[#E50914] text-white shadow-sm shadow-red-500/20'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
               }`}
             >
               <div className="flex items-center gap-3">
@@ -876,27 +917,33 @@ export default function AdminDashboardPage() {
 
             <button
               onClick={() => setActiveTab('products')}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'products'
-                  ? 'bg-red-50 text-[#E50914] border border-red-200 shadow-xs'
-                  : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
+                  ? 'bg-[#E50914] text-white shadow-sm shadow-red-500/20'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
               }`}
             >
               <div className="flex items-center gap-3">
                 <Tv className="w-4 h-4" />
                 <span>TV Inventory</span>
               </div>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 text-zinc-700">
+              <span
+                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  activeTab === 'products'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-slate-100 text-slate-600 border border-slate-200'
+                }`}
+              >
                 {productsList.length}
               </span>
             </button>
 
             <button
               onClick={() => setActiveTab('enquiries')}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'enquiries'
-                  ? 'bg-red-50 text-[#E50914] border border-red-200 shadow-xs'
-                  : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
+                  ? 'bg-[#E50914] text-white shadow-sm shadow-red-500/20'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
               }`}
             >
               <div className="flex items-center gap-3">
@@ -904,11 +951,23 @@ export default function AdminDashboardPage() {
                 <span>Customer Enquiries</span>
               </div>
               {metrics.newEnquiriesCount > 0 ? (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#E50914] text-white">
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    activeTab === 'enquiries'
+                      ? 'bg-white text-[#E50914]'
+                      : 'bg-[#E50914] text-white'
+                  }`}
+                >
                   {metrics.newEnquiriesCount} New
                 </span>
               ) : (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 text-zinc-700">
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    activeTab === 'enquiries'
+                      ? 'bg-white/20 text-white'
+                      : 'bg-slate-100 text-slate-600 border border-slate-200'
+                  }`}
+                >
                   {enquiries.length}
                 </span>
               )}
@@ -916,34 +975,46 @@ export default function AdminDashboardPage() {
 
             <button
               onClick={() => setActiveTab('orders')}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'orders'
-                  ? 'bg-red-50 text-[#E50914] border border-red-200 shadow-xs'
-                  : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
+                  ? 'bg-[#E50914] text-white shadow-sm shadow-red-500/20'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
               }`}
             >
               <div className="flex items-center gap-3">
                 <ShoppingBag className="w-4 h-4" />
                 <span>Orders & Fulfillment</span>
               </div>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 text-zinc-700">
+              <span
+                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  activeTab === 'orders'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-slate-100 text-slate-600 border border-slate-200'
+                }`}
+              >
                 {orders.length}
               </span>
             </button>
 
             <button
               onClick={() => setActiveTab('users')}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'users'
-                  ? 'bg-red-50 text-[#E50914] border border-red-200 shadow-xs'
-                  : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
+                  ? 'bg-[#E50914] text-white shadow-sm shadow-red-500/20'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
               }`}
             >
               <div className="flex items-center gap-3">
                 <Users className="w-4 h-4" />
                 <span>User Accounts</span>
               </div>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 text-zinc-700">
+              <span
+                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  activeTab === 'users'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-slate-100 text-slate-600 border border-slate-200'
+                }`}
+              >
                 {teamUsers.length}
               </span>
             </button>
@@ -951,29 +1022,29 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Sidebar Footer with Active Admin Identity & Sign Out */}
-        <div className="pt-5 border-t border-zinc-100 space-y-3">
-          <div className="p-3 rounded-xl bg-zinc-50 border border-zinc-200/80">
+        <div className="pt-5 border-t border-slate-100 space-y-3">
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-[#E50914] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+              <div className="w-8 h-8 rounded-lg bg-red-100 text-[#E50914] flex items-center justify-center font-bold text-xs shadow-xs">
                 SA
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-zinc-900 truncate">{currentUser.name}</p>
-                <p className="text-[10px] text-zinc-500 truncate">{currentUser.email}</p>
+                <p className="text-xs font-bold text-slate-900 truncate">{currentUser.name}</p>
+                <p className="text-[10px] text-slate-500 truncate">{currentUser.email}</p>
               </div>
             </div>
-            <div className="mt-2 flex items-center justify-between text-[10px] text-zinc-500 pt-2 border-t border-zinc-200/60">
+            <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500 pt-2 border-t border-slate-200/60">
               <span className="font-semibold text-emerald-600 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 Online
               </span>
-              <span className="font-mono text-zinc-400">{currentUser.role}</span>
+              <span className="font-mono text-slate-500">{currentUser.role}</span>
             </div>
           </div>
 
           <button
             onClick={handleSignOut}
-            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold text-slate-600 hover:text-[#E50914] hover:bg-red-50 border border-slate-200 hover:border-red-200 transition-colors cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
             <span>Sign Out</span>
@@ -982,7 +1053,7 @@ export default function AdminDashboardPage() {
       </aside>
 
       {/* ================= LIGHT THEME MAIN CONTENT (INDEPENDENT SCROLL) ================= */}
-      <main className="flex-1 h-full max-h-screen overflow-y-auto flex flex-col min-w-0">
+      <main className="flex-1 h-full max-h-screen overflow-y-auto flex flex-col min-w-0 bg-[#F1F5F9]">
         {/* Top Header Bar */}
         <header className="bg-white border-b border-zinc-200 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-0 z-10 shadow-xs">
           <div>
@@ -1058,197 +1129,450 @@ export default function AdminDashboardPage() {
         <div className="p-6 lg:p-8 space-y-6">
           {/* ================= TAB 1: OVERVIEW ================= */}
           {activeTab === 'overview' && (
-            <div className="space-y-6 animate-in fade-in duration-150">
-              {/* Dynamic Stats Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Stat 1: Total Revenue */}
-                <div className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-xs hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
-                      Total Revenue
-                    </span>
-                    <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                      <DollarSign className="w-4 h-4" />
-                    </div>
+            <div className="space-y-8 lg:space-y-10 animate-in fade-in duration-150">
+              {/* ================= SECTION 1 CONTAINER: KEY PERFORMANCE INDICATORS ================= */}
+              <section className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 lg:p-7 space-y-5">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <h2 className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                      Live Executive KPIs
+                    </h2>
                   </div>
-                  <h3 className="text-2xl font-black text-zinc-900">
-                    ₹ {metrics.totalRevenue.toLocaleString('en-IN')}
-                  </h3>
-                  <div className="mt-2 flex items-center gap-1.5 text-xs text-emerald-600 font-semibold">
-                    <TrendingUp className="w-3.5 h-3.5" />
-                    <span>Calculated live from {orders.length} orders</span>
-                  </div>
+                  <span className="text-[11px] font-semibold text-slate-400">
+                    Real-time transaction & inventory counters
+                  </span>
                 </div>
 
-                {/* Stat 2: TV Models in Catalog */}
-                <div className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-xs hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
-                      TV Models
-                    </span>
-                    <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                      <Tv className="w-4 h-4" />
+                {/* Dynamic Stats Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                  {/* Stat 1: Total Revenue */}
+                  <div className="bg-slate-50/70 border border-slate-200/80 rounded-xl p-5 hover:bg-white hover:border-emerald-300 hover:shadow-md transition-all flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                          Total Revenue
+                        </span>
+                        <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100 shadow-xs">
+                          <DollarSign className="w-5 h-5" />
+                        </div>
+                      </div>
+                      <h3 className="text-2xl font-black text-slate-900">
+                        ₹ {metrics.totalRevenue.toLocaleString('en-IN')}
+                      </h3>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-slate-200/60 flex items-center gap-1.5 text-xs text-emerald-600 font-semibold">
+                      <TrendingUp className="w-3.5 h-3.5" />
+                      <span>Calculated live from {orders.length} orders</span>
                     </div>
                   </div>
-                  <h3 className="text-2xl font-black text-zinc-900">{productsList.length}</h3>
-                  <div className="mt-2 flex items-center justify-between text-xs text-zinc-500">
-                    <span className="text-emerald-600 font-semibold">{metrics.inStockCount} In Stock</span>
-                    <span className="text-amber-600 font-semibold">{metrics.outOfStockCount} Low/Out</span>
-                  </div>
-                </div>
 
-                {/* Stat 3: Customer Enquiries */}
-                <div className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-xs hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
-                      Customer Leads
-                    </span>
-                    <div className="w-9 h-9 rounded-xl bg-red-50 text-[#E50914] flex items-center justify-center">
-                      <Inbox className="w-4 h-4" />
+                  {/* Stat 2: TV Models in Catalog */}
+                  <div className="bg-slate-50/70 border border-slate-200/80 rounded-xl p-5 hover:bg-white hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                          TV Models
+                        </span>
+                        <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 shadow-xs">
+                          <Tv className="w-5 h-5" />
+                        </div>
+                      </div>
+                      <h3 className="text-2xl font-black text-slate-900">{productsList.length}</h3>
                     </div>
-                  </div>
-                  <h3 className="text-2xl font-black text-zinc-900">{enquiries.length}</h3>
-                  <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold">
-                    {metrics.newEnquiriesCount > 0 ? (
-                      <span className="text-[#E50914] flex items-center gap-1">
-                        <AlertCircle className="w-3.5 h-3.5" />
-                        {metrics.newEnquiriesCount} requiring follow-up
-                      </span>
-                    ) : (
+                    <div className="mt-3 pt-3 border-t border-slate-200/60 flex items-center justify-between text-xs font-semibold">
                       <span className="text-emerald-600 flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        All caught up ({enquiries.length} total)
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                        {metrics.inStockCount} In Stock
                       </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Stat 4: Active Orders */}
-                <div className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-xs hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
-                      Fulfillment
-                    </span>
-                    <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                      <ShoppingBag className="w-4 h-4" />
+                      <span className="text-amber-600">{metrics.outOfStockCount} Low/Out</span>
                     </div>
                   </div>
-                  <h3 className="text-2xl font-black text-zinc-900">{metrics.activeOrdersCount} Active</h3>
-                  <div className="mt-2 flex items-center gap-1.5 text-xs text-zinc-500">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>{metrics.deliveredOrdersCount} successfully delivered</span>
+
+                  {/* Stat 3: Customer Enquiries */}
+                  <div className="bg-slate-50/70 border border-slate-200/80 rounded-xl p-5 hover:bg-white hover:border-rose-300 hover:shadow-md transition-all flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                          Customer Leads
+                        </span>
+                        <div className="w-10 h-10 rounded-xl bg-red-50 text-[#E50914] flex items-center justify-center border border-red-100 shadow-xs">
+                          <Inbox className="w-5 h-5" />
+                        </div>
+                      </div>
+                      <h3 className="text-2xl font-black text-slate-900">{enquiries.length}</h3>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-slate-200/60 flex items-center gap-1.5 text-xs font-semibold">
+                      {metrics.newEnquiriesCount > 0 ? (
+                        <span className="text-[#E50914] flex items-center gap-1">
+                          <AlertCircle className="w-3.5 h-3.5" />
+                          {metrics.newEnquiriesCount} requiring follow-up
+                        </span>
+                      ) : (
+                        <span className="text-emerald-600 flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          All caught up ({enquiries.length} total)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Stat 4: Active Orders */}
+                  <div className="bg-slate-50/70 border border-slate-200/80 rounded-xl p-5 hover:bg-white hover:border-amber-300 hover:shadow-md transition-all flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                          Fulfillment
+                        </span>
+                        <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100 shadow-xs">
+                          <ShoppingBag className="w-5 h-5" />
+                        </div>
+                      </div>
+                      <h3 className="text-2xl font-black text-slate-900">{metrics.activeOrdersCount} Active</h3>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-slate-200/60 flex items-center gap-1.5 text-xs text-slate-500 font-semibold">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>{metrics.deliveredOrdersCount} successfully delivered</span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </section>
 
-              {/* Secondary Metrics & Quick Insights */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Catalog Value Card */}
-                <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-xs space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-bold text-zinc-900">Inventory Valuation</h4>
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-600">
-                      Live Dynamic
-                    </span>
+              {/* ================= SECTION 2 CONTAINER: WAREHOUSE VALUATION & CUSTOMER INQUIRIES ================= */}
+              <section className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 lg:p-7 space-y-5">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                    <h2 className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                      Warehouse Valuation & Inquiries
+                    </h2>
                   </div>
-                  <p className="text-2xl font-black text-zinc-900">
-                    ₹ {metrics.totalCatalogValue.toLocaleString('en-IN')}
-                  </p>
-                  <p className="text-xs text-zinc-500">
-                    Estimated warehouse retail value based on {productsList.length} models with average price of{' '}
-                    <strong className="text-zinc-800">₹ {metrics.avgPrice.toLocaleString('en-IN')}</strong>.
-                  </p>
-                  <div className="pt-2">
+                  <span className="text-[11px] font-semibold text-slate-400">
+                    Live retail inventory assets & customer sales pipeline
+                  </span>
+                </div>
+
+                {/* Secondary Metrics & Quick Insights */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Catalog Value Card */}
+                  <div className="bg-slate-50/70 border border-slate-200/80 rounded-xl p-5 hover:bg-white hover:border-slate-300 hover:shadow-sm transition-all space-y-4 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                          <h4 className="text-sm font-bold text-slate-900">Inventory Valuation</h4>
+                        </div>
+                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          Live Dynamic
+                        </span>
+                      </div>
+                      <p className="text-3xl font-black text-slate-900 mt-3">
+                        ₹ {metrics.totalCatalogValue.toLocaleString('en-IN')}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                        Estimated warehouse retail value based on <strong className="text-slate-800">{productsList.length} models</strong> with average price of{' '}
+                        <strong className="text-slate-800">₹ {metrics.avgPrice.toLocaleString('en-IN')}</strong>.
+                      </p>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-200/60 flex items-center justify-between">
+                      <button
+                        onClick={() => setActiveTab('products')}
+                        className="text-xs font-bold text-[#E50914] hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>Manage TV Catalog</span>
+                        <ArrowUpRight className="w-3.5 h-3.5" />
+                      </button>
+                      <span className="text-xs text-slate-400 font-medium">
+                        {metrics.inStockCount}/{productsList.length} Active
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Recent Inquiries Quick Feed */}
+                  <div className="lg:col-span-2 bg-slate-50/70 border border-slate-200/80 rounded-xl p-5 hover:bg-white hover:border-slate-300 hover:shadow-sm transition-all flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200/60">
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-900">Recent Customer Inquiries</h4>
+                          <p className="text-xs text-slate-500 mt-0.5">Direct leads captured from online inquiries</p>
+                        </div>
+                        {enquiries.length > 0 && (
+                          <button
+                            onClick={() => setActiveTab('enquiries')}
+                            className="text-xs font-bold text-[#E50914] hover:underline cursor-pointer flex items-center gap-1"
+                          >
+                            <span>View All ({enquiries.length})</span>
+                            <ArrowUpRight className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      {enquiries.length === 0 ? (
+                        <div className="py-8 text-center space-y-2">
+                          <p className="text-xs font-bold text-slate-800">No Customer Inquiries Recorded</p>
+                          <p className="text-[11px] text-slate-500">
+                            Inquiries submitted via product pages or walk-in queries will appear here in real time.
+                          </p>
+                          <button
+                            onClick={() => setShowAddEnquiryModal(true)}
+                            className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-800 text-xs font-bold hover:bg-slate-100 transition-colors cursor-pointer shadow-xs"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Record Enquiry</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                          {enquiries.slice(0, 3).map((enq) => (
+                            <div
+                              key={enq.id}
+                              className="p-3.5 rounded-xl border border-slate-200/80 bg-white hover:border-slate-300 hover:shadow-sm transition-all flex flex-col justify-between"
+                            >
+                              <div>
+                                <div className="flex items-start justify-between gap-2 mb-2">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <div className="w-7 h-7 rounded-full bg-red-100 text-[#E50914] font-bold text-xs flex items-center justify-center shrink-0">
+                                      {enq.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="text-xs font-bold text-slate-900 truncate">{enq.name}</p>
+                                      <p className="text-[10px] text-slate-500 flex items-center gap-1 truncate">
+                                        <MapPin className="w-2.5 h-2.5 shrink-0" />
+                                        <span>{enq.city}</span>
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <span
+                                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                                      enq.status === 'New'
+                                        ? 'bg-red-50 text-[#E50914] border border-red-200'
+                                        : enq.status === 'Contacted'
+                                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                    }`}
+                                  >
+                                    {enq.status}
+                                  </span>
+                                </div>
+                                <div className="bg-slate-50 rounded-lg p-2 border border-slate-100 mb-2">
+                                  <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Interested Model</p>
+                                  <p className="text-xs font-semibold text-slate-800 truncate">{enq.productModel}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1.5 border-t border-slate-100">
+                                <span className="font-mono">{enq.date}</span>
+                                <button
+                                  onClick={() => setActiveTab('enquiries')}
+                                  className="text-[#E50914] hover:underline font-bold text-[11px] cursor-pointer"
+                                >
+                                  Manage &rarr;
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* ================= SECTION 3 CONTAINER: TV CATALOG & LIVE STOCK SHOWCASE ================= */}
+              <section className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 lg:p-7 space-y-6">
+                {/* Section Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-5 border-b border-slate-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-[#E50914] border border-red-100 shadow-xs">
+                      <Tv className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                        TV Catalog & Live Stock Showcase
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                          {overviewProducts.length} Models
+                        </span>
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        Interactive model cards with real-time stock toggle, specs, and direct product preview
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Screen size filter pills */}
+                    <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                      {['All', '32"', '43"', '55"', '65"'].map((size) => (
+                        <button
+                          key={size}
+                          onClick={() => setOverviewTvSize(size)}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            overviewTvSize === size
+                              ? 'bg-white text-slate-900 shadow-xs'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
+
                     <button
                       onClick={() => setActiveTab('products')}
-                      className="text-xs font-bold text-[#E50914] hover:underline inline-flex items-center gap-1 cursor-pointer"
+                      className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors cursor-pointer border border-slate-200"
                     >
-                      <span>Manage TV Catalog</span>
+                      <span>All Catalog ({productsList.length})</span>
                       <ArrowUpRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
 
-                {/* Recent Inquiries Quick Feed */}
-                <div className="lg:col-span-2 bg-white border border-zinc-200 rounded-2xl p-6 shadow-xs">
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-sm font-bold text-zinc-900">Recent Customer Inquiries</h4>
-                    {enquiries.length > 0 && (
-                      <button
-                        onClick={() => setActiveTab('enquiries')}
-                        className="text-xs font-bold text-[#E50914] hover:underline cursor-pointer"
+                {/* TV Cards Grid inside Container */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                  {overviewProducts.map((tv) => {
+                    const isTvInStock = tv.inStock !== false;
+                    const slug = (tv as any).slug || tv.id || tv.model.toLowerCase();
+                    return (
+                      <div
+                        key={tv.id}
+                        className="group bg-slate-50/70 rounded-xl border border-slate-200/90 hover:bg-white hover:border-red-400 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between overflow-hidden"
                       >
-                        View All ({enquiries.length})
+                        {/* Top Thumbnail Container */}
+                        <div className="p-4 bg-gradient-to-b from-slate-100/70 to-slate-50/70 group-hover:from-slate-50 group-hover:to-white relative flex flex-col transition-colors">
+                          <div className="flex items-center justify-between gap-1 mb-2">
+                            <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold font-mono bg-slate-900 text-white tracking-wide shadow-xs">
+                              {tv.model}
+                            </span>
+                            <button
+                              onClick={() => handleToggleProductStock(tv.id)}
+                              title="Click to toggle stock"
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold cursor-pointer transition-colors shadow-2xs ${
+                                isTvInStock
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                                  : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100'
+                              }`}
+                            >
+                              <span className={`w-1.5 h-1.5 rounded-full ${isTvInStock ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                              <span>{isTvInStock ? 'In Stock' : 'Out of Stock'}</span>
+                            </button>
+                          </div>
+
+                          <div className="relative w-full h-40 my-1 bg-white rounded-lg p-2 border border-slate-200/70 flex items-center justify-center shadow-2xs">
+                            <Image
+                              src={tv.image}
+                              alt={tv.name}
+                              fill
+                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 25vw"
+                              className="object-contain p-2 group-hover:scale-105 transition-transform duration-300"
+                              unoptimized={true}
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1.5">
+                            <span className="font-bold text-slate-700">{tv.size} Screen</span>
+                            <span className="text-[10px] bg-white border border-slate-200 px-1.5 py-0.5 rounded text-slate-600 truncate max-w-[120px] font-medium shadow-2xs">
+                              {tv.resolution.split(' ')[0]}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Card Body */}
+                        <div className="p-4 border-t border-slate-200/70 flex flex-col justify-between flex-1 bg-white/70 group-hover:bg-white transition-colors">
+                          <div>
+                            <h4 className="text-xs font-bold text-slate-900 line-clamp-1 group-hover:text-[#E50914] transition-colors" title={tv.name}>
+                              {tv.name}
+                            </h4>
+                            <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">
+                              {tv.sound} &bull; {tv.smartOS}
+                            </p>
+                          </div>
+
+                          <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                            <div>
+                              <p className="text-[10px] text-slate-400 uppercase font-semibold">MRP Price</p>
+                              <p className="text-base font-extrabold text-slate-900">{tv.price}</p>
+                            </div>
+
+                            <Link
+                              href={`/products/${slug}`}
+                              target="_blank"
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-[#E50914] hover:text-white text-slate-700 text-xs font-bold transition-all cursor-pointer border border-slate-200 hover:border-[#E50914] shadow-xs"
+                              title="Preview Live Product Page"
+                            >
+                              <span>View</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+
+              {/* ================= SECTION 4 CONTAINER: LATEST DISPATCHES & ORDERS ================= */}
+              <section className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 lg:p-7 space-y-6">
+                {/* Section Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-5 border-b border-slate-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 border border-amber-100 shadow-xs">
+                      <ShoppingBag className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                        Latest Dispatches & Customer Orders
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                          {orders.length} Records
+                        </span>
+                      </h3>
+                      <p className="text-xs text-slate-500">Live order records, customer payments, and fulfillment tracking</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    {/* View Switcher: Cards vs Table */}
+                    <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200">
+                      <button
+                        onClick={() => setOverviewOrderView('cards')}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          overviewOrderView === 'cards'
+                            ? 'bg-white text-slate-900 shadow-xs'
+                            : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        <LayoutGrid className="w-3.5 h-3.5" />
+                        <span>Cards View</span>
+                      </button>
+                      <button
+                        onClick={() => setOverviewOrderView('table')}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          overviewOrderView === 'table'
+                            ? 'bg-white text-slate-900 shadow-xs'
+                            : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        <List className="w-3.5 h-3.5" />
+                        <span>Table View</span>
+                      </button>
+                    </div>
+
+                    {orders.length > 0 && (
+                      <button
+                        onClick={() => setActiveTab('orders')}
+                        className="text-xs font-bold text-[#E50914] hover:underline cursor-pointer flex items-center gap-1"
+                      >
+                        <span>All Orders ({orders.length})</span>
+                        <ArrowUpRight className="w-3.5 h-3.5" />
                       </button>
                     )}
                   </div>
-
-                  {enquiries.length === 0 ? (
-                    <div className="py-8 text-center space-y-2">
-                      <p className="text-xs font-bold text-zinc-800">No Customer Inquiries Recorded</p>
-                      <p className="text-[11px] text-zinc-500">
-                        Inquiries submitted via product pages or walk-in queries will appear here in real time.
-                      </p>
-                      <button
-                        onClick={() => setShowAddEnquiryModal(true)}
-                        className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 text-zinc-800 text-xs font-bold hover:bg-zinc-200 transition-colors cursor-pointer"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Record Enquiry</span>
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-zinc-100">
-                      {enquiries.slice(0, 3).map((enq) => (
-                        <div key={enq.id} className="py-3 flex items-center justify-between gap-4">
-                          <div className="min-w-0">
-                            <p className="text-xs font-bold text-zinc-900 truncate">
-                              {enq.name} &bull; <span className="text-zinc-500 font-normal">{enq.city}</span>
-                            </p>
-                            <p className="text-[11px] text-zinc-500 truncate">{enq.productModel}</p>
-                          </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                enq.status === 'New'
-                                  ? 'bg-red-50 text-[#E50914] border border-red-200'
-                                  : enq.status === 'Contacted'
-                                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                                  : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              }`}
-                            >
-                              {enq.status}
-                            </span>
-                            <span className="text-[11px] text-zinc-400 font-mono hidden sm:inline">{enq.date}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Recent Orders Table */}
-              <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden shadow-xs">
-                <div className="p-5 border-b border-zinc-200 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-bold text-zinc-900">Latest Dispatches & Orders</h3>
-                    <p className="text-xs text-zinc-500 mt-0.5">Live transactions recorded in system</p>
-                  </div>
-                  {orders.length > 0 && (
-                    <button
-                      onClick={() => setActiveTab('orders')}
-                      className="text-xs font-bold text-[#E50914] hover:underline cursor-pointer"
-                    >
-                      View All Orders ({orders.length})
-                    </button>
-                  )}
                 </div>
 
+                {/* Orders Content */}
                 {orders.length === 0 ? (
-                  <div className="py-12 text-center space-y-2">
-                    <p className="text-sm font-bold text-zinc-800">No Orders Placed Yet</p>
-                    <p className="text-xs text-zinc-500">
+                  <div className="bg-slate-50 rounded-xl border border-slate-200/80 p-12 text-center space-y-2">
+                    <p className="text-sm font-bold text-slate-800">No Orders Placed Yet</p>
+                    <p className="text-xs text-slate-500">
                       Live transactions from customer checkout or manual orders will appear here.
                     </p>
                     <button
@@ -1259,50 +1583,99 @@ export default function AdminDashboardPage() {
                       <span>Create Manual Order</span>
                     </button>
                   </div>
+                ) : overviewOrderView === 'cards' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {orders.slice(0, 6).map((order) => (
+                      <div
+                        key={order.id}
+                        className="p-5 rounded-xl border border-slate-200/90 bg-slate-50/70 hover:bg-white hover:border-slate-300 hover:shadow-md transition-all flex flex-col justify-between"
+                      >
+                        <div>
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-xs font-black font-mono text-slate-900 bg-white px-2.5 py-1 rounded-md border border-slate-200 shadow-2xs">
+                              {order.id}
+                            </span>
+                            <span
+                              className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                                order.status === 'Delivered'
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  : order.status === 'Dispatched'
+                                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                  : 'bg-amber-50 text-amber-700 border border-amber-200'
+                              }`}
+                            >
+                              {order.status}
+                            </span>
+                          </div>
+
+                          <div className="space-y-1 mb-3">
+                            <h4 className="text-sm font-bold text-slate-900">{order.customerName}</h4>
+                            <p className="text-xs text-slate-500">{order.email}</p>
+                          </div>
+
+                          <div className="bg-white rounded-lg p-3 border border-slate-200/70 space-y-1 mb-3 shadow-2xs">
+                            <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Model Ordered</p>
+                            <p className="text-xs font-bold text-slate-800 truncate">{order.model}</p>
+                          </div>
+                        </div>
+
+                        <div className="pt-3 border-t border-slate-200/60 flex items-center justify-between">
+                          <div>
+                            <p className="text-[10px] text-slate-400 font-medium">{order.payment}</p>
+                            <p className="text-base font-black text-slate-900">{order.amount}</p>
+                          </div>
+                          <span className="text-[11px] text-slate-400 font-mono">{order.date}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs">
-                      <thead>
-                        <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase tracking-wider font-semibold">
-                          <th className="py-3 px-4">Order ID</th>
-                          <th className="py-3 px-4">Customer</th>
-                          <th className="py-3 px-4">Model Ordered</th>
-                          <th className="py-3 px-4">Amount</th>
-                          <th className="py-3 px-4">Payment</th>
-                          <th className="py-3 px-4">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-zinc-100">
-                        {orders.slice(0, 5).map((order) => (
-                          <tr key={order.id} className="hover:bg-zinc-50/80 transition-colors">
-                            <td className="py-3.5 px-4 font-mono font-bold text-zinc-800">{order.id}</td>
-                            <td className="py-3.5 px-4">
-                              <span className="font-semibold text-zinc-900 block">{order.customerName}</span>
-                              <span className="text-[11px] text-zinc-400">{order.email}</span>
-                            </td>
-                            <td className="py-3.5 px-4 text-zinc-700 font-medium">{order.model}</td>
-                            <td className="py-3.5 px-4 font-bold text-zinc-900">{order.amount}</td>
-                            <td className="py-3.5 px-4 text-zinc-500">{order.payment}</td>
-                            <td className="py-3.5 px-4">
-                              <span
-                                className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                                  order.status === 'Delivered'
-                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                    : order.status === 'Dispatched'
-                                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                                    : 'bg-amber-50 text-amber-700 border border-amber-200'
-                                }`}
-                              >
-                                {order.status}
-                              </span>
-                            </td>
+                  /* Standalone Table Inside Container */
+                  <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider text-[10px] font-bold">
+                          <tr>
+                            <th className="py-3 px-4">Order ID</th>
+                            <th className="py-3 px-4">Customer</th>
+                            <th className="py-3 px-4">Model Ordered</th>
+                            <th className="py-3 px-4">Amount</th>
+                            <th className="py-3 px-4">Payment</th>
+                            <th className="py-3 px-4">Status</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {orders.slice(0, 5).map((order) => (
+                            <tr key={order.id} className="hover:bg-slate-50/80 transition-colors">
+                              <td className="py-3.5 px-4 font-mono font-bold text-slate-900">{order.id}</td>
+                              <td className="py-3.5 px-4">
+                                <span className="font-semibold text-slate-900 block">{order.customerName}</span>
+                                <span className="text-[11px] text-slate-400">{order.email}</span>
+                              </td>
+                              <td className="py-3.5 px-4 text-slate-700 font-medium">{order.model}</td>
+                              <td className="py-3.5 px-4 font-bold text-slate-900">{order.amount}</td>
+                              <td className="py-3.5 px-4 text-slate-500">{order.payment}</td>
+                              <td className="py-3.5 px-4">
+                                <span
+                                  className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                                    order.status === 'Delivered'
+                                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                      : order.status === 'Dispatched'
+                                      ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                      : 'bg-amber-50 text-amber-700 border border-amber-200'
+                                  }`}
+                                >
+                                  {order.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
-              </div>
+              </section>
             </div>
           )}
 
@@ -1341,82 +1714,215 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
-              {/* Products Table */}
+              {/* Products View (Cards or Table) */}
               <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden shadow-xs">
-                <div className="p-4 border-b border-zinc-200 flex items-center justify-between">
+                <div className="p-4 border-b border-zinc-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <span className="text-xs font-bold text-zinc-700">
                     Showing {filteredProducts.length} of {productsList.length} television models
                   </span>
+
+                  {/* View Switcher: Cards vs Table */}
+                  <div className="flex items-center bg-zinc-100 p-0.5 rounded-xl border border-zinc-200 self-start sm:self-auto">
+                    <button
+                      onClick={() => setProductsViewMode('cards')}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        productsViewMode === 'cards'
+                          ? 'bg-white text-zinc-900 shadow-xs'
+                          : 'text-zinc-500 hover:text-zinc-800'
+                      }`}
+                    >
+                      <LayoutGrid className="w-3.5 h-3.5" />
+                      <span>Cards View</span>
+                    </button>
+                    <button
+                      onClick={() => setProductsViewMode('table')}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        productsViewMode === 'table'
+                          ? 'bg-white text-zinc-900 shadow-xs'
+                          : 'text-zinc-500 hover:text-zinc-800'
+                      }`}
+                    >
+                      <List className="w-3.5 h-3.5" />
+                      <span>Table View</span>
+                    </button>
+                  </div>
                 </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase tracking-wider font-semibold">
-                        <th className="py-3 px-4">Display</th>
-                        <th className="py-3 px-4">Model Code</th>
-                        <th className="py-3 px-4">Name & Size</th>
-                        <th className="py-3 px-4">Resolution</th>
-                        <th className="py-3 px-4">Audio Output</th>
-                        <th className="py-3 px-4">Price</th>
-                        <th className="py-3 px-4">Stock Status</th>
-                        <th className="py-3 px-4 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-zinc-100">
+                {productsViewMode === 'cards' ? (
+                  /* TV Cards View Grid */
+                  <div className="p-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                       {filteredProducts.map((tv) => {
                         const isTvInStock = tv.inStock !== false;
+                        const slug = (tv as any).slug || tv.id || tv.model.toLowerCase();
                         return (
-                          <tr key={tv.id} className="hover:bg-zinc-50/80 transition-colors">
-                            <td className="py-3 px-4">
-                              <div className="relative w-14 h-10 bg-zinc-100 rounded-lg overflow-hidden border border-zinc-200 p-0.5">
+                          <div
+                            key={tv.id}
+                            className="group bg-white rounded-2xl border border-zinc-200 hover:border-zinc-300 hover:shadow-md transition-all duration-200 flex flex-col justify-between overflow-hidden"
+                          >
+                            {/* Top Thumbnail Container */}
+                            <div className="p-4 bg-gradient-to-b from-zinc-50/80 to-white relative flex flex-col">
+                              <div className="flex items-center justify-between gap-1 mb-2">
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold font-mono bg-zinc-900 text-white tracking-wide">
+                                  {tv.model}
+                                </span>
+                                <button
+                                  onClick={() => handleToggleProductStock(tv.id)}
+                                  title="Click to toggle stock"
+                                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold cursor-pointer transition-colors ${
+                                    isTvInStock
+                                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                                      : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100'
+                                  }`}
+                                >
+                                  <span className={`w-1.5 h-1.5 rounded-full ${isTvInStock ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                                  <span>{isTvInStock ? 'In Stock' : 'Out of Stock'}</span>
+                                </button>
+                              </div>
+
+                              <div className="relative w-full h-36 my-1">
                                 <Image
                                   src={tv.image}
                                   alt={tv.name}
                                   fill
-                                  sizes="56px"
-                                  className="object-contain"
-                                  unoptimized={typeof tv.image === 'string' && tv.image.startsWith('data:')}
+                                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 25vw"
+                                  className="object-contain group-hover:scale-105 transition-transform duration-300"
+                                  unoptimized={true}
                                 />
                               </div>
-                            </td>
-                            <td className="py-3 px-4 font-mono font-bold text-zinc-900">{tv.model}</td>
-                            <td className="py-3 px-4">
-                              <span className="font-bold text-zinc-900 block">{tv.name}</span>
-                              <span className="text-[11px] text-zinc-400">{tv.size} Screen</span>
-                            </td>
-                            <td className="py-3 px-4 text-zinc-600 font-medium">{tv.resolution}</td>
-                            <td className="py-3 px-4 text-zinc-600">{tv.sound}</td>
-                            <td className="py-3 px-4 font-black text-zinc-900">{tv.price}</td>
-                            <td className="py-3 px-4">
-                              <button
-                                onClick={() => handleToggleProductStock(tv.id)}
-                                className={`px-2.5 py-1 rounded-full text-[10px] font-bold cursor-pointer transition-colors border ${
-                                  isTvInStock
-                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                                    : 'bg-red-50 text-[#E50914] border-red-200 hover:bg-red-100'
-                                }`}
-                                title="Click to toggle stock status"
-                              >
-                                {isTvInStock ? 'In Stock' : 'Out of Stock'}
-                              </button>
-                            </td>
-                            <td className="py-3 px-4 text-right">
-                              <button
-                                onClick={() => handleDeleteProduct(tv.id)}
-                                aria-label="Delete TV model"
-                                className="p-1.5 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                                title="Remove TV model"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </td>
-                          </tr>
+
+                              <div className="flex items-center justify-between text-[11px] text-zinc-500 pt-1">
+                                <span className="font-semibold text-zinc-700">{tv.size} Screen</span>
+                                <span className="text-[10px] bg-zinc-100 px-1.5 py-0.5 rounded text-zinc-600 truncate max-w-[120px]">
+                                  {tv.resolution.split(' ')[0]}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Card Body */}
+                            <div className="p-4 border-t border-zinc-100 flex flex-col justify-between flex-1 bg-white">
+                              <div>
+                                <h4 className="text-xs font-bold text-zinc-900 line-clamp-1 group-hover:text-[#E50914] transition-colors" title={tv.name}>
+                                  {tv.name}
+                                </h4>
+                                <p className="text-[11px] text-zinc-400 mt-0.5 line-clamp-1">
+                                  {tv.sound} &bull; {tv.smartOS}
+                                </p>
+                              </div>
+
+                              <div className="mt-3 pt-3 border-t border-zinc-100 flex items-center justify-between gap-2">
+                                <div>
+                                  <p className="text-[10px] text-zinc-400 uppercase font-semibold">Price</p>
+                                  <p className="text-sm font-extrabold text-zinc-900">{tv.price}</p>
+                                </div>
+
+                                <div className="flex items-center gap-1">
+                                  <Link
+                                    href={`/products/${slug}`}
+                                    target="_blank"
+                                    className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 transition-colors inline-flex items-center"
+                                    title="View Live Page"
+                                  >
+                                    <ExternalLink className="w-4 h-4" />
+                                  </Link>
+                                  <button
+                                    onClick={() => handleDeleteProduct(tv.id)}
+                                    aria-label="Delete TV model"
+                                    className="p-1.5 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                                    title="Remove TV model"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                         );
                       })}
-                    </tbody>
-                  </table>
-                </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* Products Table */
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase tracking-wider font-semibold">
+                          <th className="py-3 px-4">Display</th>
+                          <th className="py-3 px-4">Model Code</th>
+                          <th className="py-3 px-4">Name & Size</th>
+                          <th className="py-3 px-4">Resolution</th>
+                          <th className="py-3 px-4">Audio Output</th>
+                          <th className="py-3 px-4">Price</th>
+                          <th className="py-3 px-4">Stock Status</th>
+                          <th className="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-100">
+                        {filteredProducts.map((tv) => {
+                          const isTvInStock = tv.inStock !== false;
+                          return (
+                            <tr key={tv.id} className="hover:bg-zinc-50/80 transition-colors">
+                              <td className="py-3 px-4">
+                                <div className="relative w-14 h-10 bg-zinc-100 rounded-lg overflow-hidden border border-zinc-200 p-0.5">
+                                  <Image
+                                    src={tv.image}
+                                    alt={tv.name}
+                                    fill
+                                    sizes="56px"
+                                    className="object-contain"
+                                    unoptimized={true}
+                                  />
+                                </div>
+                              </td>
+                              <td className="py-3 px-4 font-mono font-bold text-zinc-900">{tv.model}</td>
+                              <td className="py-3 px-4">
+                                <span className="font-bold text-zinc-900 block">{tv.name}</span>
+                                <span className="text-[11px] text-zinc-400">{tv.size} Screen</span>
+                              </td>
+                              <td className="py-3 px-4 text-zinc-600 font-medium">{tv.resolution}</td>
+                              <td className="py-3 px-4 text-zinc-600">{tv.sound}</td>
+                              <td className="py-3 px-4 font-black text-zinc-900">{tv.price}</td>
+                              <td className="py-3 px-4">
+                                <button
+                                  onClick={() => handleToggleProductStock(tv.id)}
+                                  className={`px-2.5 py-1 rounded-full text-[10px] font-bold cursor-pointer transition-colors border ${
+                                    isTvInStock
+                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                      : 'bg-red-50 text-[#E50914] border-red-200 hover:bg-red-100'
+                                  }`}
+                                  title="Click to toggle stock status"
+                                >
+                                  {isTvInStock ? 'In Stock' : 'Out of Stock'}
+                                </button>
+                              </td>
+                              <td className="py-3 px-4 text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <Link
+                                    href={`/products/${tv.id}`}
+                                    target="_blank"
+                                    aria-label="View product page"
+                                    className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 transition-colors inline-flex items-center"
+                                    title="View TV Page"
+                                  >
+                                    <ExternalLink className="w-4 h-4" />
+                                  </Link>
+                                  <button
+                                    onClick={() => handleDeleteProduct(tv.id)}
+                                    aria-label="Delete TV model"
+                                    className="p-1.5 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                                    title="Remove TV model"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1900,7 +2406,7 @@ export default function AdminDashboardPage() {
                                 alt={img.name}
                                 fill
                                 sizes="96px"
-                                unoptimized={typeof img.url === 'string' && img.url.startsWith('data:')}
+                                unoptimized={true}
                                 className="object-contain p-1"
                               />
                               <div className="absolute top-1 right-1 px-1 py-0.2 rounded bg-black/80 text-[8px] font-black text-white">
@@ -2152,6 +2658,105 @@ export default function AdminDashboardPage() {
                     className="w-full px-3 py-2 rounded-xl border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#E50914]/20 focus:border-[#E50914]"
                   />
                 </div>
+              </div>
+
+              {/* Dynamic Field 1: Key Features */}
+              <div className="p-3 bg-zinc-50/80 rounded-2xl border border-zinc-200/80 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-zinc-800 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-[#E50914]" />
+                    <span>Tab 1: Key Features Highlights</span>
+                  </label>
+                  <span className="text-[10px] text-zinc-400 font-medium">One bullet per line</span>
+                </div>
+                <textarea
+                  rows={4}
+                  value={newProduct.keyFeaturesText}
+                  onChange={(e) => setNewProduct({ ...newProduct, keyFeaturesText: e.target.value })}
+                  placeholder="Cinema-Grade Visuals&#10;Ultra-wide 178° viewing angle&#10;HDR10 & HLG Decoding"
+                  className="w-full px-3 py-2 rounded-xl border border-zinc-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#E50914]/20 focus:border-[#E50914] text-xs leading-relaxed font-mono"
+                />
+              </div>
+
+              {/* Dynamic Field 2: Technical Specifications */}
+              <div className="p-3 bg-zinc-50/80 rounded-2xl border border-zinc-200/80 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-zinc-800 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-[#E50914]" />
+                    <span>Tab 2: Technical Specifications</span>
+                  </label>
+                  <span className="text-[10px] text-zinc-400 font-medium">Display & Connectivity</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-zinc-600 mb-0.5">Refresh Rate</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 60 Hz Native"
+                      value={newProduct.refreshRate}
+                      onChange={(e) => setNewProduct({ ...newProduct, refreshRate: e.target.value })}
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-zinc-300 bg-white focus:outline-none focus:ring-1 focus:ring-[#E50914]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-zinc-600 mb-0.5">Panel Type</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. A+ Grade IPS Bezel-Less"
+                      value={newProduct.panelType}
+                      onChange={(e) => setNewProduct({ ...newProduct, panelType: e.target.value })}
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-zinc-300 bg-white focus:outline-none focus:ring-1 focus:ring-[#E50914]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-zinc-600 mb-0.5">HDMI Ports</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 3 x HDMI (ARC Supported)"
+                      value={newProduct.hdmiPorts}
+                      onChange={(e) => setNewProduct({ ...newProduct, hdmiPorts: e.target.value })}
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-zinc-300 bg-white focus:outline-none focus:ring-1 focus:ring-[#E50914]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-zinc-600 mb-0.5">USB Ports</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 2 x USB 2.0 High Speed"
+                      value={newProduct.usbPorts}
+                      onChange={(e) => setNewProduct({ ...newProduct, usbPorts: e.target.value })}
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-zinc-300 bg-white focus:outline-none focus:ring-1 focus:ring-[#E50914]"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-zinc-600 mb-0.5">Wireless Network</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Dual-band Wi-Fi & Bluetooth 5.0"
+                    value={newProduct.wireless}
+                    onChange={(e) => setNewProduct({ ...newProduct, wireless: e.target.value })}
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-zinc-300 bg-white focus:outline-none focus:ring-1 focus:ring-[#E50914]"
+                  />
+                </div>
+              </div>
+
+              {/* Dynamic Field 3: Installation & Warranty */}
+              <div className="p-3 bg-zinc-50/80 rounded-2xl border border-zinc-200/80 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-zinc-800 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-[#E50914]" />
+                    <span>Tab 3: Installation & Warranty Coverage</span>
+                  </label>
+                  <span className="text-[10px] text-zinc-400 font-medium">Terms & Doorstep setup</span>
+                </div>
+                <textarea
+                  rows={2}
+                  value={newProduct.warrantyInstallation}
+                  onChange={(e) => setNewProduct({ ...newProduct, warrantyInstallation: e.target.value })}
+                  placeholder="Complimentary Doorstep Installation Process within 48 hours..."
+                  className="w-full px-3 py-2 rounded-xl border border-zinc-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#E50914]/20 focus:border-[#E50914] text-xs leading-relaxed"
+                />
               </div>
 
               <div className="pt-3 flex items-center justify-end gap-3 border-t border-zinc-100">
