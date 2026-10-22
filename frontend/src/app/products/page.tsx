@@ -225,7 +225,7 @@ function ProductsCatalogContent() {
           search: searchParams.get('q') || undefined,
           sort: searchParams.get('sort') || undefined,
         });
-        if (isMounted && liveData && liveData.length > 0) {
+        if (isMounted && Array.isArray(liveData)) {
           setProductsList(liveData);
           setIsLoadingProducts(false);
           return;

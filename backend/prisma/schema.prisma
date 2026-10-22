@@ -150,3 +150,25 @@ model Enquiry {
 
   @@map("enquiries")
 }
+
+model CompanySetting {
+  id             String   @id @default("default")
+  companyName    String   @default("Butterfly Smart TV")
+  email          String   @default("butterflytvs@gmail.com")
+  supportEmail   String   @default("support@butterflytv.in")
+  phone          String   @default("+91 422 430 1234")
+  alternatePhone String?  @default("+91 98765 43210")
+  whatsapp       String?  @default("+91 98765 43210")
+  address        String   @default("Butterfly Smart TV Technologies, Avinashi Road, Peelamedu")
+  city           String   @default("Coimbatore")
+  state          String   @default("Tamil Nadu")
+  pincode        String   @default("641004")
+  country        String   @default("India")
+  locationUrl    String?  @default("https://maps.google.com/?q=Peelamedu+Coimbatore")
+  supportHours   String   @default("Mon - Sat | 9:00 AM - 6:00 PM IST")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("company_settings")
+}
+

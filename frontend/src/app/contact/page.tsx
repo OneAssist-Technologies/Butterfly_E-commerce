@@ -19,8 +19,11 @@ import {
 } from 'lucide-react';
 import { enquiryService } from '@/services/enquiry.service';
 import { ALL_PRODUCTS } from '@/data/products';
+import { settingsService, CompanySettings } from '@/services/settings.service';
+import { ExternalLink } from 'lucide-react';
 
 export default function ContactPage() {
+  const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -49,6 +52,12 @@ export default function ContactPage() {
     } catch {
       // Ignore
     }
+
+    settingsService.getSettings()
+      .then((data) => {
+        if (data) setCompanySettings(data);
+      })
+      .catch(() => {});
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -140,7 +149,7 @@ export default function ContactPage() {
               
               {/* Phone Card */}
               <a
-                href="tel:+914224301234"
+                href={`tel:${companySettings?.phone || '+914224301234'}`}
                 className="flex items-start gap-4 p-5 rounded-2xl bg-white border border-zinc-200/90 shadow-xs hover:shadow-md hover:border-[#E50914]/40 transition-all group"
               >
                 <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center text-[#E50914] shrink-0 group-hover:scale-110 transition-transform">
@@ -151,18 +160,23 @@ export default function ContactPage() {
                     Customer Care Helpline
                   </span>
                   <p className="text-base font-black text-zinc-900 mt-0.5 group-hover:text-[#E50914] transition-colors">
-                    +91 422 430 1234
+                    {companySettings?.phone || '+91 422 430 1234'}
                   </p>
+                  {companySettings?.alternatePhone && (
+                    <p className="text-xs text-zinc-500 mt-0.5">
+                      Alt: {companySettings.alternatePhone}
+                    </p>
+                  )}
                   <p className="text-xs text-zinc-500 mt-1 flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5 text-zinc-400" />
-                    Mon - Sat | 9:00 AM - 6:00 PM IST
+                    {companySettings?.supportHours || 'Mon - Sat | 9:00 AM - 6:00 PM IST'}
                   </p>
                 </div>
               </a>
 
               {/* Email Card */}
               <a
-                href="mailto:support@butterflytv.in"
+                href={`mailto:${companySettings?.supportEmail || companySettings?.email || 'support@butterflytv.in'}`}
                 className="flex items-start gap-4 p-5 rounded-2xl bg-white border border-zinc-200/90 shadow-xs hover:shadow-md hover:border-[#E50914]/40 transition-all group"
               >
                 <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center text-[#E50914] shrink-0 group-hover:scale-110 transition-transform">
@@ -173,7 +187,7 @@ export default function ContactPage() {
                     Direct Email Support
                   </span>
                   <p className="text-base font-black text-zinc-900 mt-0.5 group-hover:text-[#E50914] transition-colors">
-                    support@butterflytv.in
+                    {companySettings?.supportEmail || companySettings?.email || 'support@butterflytv.in'}
                   </p>
                   <p className="text-xs text-zinc-500 mt-1">
                     Response guaranteed within 24 hours
@@ -186,16 +200,29 @@ export default function ContactPage() {
                 <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center text-[#E50914] shrink-0">
                   <MapPin className="w-5 h-5" />
                 </div>
-                <div>
+                <div className="flex-1">
                   <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
                     Headquarters &amp; Experience Center
                   </span>
                   <p className="text-sm font-bold text-zinc-900 mt-0.5">
-                    Butterfly Smart TV Technologies
+                    {companySettings?.companyName || 'Butterfly Smart TV Technologies'}
                   </p>
                   <p className="text-xs text-zinc-600 mt-1 leading-relaxed">
-                    Avinashi Road, Peelamedu, Coimbatore, Tamil Nadu – 641004, India
+                    {companySettings
+                      ? `${companySettings.address}, ${companySettings.city}, ${companySettings.state} – ${companySettings.pincode}, ${companySettings.country}`
+                      : 'Avinashi Road, Peelamedu, Coimbatore, Tamil Nadu – 641004, India'}
                   </p>
+                  {companySettings?.locationUrl && (
+                    <a
+                      href={companySettings.locationUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-[#E50914] hover:underline mt-2"
+                    >
+                      <span>View on Google Maps</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
                 </div>
               </div>
 

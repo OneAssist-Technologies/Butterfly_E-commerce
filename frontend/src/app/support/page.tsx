@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { settingsService, CompanySettings } from '@/services/settings.service';
 import {
   Search,
   Settings,
@@ -117,12 +118,21 @@ const CATEGORIES = [
 ];
 
 export default function SupportPage() {
+  const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('General');
   const [openFaqId, setOpenFaqId] = useState<string | null>('faq-1');
 
   // Modals state
   const [activeModal, setActiveModal] = useState<string | null>(null);
+
+  useEffect(() => {
+    settingsService.getSettings()
+      .then((data) => {
+        if (data) setCompanySettings(data);
+      })
+      .catch(() => {});
+  }, []);
 
   const filteredFaqs = useMemo(() => {
     return FAQ_DATA.filter((item) => {
@@ -378,7 +388,7 @@ export default function SupportPage() {
             
             {/* 1. Phone Support */}
             <a
-              href="tel:+914224301234"
+              href={`tel:${companySettings?.phone || '+914224301234'}`}
               className="group flex items-start gap-4 p-4 rounded-2xl hover:bg-zinc-50 transition-colors"
             >
               <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center text-[#E50914] shrink-0 group-hover:scale-110 transition-transform">
@@ -389,17 +399,17 @@ export default function SupportPage() {
                   Phone Support
                 </h4>
                 <p className="text-base font-extrabold text-zinc-900 mt-0.5">
-                  +91 422 430 1234
+                  {companySettings?.phone || '+91 422 430 1234'}
                 </p>
                 <p className="text-xs text-zinc-500 mt-1">
-                  Mon - Sat | 9:00 AM - 6:00 PM
+                  {companySettings?.supportHours || 'Mon - Sat | 9:00 AM - 6:00 PM'}
                 </p>
               </div>
             </a>
 
             {/* 2. Email Support */}
             <a
-              href="mailto:support@butterflytv.in"
+              href={`mailto:${companySettings?.supportEmail || companySettings?.email || 'support@butterflytv.in'}`}
               className="group flex items-start gap-4 p-4 rounded-2xl hover:bg-zinc-50 transition-colors"
             >
               <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center text-[#E50914] shrink-0 group-hover:scale-110 transition-transform">
@@ -410,7 +420,7 @@ export default function SupportPage() {
                   Email Support
                 </h4>
                 <p className="text-sm font-bold text-zinc-900 mt-0.5">
-                  support@butterflytv.in
+                  {companySettings?.supportEmail || companySettings?.email || 'support@butterflytv.in'}
                 </p>
                 <p className="text-xs text-zinc-500 mt-1">
                   We&apos;ll respond within 24 hours

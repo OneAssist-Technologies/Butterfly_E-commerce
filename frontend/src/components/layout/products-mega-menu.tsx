@@ -19,17 +19,6 @@ export interface MegaMenuItem {
 
 export const MEGA_MENU_ITEMS: MegaMenuItem[] = [
   {
-    id: 'laser-tv',
-    title: 'Laser TV',
-    badge: '120" CINEMA',
-    tag: 'Flagship',
-    image: '/tv_space.jpg',
-    href: '/products?q=Laser',
-    isLaser: true,
-    standType: 'laser',
-    subtitle: 'Ultra Short Throw 4K',
-  },
-  {
     id: 'rgb-miniled',
     title: 'RGB MiniLED',
     badge: '144Hz PRO',

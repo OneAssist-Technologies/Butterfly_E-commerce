@@ -1,11 +1,12 @@
 import React from 'react';
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import { ALL_PRODUCTS, CatalogProduct, getProductById, getSimilarProducts } from '@/data/products';
 import { ProductDetailsClient } from '@/components/products/product-details-client';
 import { ArrowLeft, Tv } from 'lucide-react';
 import { ENV } from '@/config/env';
+
+export const instant = false;
 
 interface PageProps {
   params: Promise<{
@@ -13,15 +14,9 @@ interface PageProps {
   }>;
 }
 
-export async function generateStaticParams() {
-  return ALL_PRODUCTS.map((product) => ({
-    id: product.id,
-  }));
-}
-
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  const product = getProductById(id);
+  const product = await getLiveProduct(id);
 
   if (!product) {
     return {
@@ -48,12 +43,48 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export const instant = false;
-
 async function getLiveProduct(id: string): Promise<CatalogProduct | undefined> {
   try {
-    const res = await fetch(`${ENV.apiBaseUrl}/products/${id}`, {
-      next: { revalidate: 60 },
+    const res = await fetch(`${ENV.apiBaseUrl}/products/${encodeURIComponent(id)}`, {
+      cache: 'no-store',
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // Fall back to fixture if backend is temporarily unavailable
+  }
+  return getProductById(id);
+}
+
+async function getLiveSimilarProducts(currentProduct: CatalogProduct): Promise<CatalogProduct[]> {
+  try {
+    const sizeParam = encodeURIComponent(currentProduct.screenSizeCategory || currentProduct.size);
+    const res = await fetch(`${ENV.apiBaseUrl}/products?size=${sizeParam}`, {
+      cache: 'no-store',
+    });
+    if (res.ok) {
+      const items: CatalogProduct[] = await res.json();
+      const filtered = items.filter((p) => p.id !== currentProduct.id);
+      if (filtered.length > 0) return filtered.slice(0, 4);
+    }
+    const allRes = await fetch(`${ENV.apiBaseUrl}/products`, {
+      cache: 'no-store',
+    });
+    if (allRes.ok) {
+      const allItems: CatalogProduct[] = await allRes.json();
+      return allItems.filter((p) => p.id !== currentProduct.id).slice(0, 4);
+    }
+  } catch {
+    // Fall back to fixture
+  }
+  return getSimilarProducts(currentProduct, 4);
+}
+
+async function getAllLiveProducts(): Promise<CatalogProduct[]> {
+  try {
+    const res = await fetch(`${ENV.apiBaseUrl}/products`, {
+      cache: 'no-store',
     });
     if (res.ok) {
       return await res.json();
@@ -61,7 +92,7 @@ async function getLiveProduct(id: string): Promise<CatalogProduct | undefined> {
   } catch {
     // Fall back to fixture
   }
-  return getProductById(id);
+  return ALL_PRODUCTS;
 }
 
 async function ProductDetailsContent({
@@ -95,12 +126,16 @@ async function ProductDetailsContent({
     );
   }
 
-  const similarProducts = getSimilarProducts(product, 4);
+  const [similarProducts, allProducts] = await Promise.all([
+    getLiveSimilarProducts(product),
+    getAllLiveProducts(),
+  ]);
 
   return (
     <ProductDetailsClient
       product={product}
       similarProducts={similarProducts}
+      allProducts={allProducts}
     />
   );
 }

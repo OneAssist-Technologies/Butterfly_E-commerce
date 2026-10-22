@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -9,11 +9,27 @@ import {
   MapPin,
   CheckCircle2,
 } from 'lucide-react';
+import { settingsService, CompanySettings } from '@/services/settings.service';
 
 export function Footer() {
   const pathname = usePathname();
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
+  const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
+  const [currentYear, setCurrentYear] = useState('2025');
+
+  useEffect(() => {
+    setCurrentYear(String(new Date().getFullYear()));
+    let mounted = true;
+    settingsService.getSettings()
+      .then((data) => {
+        if (mounted && data) setCompanySettings(data);
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   if (pathname === '/login' || pathname === '/signup' || pathname?.startsWith('/admin')) {
     return null;
@@ -275,10 +291,14 @@ export function Footer() {
 
         {/* Bottom Bar: Copyright & Location */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-500">
-          <p>© 2025 Butterfly Smart TV. All rights reserved.</p>
+          <p>© {currentYear} {companySettings?.companyName || 'Butterfly Smart TV'}. All rights reserved.</p>
           <div className="flex items-center gap-1 text-zinc-400">
             <MapPin className="w-3.5 h-3.5 text-[#E50914]" />
-            <span>Coimbatore, Tamil Nadu</span>
+            <span>
+              {companySettings?.city && companySettings?.state
+                ? `${companySettings.city}, ${companySettings.state}`
+                : 'Coimbatore, Tamil Nadu'}
+            </span>
           </div>
         </div>
       </div>

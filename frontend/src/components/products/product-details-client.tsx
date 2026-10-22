@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -31,7 +31,7 @@ import {
   MessageSquare,
   Loader2,
 } from 'lucide-react';
-import { CatalogProduct, ALL_PRODUCTS } from '@/data/products';
+import { CatalogProduct } from '@/data/products';
 import { ProductCatalogCard } from '@/components/cards/product-catalog-card';
 import { EnquiryModal } from '@/components/shared/enquiry-modal';
 import { useCart } from '@/providers';
@@ -41,23 +41,35 @@ import { productService } from '@/services/product.service';
 interface ProductDetailsClientProps {
   product: CatalogProduct;
   similarProducts: CatalogProduct[];
+  allProducts?: CatalogProduct[];
 }
 
 export function ProductDetailsClient({
   product,
   similarProducts,
+  allProducts = [],
 }: ProductDetailsClientProps) {
   const router = useRouter();
   const { addToCart, openCart } = useCart();
 
-  // Active Gallery Image
-  const galleryImages = [
-    { src: product.image, label: 'Front Display' },
-    { src: '/products_hero.jpg', label: 'Living Room Ambience' },
-    { src: '/tv_canyon.jpg', label: 'Cinematic Visuals' },
-    { src: '/tv_space.jpg', label: 'Infinite Contrast' },
-  ];
-  const [activeImage, setActiveImage] = useState(galleryImages[0].src);
+  // Dynamic Gallery Images from Database (zero hardcoded mock images)
+  const galleryImages: Array<{ src: string; label: string }> = useMemo(() => {
+    if (Array.isArray(product.images) && product.images.length > 0) {
+      return product.images.map((src: string, idx: number) => ({
+        src,
+        label: idx === 0 ? 'Front Display' : `View ${idx + 1}`,
+      }));
+    }
+    return [{ src: product.image, label: 'Front Display' }];
+  }, [product.image, product.images]);
+
+  const [activeImage, setActiveImage] = useState(product.image);
+
+  useEffect(() => {
+    if (galleryImages.length > 0) {
+      setActiveImage(galleryImages[0].src);
+    }
+  }, [galleryImages]);
 
   // Interaction States
   const [isWishlisted, setIsWishlisted] = useState(false);
@@ -207,12 +219,14 @@ export function ProductDetailsClient({
   const discountPercent = Math.round((savings / originalMrp) * 100);
   const emiAmount = Math.round(product.numericPrice / 12);
 
-  // Screen size switcher options
-  const availableSizes: Array<{ label: '32"' | '43"' | '55"' | '65"'; targetId?: string }> = [
-    { label: '32"', targetId: ALL_PRODUCTS.find((p) => p.screenSizeCategory === '32"')?.id },
-    { label: '43"', targetId: ALL_PRODUCTS.find((p) => p.screenSizeCategory === '43"')?.id },
-    { label: '55"', targetId: ALL_PRODUCTS.find((p) => p.screenSizeCategory === '55"')?.id },
-    { label: '65"', targetId: ALL_PRODUCTS.find((p) => p.screenSizeCategory === '65"')?.id },
+  // Screen size switcher options dynamically from database products
+  const productSource = allProducts && allProducts.length > 0 ? allProducts : similarProducts;
+  const availableSizes: Array<{ label: '32"' | '43"' | '50"' | '55"' | '65"'; targetId?: string }> = [
+    { label: '32"', targetId: productSource.find((p) => p.screenSizeCategory === '32"' || p.size?.includes('32'))?.id },
+    { label: '43"', targetId: productSource.find((p) => p.screenSizeCategory === '43"' || p.size?.includes('43'))?.id },
+    { label: '50"', targetId: productSource.find((p) => p.screenSizeCategory === '50"' || p.size?.includes('50'))?.id },
+    { label: '55"', targetId: productSource.find((p) => p.screenSizeCategory === '55"' || p.size?.includes('55'))?.id },
+    { label: '65"', targetId: productSource.find((p) => p.screenSizeCategory === '65"' || p.size?.includes('65'))?.id },
   ];
 
   const handleAddToCart = () => {
@@ -331,55 +345,51 @@ export function ProductDetailsClient({
                 </div>
               </div>
 
-              {/* TV Display Bezel Mockup */}
-              <div className="relative w-full aspect-[16/10] bg-zinc-950 rounded-2xl p-2.5 sm:p-3.5 shadow-2xl border-4 border-zinc-800 flex items-center justify-center">
-                <div className="relative w-full h-full rounded-lg overflow-hidden bg-black">
-                  <Image
-                    src={activeImage}
-                    alt={product.name}
-                    fill
-                    priority
-                    className="object-cover transition-all duration-500 group-hover:scale-105"
-                    sizes="(max-width: 1024px) 100vw, 55vw"
-                    unoptimized={true}
-                  />
-                  {/* Subtle TV screen gloss reflection overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/10 pointer-events-none" />
-                </div>
-                {/* TV Stand Base */}
-                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-28 sm:w-36 h-2 bg-gradient-to-r from-zinc-700 via-zinc-400 to-zinc-700 rounded-b-md shadow-md" />
+              {/* Main Product Image Display (Clean, borderless) */}
+              <div className="relative w-full aspect-[16/10] overflow-hidden flex items-center justify-center">
+                <Image
+                  src={activeImage}
+                  alt={product.name}
+                  fill
+                  priority
+                  className="object-contain transition-all duration-500 group-hover:scale-105"
+                  sizes="(max-width: 1024px) 100vw, 55vw"
+                  unoptimized={true}
+                />
               </div>
             </div>
 
-            {/* Gallery Thumbnails */}
-            <div className="grid grid-cols-4 gap-3 sm:gap-4">
-              {galleryImages.map((thumb, index) => {
-                const isActive = activeImage === thumb.src;
-                return (
-                  <button
-                    key={index}
-                    type="button"
-                    onClick={() => setActiveImage(thumb.src)}
-                    className={`relative aspect-[16/10] rounded-xl overflow-hidden border-2 transition-all p-1 bg-white cursor-pointer ${
-                      isActive
-                        ? 'border-[#E50914] ring-2 ring-red-100 shadow-md scale-[1.02]'
-                        : 'border-zinc-200 hover:border-zinc-300'
-                    }`}
-                  >
-                    <div className="relative w-full h-full rounded-lg overflow-hidden bg-zinc-900">
-                      <Image
-                        src={thumb.src}
-                        alt={thumb.label}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 768px) 25vw, 15vw"
-                        unoptimized={true}
-                      />
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+            {/* Gallery Thumbnails (renders only if multiple images exist in database) */}
+            {galleryImages.length > 1 && (
+              <div className="grid grid-cols-4 gap-3 sm:gap-4">
+                {galleryImages.map((thumb, index) => {
+                  const isActive = activeImage === thumb.src;
+                  return (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => setActiveImage(thumb.src)}
+                      className={`relative aspect-[16/10] rounded-xl overflow-hidden border-2 transition-all p-1 bg-white cursor-pointer ${
+                        isActive
+                          ? 'border-[#E50914] ring-2 ring-red-100 shadow-md scale-[1.02]'
+                          : 'border-zinc-200 hover:border-zinc-300'
+                      }`}
+                    >
+                      <div className="relative w-full h-full rounded-lg overflow-hidden bg-zinc-50 flex items-center justify-center">
+                        <Image
+                          src={thumb.src}
+                          alt={thumb.label}
+                          fill
+                          className="object-contain p-1"
+                          sizes="(max-width: 768px) 25vw, 15vw"
+                          unoptimized={true}
+                        />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             {/* 4 Quick Highlights Feature Tiles */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
@@ -1214,7 +1224,7 @@ export function ProductDetailsClient({
             href="/products"
             className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-zinc-700 hover:text-[#E50914] transition-colors group flex-shrink-0"
           >
-            <span>View All {ALL_PRODUCTS.length} TVs</span>
+            <span>View All {allProducts && allProducts.length > 0 ? allProducts.length : '30+'} TVs</span>
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
           </Link>
         </div>
