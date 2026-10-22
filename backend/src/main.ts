@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module.js';
 
 async function bootstrap() {
-  const logger = new Logger('Bootstrap');
+  const logger = new Logger('Bootstrap'); // Dynamic services loaded
   const app = await NestFactory.create(AppModule);
 
   const configService = app.get(ConfigService);

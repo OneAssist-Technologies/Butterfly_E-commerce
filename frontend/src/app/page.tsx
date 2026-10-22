@@ -16,11 +16,7 @@ export default function Home() {
   const { addToCart } = useCart();
 
   const handleSelectSize = (size: string) => {
-    setSelectedSizeFilter(size);
-    const targetElement = document.getElementById('best-selling');
-    if (targetElement) {
-      targetElement.scrollIntoView({ behavior: 'smooth' });
-    }
+    router.push(`/products?size=${encodeURIComponent(size)}`);
   };
 
   const handleViewDetails = (product: TVProduct) => {

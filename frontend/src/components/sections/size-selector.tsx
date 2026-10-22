@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { SizeCard, SizeOption } from '@/components/cards/size-card';
 import { ArrowRight } from 'lucide-react';
 
@@ -9,21 +10,25 @@ const SIZE_OPTIONS: SizeOption[] = [
     size: '32"',
     tagline: 'Compact & Smart',
     image: '/tv_lake.jpg',
+    href: '/products?size=32%22',
   },
   {
     size: '43"',
     tagline: 'Perfect for Every Home',
     image: '/tv_art.jpg',
+    href: '/products?size=43%22',
   },
   {
     size: '55"',
     tagline: 'Bigger Screen, Bigger Joy',
     image: '/tv_space.jpg',
+    href: '/products?size=55%22',
   },
   {
     size: '65"',
     tagline: 'The Ultimate Experience',
     image: '/tv_city.jpg',
+    href: '/products?size=65%22',
   },
 ];
 
@@ -47,13 +52,13 @@ export function SizeSelector({ onSelectSize }: SizeSelectorProps) {
             </h2>
           </div>
 
-          <a
-            href="#best-selling"
+          <Link
+            href="/products"
             className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-700 hover:text-[#E50914] transition-colors group"
           >
             View All Products
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-          </a>
+          </Link>
         </div>
 
         {/* Responsive 4-Column Grid matching reference image */}

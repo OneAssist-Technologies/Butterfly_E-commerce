@@ -2,12 +2,14 @@
 
 import React from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 
 export interface SizeOption {
   size: string;
   tagline: string;
   image: string;
+  href?: string;
 }
 
 interface SizeCardProps {
@@ -16,10 +18,13 @@ interface SizeCardProps {
 }
 
 export function SizeCard({ item, onSelect }: SizeCardProps) {
+  const targetHref = item.href || `/products?size=${encodeURIComponent(item.size)}`;
+
   return (
-    <div
+    <Link
+      href={targetHref}
       onClick={() => onSelect?.(item.size)}
-      className="group relative bg-[#f8fafc] border border-zinc-200/90 rounded-2xl p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 cursor-pointer flex flex-col justify-between overflow-hidden"
+      className="group relative bg-[#f8fafc] border border-zinc-200/90 rounded-2xl p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 cursor-pointer flex flex-col justify-between overflow-hidden block"
     >
       {/* Subtle hover aura */}
       <div className="absolute inset-0 bg-gradient-to-tr from-[#E50914]/0 via-transparent to-[#E50914]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
@@ -53,6 +58,6 @@ export function SizeCard({ item, onSelect }: SizeCardProps) {
           <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-0.5" />
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

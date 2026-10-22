@@ -319,35 +319,8 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
               </Link>
             </div>
 
-            {/* 6 Column Horizontal TV Cards Grid - Exactly matching Hisense UI */}
-            <div className="grid grid-cols-6 gap-3 lg:gap-4 items-stretch">
-              {/* Laser TV (Featured item like Hisense Laser TV teal block, in Butterfly signature red) */}
-              <Link
-                href="/products?filter=all"
-                onClick={() => setActiveDropdown(null)}
-                className="group relative rounded-2xl p-3 bg-gradient-to-b from-[#E50914] to-[#B80710] text-white flex flex-col justify-between overflow-hidden shadow-md hover:shadow-xl hover:scale-[1.02] transition-all cursor-pointer"
-              >
-                <div className="relative aspect-[16/10] w-full rounded-xl overflow-hidden bg-black/20 p-1 mb-2">
-                  <Image
-                    src="/menu_laser_tv.jpg"
-                    alt="Laser TV"
-                    fill
-                    sizes="200px"
-                    className="object-contain group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <span className="absolute top-1.5 left-1.5 bg-white text-[#E50914] text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider shadow-xs">
-                    FLAGSHIP
-                  </span>
-                </div>
-                <div className="text-center w-full pt-1">
-                  <span className="block text-sm font-black tracking-tight text-white uppercase">
-                    Laser TV
-                  </span>
-                  <span className="block text-[10px] text-red-100 font-medium mt-0.5">
-                    100&quot; Ultra Cinema
-                  </span>
-                </div>
-              </Link>
+            {/* 5 Column Horizontal TV Cards Grid */}
+            <div className="grid grid-cols-5 gap-3 lg:gap-4 items-stretch">
 
               {/* 32" Smart TV */}
               <Link
@@ -537,13 +510,6 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
                 className="text-xs font-bold text-zinc-600 hover:text-[#E50914] bg-zinc-50 p-2 rounded-lg text-center"
               >
                 65&quot; TV
-              </Link>
-              <Link
-                href="/products?filter=all"
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-xs font-bold text-[#E50914] bg-red-50 p-2 rounded-lg text-center"
-              >
-                Laser TV
               </Link>
             </div>
           </div>

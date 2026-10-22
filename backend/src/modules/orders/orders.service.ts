@@ -82,7 +82,7 @@ export class OrdersService {
           if (productRecord) {
             unitPrice = productRecord.numericPrice;
           } else {
-            unitPrice = parseInt(item.price.replace(/[^0-9]/g, '')) || 24990;
+            unitPrice = item.price ? (parseInt(item.price.replace(/[^0-9]/g, ''), 10) || 0) : 0;
           }
 
           const lineTotal = unitPrice * item.quantity;
@@ -99,7 +99,7 @@ export class OrdersService {
           });
         }
       } else {
-        numericAmount = parseInt(dto.amount?.replace(/[^0-9]/g, '') || '0') || 24990;
+        numericAmount = parseInt(dto.amount?.replace(/[^0-9]/g, '') || '0', 10) || 0;
       }
 
       const orderNumber = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;

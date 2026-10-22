@@ -1,14 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import {
   Volume2,
   Tv,
   Eye,
   Sparkles,
-  ChevronLeft,
-  ChevronRight,
   ArrowRight,
   Layers,
 } from 'lucide-react';
@@ -42,9 +41,9 @@ const HERO_SLIDES: HeroSlide[] = [
     description:
       'Experience stunning visuals, immersive sound and smart features — all in one.',
     primaryCtaText: 'Explore Our TVs',
-    primaryCtaLink: '#size-selector',
+    primaryCtaLink: '/products',
     secondaryCtaText: 'Enquire Now',
-    secondaryCtaLink: '#best-selling',
+    secondaryCtaLink: '/products',
     image: '/hero_tv_showroom.jpg',
     badgeResolution: '4K UHD',
     quote: 'Designed for a better tomorrow',
@@ -83,15 +82,15 @@ const HERO_SLIDES: HeroSlide[] = [
     description:
       'Quantum Dot technology and Dolby Atmos for an uncompromised theatrical experience in your living room.',
     primaryCtaText: 'View 65" Flagship',
-    primaryCtaLink: '#best-selling',
-    secondaryCtaText: 'Watch Demo',
-    secondaryCtaLink: '#about-section',
+    primaryCtaLink: '/products?size=65%22',
+    secondaryCtaText: 'About Butterfly',
+    secondaryCtaLink: '/about',
     image: '/hero_tv_sunset.jpg',
     badgeResolution: 'OLED 4K',
     quote: 'Engineered for pure immersion',
     features: [
       {
-        icon: <Sparkles className="w-5 h-5 text-amber-400" />,
+        icon: <Sparkles className="w-5 h-5 text-white" />,
         title: 'Quantum Dot',
         sub: '1 Billion Colors',
       },
@@ -116,31 +115,20 @@ const HERO_SLIDES: HeroSlide[] = [
 
 export function HeroCarousel() {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-
-  const nextSlide = useCallback(() => {
-    setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
-  }, []);
-
-  const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length);
-  };
 
   useEffect(() => {
-    if (isPaused) return;
-    const interval = setInterval(() => {
-      nextSlide();
-    }, 8000);
-    return () => clearInterval(interval);
-  }, [isPaused, nextSlide]);
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+    }, 5000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   const slide = HERO_SLIDES[currentSlide];
 
   return (
     <section
       className="relative bg-[#070b12] text-white overflow-hidden min-h-[580px] sm:min-h-[660px] lg:min-h-[740px] flex items-center select-none"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
     >
       {/* 1. Full-bleed Living Room Photography with Smooth Cross-fade */}
       {HERO_SLIDES.map((s, idx) => (
@@ -173,7 +161,10 @@ export function HeroCarousel() {
 
       {/* 2. Left Hero Content: Headline, CTAs, Feature Badges */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24 w-full relative z-20">
-        <div className="max-w-xl lg:max-w-2xl space-y-6 lg:space-y-8 animate-in fade-in slide-in-from-left duration-700">
+        <div
+          key={slide.id}
+          className="max-w-xl lg:max-w-2xl space-y-6 lg:space-y-8 animate-in fade-in slide-in-from-left duration-700"
+        >
           
           {/* Subheading with red dash */}
           <div className="inline-flex items-center gap-2">
@@ -200,20 +191,20 @@ export function HeroCarousel() {
 
           {/* CTA Buttons matching reference design */}
           <div className="flex flex-wrap items-center gap-4 pt-2">
-            <a
+            <Link
               href={slide.primaryCtaLink}
               className="inline-flex items-center gap-2.5 px-8 py-3.5 rounded-full bg-[#E50914] text-white text-sm font-semibold tracking-wide hover:bg-[#c70811] shadow-[0_4px_20px_rgba(229,9,20,0.4)] hover:shadow-[0_6px_25px_rgba(229,9,20,0.6)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
             >
               {slide.primaryCtaText}
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-            </a>
+            </Link>
 
-            <a
+            <Link
               href={slide.secondaryCtaLink}
               className="inline-flex items-center px-8 py-3.5 rounded-full border border-white/30 bg-black/40 backdrop-blur-sm hover:bg-white/10 text-white text-sm font-semibold tracking-wide transition-all duration-200"
             >
               {slide.secondaryCtaText}
-            </a>
+            </Link>
           </div>
 
           {/* 4 Feature Badges in a horizontal row right below CTAs */}
@@ -243,42 +234,6 @@ export function HeroCarousel() {
           </span>
         </div>
 
-        {/* 4. Carousel Dot & Arrow Controls */}
-        <div className="mt-8 pt-4 flex items-center justify-between max-w-xl relative z-20">
-          {/* Dot Indicators */}
-          <div className="flex items-center gap-2">
-            {HERO_SLIDES.map((s, idx) => (
-              <button
-                key={s.id}
-                onClick={() => setCurrentSlide(idx)}
-                aria-label={`Go to slide ${idx + 1}`}
-                className={`transition-all duration-300 rounded-full h-2 cursor-pointer ${
-                  currentSlide === idx
-                    ? 'w-8 bg-[#E50914]'
-                    : 'w-2 bg-zinc-600 hover:bg-zinc-400'
-                }`}
-              />
-            ))}
-          </div>
-
-          {/* Left / Right Arrow Buttons */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={prevSlide}
-              aria-label="Previous Slide"
-              className="p-2.5 rounded-full bg-black/50 hover:bg-black/80 border border-white/20 text-zinc-200 hover:text-white transition-all hover:scale-105 active:scale-95 cursor-pointer"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={nextSlide}
-              aria-label="Next Slide"
-              className="p-2.5 rounded-full bg-black/50 hover:bg-black/80 border border-white/20 text-zinc-200 hover:text-white transition-all hover:scale-105 active:scale-95 cursor-pointer"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
       </div>
     </section>
   );
