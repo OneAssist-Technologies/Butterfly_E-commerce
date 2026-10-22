@@ -18,18 +18,27 @@ export class ProductsService implements OnModuleInit {
     }
   }
 
+  private getBaseUrl(): string {
+    const backendUrl = process.env.BACKEND_URL || process.env.BASE_URL;
+    if (backendUrl) {
+      return backendUrl.replace(/\/$/, '');
+    }
+    return 'http://localhost:3001';
+  }
+
   private mapProductImageUrl(product: any) {
     if (!product) return product;
+    const baseUrl = this.getBaseUrl();
     const isDataUrl = typeof product.image === 'string' && product.image.startsWith('data:');
     const imageUrl = isDataUrl
-      ? `http://localhost:3001/api/v1/products/${product.id}/image`
+      ? `${baseUrl}/api/v1/products/${product.id}/image`
       : product.image;
 
     let images = product.images;
     if (Array.isArray(images) && images.length > 0) {
       images = images.map((img: string) => {
         if (typeof img === 'string' && img.startsWith('data:')) {
-          return `http://localhost:3001/api/v1/products/${product.id}/image`;
+          return `${baseUrl}/api/v1/products/${product.id}/image`;
         }
         return img;
       });
@@ -184,10 +193,11 @@ export class ProductsService implements OnModuleInit {
       orderBy,
     });
 
+    const baseUrl = this.getBaseUrl();
     return products.map((p) => ({
       ...p,
-      image: `http://localhost:3001/api/v1/products/${p.id}/image`,
-      images: [`http://localhost:3001/api/v1/products/${p.id}/image`],
+      image: `${baseUrl}/api/v1/products/${p.id}/image`,
+      images: [`${baseUrl}/api/v1/products/${p.id}/image`],
     }));
   }
 
@@ -234,10 +244,11 @@ export class ProductsService implements OnModuleInit {
       throw new NotFoundException(`Product with ID or Model '${idOrModel}' not found.`);
     }
 
+    const baseUrl = this.getBaseUrl();
     return {
       ...product,
-      image: `http://localhost:3001/api/v1/products/${product.id}/image`,
-      images: [`http://localhost:3001/api/v1/products/${product.id}/image`],
+      image: `${baseUrl}/api/v1/products/${product.id}/image`,
+      images: [`${baseUrl}/api/v1/products/${product.id}/image`],
     };
   }
 

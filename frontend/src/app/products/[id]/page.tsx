@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import { ALL_PRODUCTS, CatalogProduct, getProductById, getSimilarProducts } from '@/data/products';
 import { ProductDetailsClient } from '@/components/products/product-details-client';
 import { ArrowLeft, Tv } from 'lucide-react';
+import { ENV } from '@/config/env';
 
 interface PageProps {
   params: Promise<{
@@ -51,7 +52,7 @@ export const instant = false;
 
 async function getLiveProduct(id: string): Promise<CatalogProduct | undefined> {
   try {
-    const res = await fetch(`http://localhost:3001/api/v1/products/${id}`, {
+    const res = await fetch(`${ENV.apiBaseUrl}/products/${id}`, {
       next: { revalidate: 60 },
     });
     if (res.ok) {
