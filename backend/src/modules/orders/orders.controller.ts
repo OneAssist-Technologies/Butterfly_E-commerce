@@ -9,15 +9,21 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { OrdersService } from './orders.service.js';
 import { CreateOrderDto, UpdateOrderStatusDto } from './dto/order.dto.js';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
+import { RolesGuard } from '../../common/guards/roles.guard.js';
+import { Roles } from '../../common/decorators/roles.decorator.js';
 
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Get()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN')
   async getAll(
     @Query('status') status?: string,
     @Query('search') search?: string,
@@ -26,6 +32,8 @@ export class OrdersController {
   }
 
   @Get(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN')
   async getOne(@Param('id') id: string) {
     return this.ordersService.findOne(id);
   }
@@ -37,6 +45,8 @@ export class OrdersController {
   }
 
   @Patch(':id/status')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN')
   async updateStatus(
     @Param('id') id: string,
     @Body() dto: UpdateOrderStatusDto,
@@ -45,6 +55,8 @@ export class OrdersController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN')
   async delete(@Param('id') id: string) {
     return this.ordersService.remove(id);
   }

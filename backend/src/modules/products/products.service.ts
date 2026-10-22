@@ -12,7 +12,7 @@ export class ProductsService implements OnModuleInit {
   async onModuleInit() {
     try {
       await seedProductsIfEmpty(this.prisma);
-      this.logger.log('Products database verification completed.');
+      this.logger.log('Products database verification and upsert completed.');
     } catch (err) {
       this.logger.warn(`Could not seed initial products: ${err instanceof Error ? err.message : err}`);
     }

@@ -4,7 +4,11 @@ import { CatalogProduct } from '@/data/products';
 export interface ProductQueryParams {
   size?: string;
   resolution?: string;
+  smart?: string;
+  minPrice?: string | number;
+  maxPrice?: string | number;
   search?: string;
+  sort?: string;
 }
 
 export const productService = {

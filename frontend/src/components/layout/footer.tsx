@@ -138,17 +138,17 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/#about-section" className="text-[#E50914] font-medium hover:underline transition-colors">
+                <Link href="/about" className="hover:text-white transition-colors">
                   About Us
                 </Link>
               </li>
               <li>
-                <Link href="/#trust-bar" className="hover:text-white transition-colors">
+                <Link href="/support" className="hover:text-white transition-colors">
                   Support
                 </Link>
               </li>
               <li>
-                <Link href="/#footer" className="hover:text-white transition-colors">
+                <Link href="/contact" className="hover:text-white transition-colors">
                   Contact
                 </Link>
               </li>
@@ -162,17 +162,17 @@ export function Footer() {
             </h4>
             <ul className="space-y-2 text-xs text-zinc-400">
               <li>
-                <Link href="/#trust-bar" className="hover:text-white transition-colors">
+                <Link href="/support#faq" className="hover:text-white transition-colors">
                   FAQs
                 </Link>
               </li>
               <li>
-                <Link href="/#trust-bar" className="hover:text-white transition-colors">
+                <Link href="/support#warranty" className="hover:text-white transition-colors">
                   Warranty
                 </Link>
               </li>
               <li>
-                <Link href="/#trust-bar" className="hover:text-white transition-colors">
+                <Link href="/support#service-centers" className="hover:text-white transition-colors">
                   Service Centers
                 </Link>
               </li>

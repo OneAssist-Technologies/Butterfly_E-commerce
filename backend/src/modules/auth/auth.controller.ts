@@ -30,7 +30,7 @@ export class AuthController {
     return this.authService.seedSuperAdmin();
   }
 
-  @Post('admin/login')
+  @Post(['admin/login', 'admin-login'])
   @HttpCode(HttpStatus.OK)
   async adminLogin(@Body() dto: AdminLoginDto) {
     return this.authService.validateAdminLogin(dto);
