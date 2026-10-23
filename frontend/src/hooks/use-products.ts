@@ -9,6 +9,7 @@ import {
   getSimilarProducts,
 } from '@/data/products';
 import { TVProduct } from '@/components/cards/product-card';
+import { productService } from '@/services/product.service';
 
 export interface DynamicSizeOption {
   size: string;
@@ -28,7 +29,20 @@ export function useDynamicProducts() {
   });
   const [isLoaded, setIsLoaded] = useState(false);
 
-  const refreshProducts = useCallback(() => {
+  const refreshProducts = useCallback(async () => {
+    try {
+      const live = await productService.getAll();
+      if (Array.isArray(live)) {
+        setProducts(live);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('butterfly_admin_products', JSON.stringify(live));
+        }
+        setIsLoaded(true);
+        return;
+      }
+    } catch {
+      // Fallback to stored products
+    }
     const latest = getStoredProducts();
     setProducts(latest);
     setIsLoaded(true);

@@ -2,6 +2,14 @@ import { IsString, IsNotEmpty, IsOptional, IsNumber, IsBoolean, IsArray } from '
 
 export class CreateProductDto {
   @IsString()
+  @IsOptional()
+  id?: string;
+
+  @IsNumber()
+  @IsOptional()
+  priceNumber?: number;
+
+  @IsString()
   @IsNotEmpty()
   model!: string;
 
@@ -106,6 +114,14 @@ export class CreateProductDto {
 }
 
 export class UpdateProductDto {
+  @IsString()
+  @IsOptional()
+  id?: string;
+
+  @IsNumber()
+  @IsOptional()
+  priceNumber?: number;
+
   @IsString()
   @IsOptional()
   name?: string;

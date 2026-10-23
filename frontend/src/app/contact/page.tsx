@@ -19,11 +19,13 @@ import {
 } from 'lucide-react';
 import { enquiryService } from '@/services/enquiry.service';
 import { ALL_PRODUCTS } from '@/data/products';
+import { productService } from '@/services/product.service';
 import { settingsService, CompanySettings } from '@/services/settings.service';
 import { ExternalLink } from 'lucide-react';
 
 export default function ContactPage() {
   const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
+  const [liveProducts, setLiveProducts] = useState<any[]>(ALL_PRODUCTS);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -56,6 +58,14 @@ export default function ContactPage() {
     settingsService.getSettings()
       .then((data) => {
         if (data) setCompanySettings(data);
+      })
+      .catch(() => {});
+
+    productService.getAll()
+      .then((items) => {
+        if (Array.isArray(items) && items.length > 0) {
+          setLiveProducts(items);
+        }
       })
       .catch(() => {});
   }, []);
@@ -358,7 +368,7 @@ export default function ContactPage() {
                   <option value="Installation / Wall Mounting Request">Installation / Wall Mounting Request</option>
                   <option value="Warranty Claim / Registration">Warranty Claim / Registration</option>
                   <option value="Corporate / Bulk Order Enquiry">Corporate / Bulk Order Enquiry</option>
-                  {ALL_PRODUCTS.map((prod) => (
+                  {liveProducts.map((prod) => (
                     <option key={prod.id} value={`${prod.name} (${prod.model})`}>
                       {prod.name} — {prod.price}
                     </option>

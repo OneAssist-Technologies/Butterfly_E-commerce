@@ -55,7 +55,7 @@ export function SettingsTab({
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-150">
-      <section className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 sm:p-7 space-y-6">
+      <section className="bg-white rounded-3xl border border-slate-200/90 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] p-6 sm:p-7 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-red-50 text-[#E50914] flex items-center justify-center border border-red-100 shadow-xs">

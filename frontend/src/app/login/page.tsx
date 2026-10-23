@@ -10,7 +10,6 @@ import {
   EyeOff,
   CheckCircle2,
   AlertCircle,
-  ShieldCheck,
   Sparkles,
 } from 'lucide-react';
 import { AuthTvShowcase } from '@/components/auth/auth-tv-showcase';
@@ -25,12 +24,6 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-
-  const handleAdminAutofill = () => {
-    setEmail('admin@butterfly.com');
-    setPassword('Butterfly@2026');
-    setErrorMessage('');
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,20 +102,6 @@ export default function LoginPage() {
 
           {/* Form Header */}
           <div className="mb-6">
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <span className="text-xs font-extrabold uppercase tracking-widest text-[#E50914]">
-                UNIFIED SIGN IN
-              </span>
-              <button
-                type="button"
-                onClick={handleAdminAutofill}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 hover:bg-red-100 text-[#E50914] text-[11px] font-bold border border-red-200 transition-colors cursor-pointer"
-                title="Fill Super Admin Credentials"
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Admin Quick Fill</span>
-              </button>
-            </div>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-zinc-900 tracking-tight">
               Sign In
             </h2>

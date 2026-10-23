@@ -299,7 +299,7 @@ export function ProductDetailsClient({
           {/* Left Column: Visual Showcase & Gallery (7 cols) */}
           <div className="lg:col-span-7 space-y-5">
             {/* Main Stage Image with Sleek TV Bezel */}
-            <div className="relative bg-white rounded-3xl border border-zinc-200/90 p-4 sm:p-8 shadow-sm overflow-hidden group">
+            <div className="relative bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-8 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] overflow-hidden group">
               {/* Top Badges & Actions */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
@@ -417,7 +417,7 @@ export function ProductDetailsClient({
           </div>
 
           {/* Right Column: Pricing, Specs & Purchase Actions (5 cols) */}
-          <div className="lg:col-span-5 bg-white rounded-3xl border border-zinc-200/90 p-6 sm:p-8 shadow-sm space-y-6">
+          <div className="lg:col-span-5 bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-8 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] space-y-6">
             
             {/* Header Titles */}
             <div>

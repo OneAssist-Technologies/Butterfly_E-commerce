@@ -1,7 +1,9 @@
 import { CatalogProduct } from '@/data/products';
 import { CompanySettings } from '@/services/settings.service';
+import { Offer } from '@/services/offer.service';
 
-export type AdminTab = 'overview' | 'products' | 'enquiries' | 'orders' | 'users' | 'settings';
+export type AdminTab = 'overview' | 'products' | 'offers' | 'enquiries' | 'orders' | 'users' | 'settings';
+export type { Offer };
 
 export interface CustomerEnquiry {
   id: string;

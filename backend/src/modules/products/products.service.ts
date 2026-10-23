@@ -1,22 +1,12 @@
-import { Injectable, NotFoundException, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
 import { CreateProductDto, UpdateProductDto } from './dto/product.dto.js';
-import { seedProductsIfEmpty } from './products.seed.js';
 
 @Injectable()
-export class ProductsService implements OnModuleInit {
+export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
 
   constructor(private readonly prisma: PrismaService) {}
-
-  async onModuleInit() {
-    try {
-      await seedProductsIfEmpty(this.prisma);
-      this.logger.log('Products database verification and upsert completed.');
-    } catch (err) {
-      this.logger.warn(`Could not seed initial products: ${err instanceof Error ? err.message : err}`);
-    }
-  }
 
   private getBaseUrl(): string {
     const backendUrl = process.env.BACKEND_URL || process.env.BASE_URL;
@@ -325,18 +315,20 @@ export class ProductsService implements OnModuleInit {
   }
 
   async create(dto: CreateProductDto) {
+    const { id: _id, priceNumber: _priceNumber, ...data } = dto as any;
     return this.prisma.product.create({
       data: {
-        ...dto,
+        ...data,
       },
     });
   }
 
   async update(id: string, dto: UpdateProductDto) {
     const existing = await this.findOne(id);
+    const { id: _id, priceNumber: _priceNumber, ...data } = dto as any;
     return this.prisma.product.update({
       where: { id: existing.id },
-      data: dto,
+      data,
     });
   }
 

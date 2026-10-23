@@ -23,12 +23,17 @@ export const productService = {
   },
 
   async create(product: Partial<CatalogProduct>): Promise<CatalogProduct> {
-    const response = await apiClient.post<CatalogProduct>('/products', product);
+    const { priceNumber, ...payload } = product as any;
+    if (payload.id && typeof payload.id === 'string' && payload.id.startsWith('tv-')) {
+      delete payload.id;
+    }
+    const response = await apiClient.post<CatalogProduct>('/products', payload);
     return response.data;
   },
 
   async update(id: string, product: Partial<CatalogProduct>): Promise<CatalogProduct> {
-    const response = await apiClient.put<CatalogProduct>(`/products/${id}`, product);
+    const { priceNumber, id: _id, ...payload } = product as any;
+    const response = await apiClient.put<CatalogProduct>(`/products/${id}`, payload);
     return response.data;
   },
 

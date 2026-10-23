@@ -23,6 +23,8 @@ import {
 import { useCart } from '@/providers';
 import { ALL_PRODUCTS, CatalogProduct } from '@/data/products';
 import { orderService } from '@/services/order.service';
+import { offerService, Offer } from '@/services/offer.service';
+import { productService } from '@/services/product.service';
 
 export default function CartPage() {
   const router = useRouter();
@@ -33,6 +35,10 @@ export default function CartPage() {
   const [couponCode, setCouponCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState<{ code: string; percent: number; amount: number } | null>(null);
   const [couponError, setCouponError] = useState('');
+  const [availableOffers, setAvailableOffers] = useState<Offer[]>([]);
+  const [showOffersDrawer, setShowOffersDrawer] = useState(false);
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+  const [liveCatalog, setLiveCatalog] = useState<CatalogProduct[]>([]);
 
   // Checkout form details
   const [customerName, setCustomerName] = useState('');
@@ -104,22 +110,87 @@ export default function CartPage() {
 
   const totalAmount = Math.max(0, subtotal - discountAmount);
 
-  // Coupon handling
-  const handleApplyCoupon = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Fetch active store offers for the cart
+  useEffect(() => {
+    const fetchOffers = async () => {
+      try {
+        const data = await offerService.getActiveOffers();
+        const active = data.filter((o) => o.isActive);
+        setAvailableOffers(active);
+
+        // Auto-apply best automatic offer if eligible and no coupon applied yet
+        if (!appliedDiscount && subtotal > 0) {
+          const autoOffer = active.find((o) => o.applyAutomatically && subtotal >= o.minOrderAmount);
+          if (autoOffer) {
+            const calculatedSavings = autoOffer.discountType === 'PERCENTAGE'
+              ? Math.min(Math.round((subtotal * autoOffer.discountValue) / 100), autoOffer.maxDiscountAmount || Infinity)
+              : Math.min(autoOffer.discountValue, subtotal);
+            setAppliedDiscount({
+              code: autoOffer.code,
+              percent: autoOffer.discountType === 'PERCENTAGE' ? autoOffer.discountValue : 0,
+              amount: calculatedSavings,
+            });
+            setCouponCode(autoOffer.code);
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load active offers in cart:', e);
+      }
+    };
+    fetchOffers();
+
+    // Fetch live catalog products for dynamic suggestions
+    productService.getAll().then((data) => {
+      if (Array.isArray(data) && data.length > 0) setLiveCatalog(data);
+    }).catch(() => {});
+
+    const handleUpdate = () => {
+      fetchOffers();
+      productService.getAll().then((data) => {
+        if (Array.isArray(data) && data.length > 0) setLiveCatalog(data);
+      }).catch(() => {});
+    };
+    window.addEventListener('butterfly_offers_updated', handleUpdate);
+    window.addEventListener('butterfly_products_updated', handleUpdate);
+    return () => {
+      window.removeEventListener('butterfly_offers_updated', handleUpdate);
+      window.removeEventListener('butterfly_products_updated', handleUpdate);
+    };
+  }, [subtotal, appliedDiscount]);
+
+  // Dynamic Coupon handling
+  const handleApplyCoupon = async (e?: React.FormEvent, directCode?: string) => {
+    if (e) e.preventDefault();
     setCouponError('');
-    const code = couponCode.trim().toUpperCase();
+    const code = (directCode || couponCode).trim().toUpperCase();
 
     if (!code) return;
+    setIsValidatingCoupon(true);
 
-    if (code === 'BUTTERFLY2026') {
-      const discount = Math.round(subtotal * 0.05);
-      setAppliedDiscount({ code, percent: 5, amount: discount });
-    } else if (code === 'WELCOME1000' || code === 'SAVE1000') {
-      setAppliedDiscount({ code, percent: 0, amount: 1000 });
-    } else {
-      setCouponError('Invalid promo code. Try BUTTERFLY2026 or SAVE1000');
+    try {
+      const result = await offerService.validateCoupon(code, subtotal);
+      if (result.valid && result.offer) {
+        setAppliedDiscount({
+          code: result.offer.code,
+          percent: result.offer.discountType === 'PERCENTAGE' ? result.offer.discountValue : 0,
+          amount: result.discountAmount || 0,
+        });
+        setCouponCode(result.offer.code);
+        setCouponError('');
+      } else {
+        setCouponError(result.message || 'Invalid or expired promo code.');
+      }
+    } catch (err: any) {
+      setCouponError(err?.message || 'Could not validate promo code.');
+    } finally {
+      setIsValidatingCoupon(false);
     }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedDiscount(null);
+    setCouponCode('');
+    setCouponError('');
   };
 
   // Handle Checkout Order Submission
@@ -169,9 +240,11 @@ export default function CartPage() {
     }
   };
 
-  // Suggested products (exclude current cart models)
+  // Suggested products (exclude current cart models, dynamically from DB)
   const cartModelSet = new Set(cartItems.map((i) => i.model));
-  const suggestedProducts = ALL_PRODUCTS.filter((p) => !cartModelSet.has(p.model)).slice(0, 3);
+  const suggestedProducts = (liveCatalog.length > 0 ? liveCatalog : ALL_PRODUCTS)
+    .filter((p) => !cartModelSet.has(p.model))
+    .slice(0, 3);
 
   // If order was successfully placed
   if (orderSuccess) {
@@ -236,7 +309,7 @@ export default function CartPage() {
 
   if (!isHydrated) {
     return (
-      <main className="min-h-screen bg-[#F8FAFC] flex items-center justify-center py-24">
+      <main className="min-h-screen bg-[#F1F5F9] flex items-center justify-center py-24">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 animate-spin text-[#E50914]" />
           <p className="text-xs font-semibold text-zinc-500">Loading your cart...</p>
@@ -292,7 +365,7 @@ export default function CartPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
         {cartItems.length === 0 ? (
           /* Empty Cart State */
-          <div className="bg-white rounded-3xl border border-zinc-200/80 p-8 sm:p-16 text-center max-w-2xl mx-auto shadow-sm">
+          <div className="bg-white rounded-3xl border border-slate-200/90 p-8 sm:p-16 text-center max-w-2xl mx-auto shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
             <div className="w-20 h-20 bg-red-50 text-[#E50914] rounded-3xl flex items-center justify-center mx-auto mb-6 border border-red-100">
               <ShoppingBag className="w-10 h-10 stroke-[1.5]" />
             </div>
@@ -324,7 +397,7 @@ export default function CartPage() {
             
             {/* LEFT: Items List (8 Columns) */}
             <div className="lg:col-span-7 xl:col-span-8 space-y-4">
-              <div className="bg-white rounded-2xl border border-zinc-200/80 p-4 sm:p-6 shadow-sm divide-y divide-zinc-100">
+              <div className="bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] divide-y divide-zinc-100">
                 {cartItems.map((item, idx) => {
                   const qty = quantities[idx] || (item as any).quantity || 1;
                   const itemTotal = (item.numericPrice || 0) * qty;
@@ -465,7 +538,7 @@ export default function CartPage() {
 
             {/* RIGHT: Order Summary & Checkout (4 Columns, Sticky) */}
             <div className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-24 space-y-6">
-              <div className="bg-white rounded-2xl border border-zinc-200/80 p-6 shadow-sm">
+              <div className="bg-white rounded-3xl border border-slate-200/90 p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
                 <h2 className="text-lg font-extrabold text-zinc-900 pb-4 border-b border-zinc-100 flex items-center justify-between">
                   <span>Order Summary</span>
                   <span className="text-xs font-bold text-zinc-500">
@@ -506,37 +579,134 @@ export default function CartPage() {
                   </div>
                 </div>
 
-                {/* Coupon Input Field */}
-                <form onSubmit={handleApplyCoupon} className="pt-3 pb-4 border-t border-zinc-100">
-                  <label htmlFor="coupon" className="block text-xs font-bold text-zinc-700 mb-1.5">
-                    Have a promo coupon?
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      id="coupon"
-                      type="text"
-                      value={couponCode}
-                      onChange={(e) => setCouponCode(e.target.value)}
-                      placeholder="e.g. BUTTERFLY2026"
-                      className="flex-1 px-3 py-2 border border-zinc-300 rounded-xl text-xs uppercase placeholder:normal-case font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-[#E50914]/20 focus:border-[#E50914]"
-                    />
-                    <button
-                      type="submit"
-                      className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
-                    >
-                      Apply
-                    </button>
+                {/* Coupon & Available Offers Section */}
+                <div className="pt-3 pb-4 border-t border-zinc-100 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="coupon" className="block text-xs font-bold text-zinc-700">
+                      Have a promo coupon?
+                    </label>
+
+                    {availableOffers.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowOffersDrawer(!showOffersDrawer)}
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-[#E50914] hover:text-[#c70811] transition-colors cursor-pointer"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>{showOffersDrawer ? 'Hide Offers' : `View Offers (${availableOffers.length})`}</span>
+                      </button>
+                    )}
                   </div>
-                  {couponError && (
-                    <p className="text-[11px] text-red-600 font-semibold mt-1">{couponError}</p>
+
+                  {appliedDiscount ? (
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <div>
+                          <span className="font-mono font-black text-emerald-900 tracking-wider">
+                            {appliedDiscount.code}
+                          </span>
+                          <span className="text-emerald-700 ml-1.5 font-bold">
+                            Applied (-₹{discountAmount.toLocaleString('en-IN')})
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleRemoveCoupon}
+                        className="text-[11px] font-bold text-red-600 hover:text-red-700 underline cursor-pointer"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleApplyCoupon} className="space-y-1.5">
+                      <div className="flex gap-2">
+                        <input
+                          id="coupon"
+                          type="text"
+                          value={couponCode}
+                          onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                          placeholder="e.g. BUTTERFLY2026"
+                          className="flex-1 px-3 py-2 border border-zinc-300 rounded-xl text-xs uppercase placeholder:normal-case font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-[#E50914]/20 focus:border-[#E50914]"
+                        />
+                        <button
+                          type="submit"
+                          disabled={isValidatingCoupon || !couponCode.trim()}
+                          className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer shrink-0"
+                        >
+                          {isValidatingCoupon ? 'Validating...' : 'Apply'}
+                        </button>
+                      </div>
+
+                      {couponError && (
+                        <p className="text-[11px] text-red-600 font-semibold">{couponError}</p>
+                      )}
+                    </form>
                   )}
-                  {appliedDiscount && (
-                    <p className="text-[11px] text-emerald-600 font-semibold mt-1 flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>{appliedDiscount.code} applied successfully!</span>
-                    </p>
+
+                  {/* Available Offers Drawer */}
+                  {showOffersDrawer && (
+                    <div className="p-3 rounded-2xl bg-zinc-50 border border-zinc-200/80 space-y-2.5 animate-in fade-in slide-in-from-top-2 duration-150">
+                      <p className="text-[11px] font-black uppercase tracking-wider text-zinc-500">
+                        Applicable Store Discounts
+                      </p>
+                      <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                        {availableOffers.map((offer) => {
+                          const isEligible = subtotal >= offer.minOrderAmount;
+                          const isCurrentlyApplied = appliedDiscount?.code === offer.code;
+
+                          return (
+                            <div
+                              key={offer.id}
+                              className={`p-2.5 rounded-xl border text-xs transition-all flex items-center justify-between gap-3 ${
+                                isCurrentlyApplied
+                                  ? 'bg-emerald-50 border-emerald-300'
+                                  : 'bg-white border-zinc-200 hover:border-red-200'
+                              }`}
+                            >
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-mono font-black text-zinc-900 uppercase tracking-wider">
+                                    {offer.code}
+                                  </span>
+                                  <span className="text-[10px] font-black uppercase px-1.5 py-0.2 rounded-md bg-red-50 text-[#E50914] border border-red-100">
+                                    {offer.discountType === 'PERCENTAGE'
+                                      ? `${offer.discountValue}% OFF`
+                                      : `₹${offer.discountValue.toLocaleString('en-IN')} OFF`}
+                                  </span>
+                                </div>
+                                <p className="text-[11px] text-zinc-500 mt-0.5 line-clamp-1">
+                                  {offer.description}
+                                </p>
+                                {!isEligible && (
+                                  <p className="text-[10px] text-amber-700 font-semibold mt-0.5">
+                                    Add ₹{(offer.minOrderAmount - subtotal).toLocaleString('en-IN')} more to unlock
+                                  </p>
+                                )}
+                              </div>
+
+                              <button
+                                type="button"
+                                disabled={!isEligible || isCurrentlyApplied}
+                                onClick={() => handleApplyCoupon(undefined, offer.code)}
+                                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 transition-colors cursor-pointer disabled:cursor-not-allowed ${
+                                  isCurrentlyApplied
+                                    ? 'bg-emerald-600 text-white'
+                                    : isEligible
+                                    ? 'bg-[#E50914] text-white hover:bg-[#c70811]'
+                                    : 'bg-zinc-200 text-zinc-400'
+                                }`}
+                              >
+                                {isCurrentlyApplied ? 'Applied' : isEligible ? 'Apply' : 'Min Spend'}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   )}
-                </form>
+                </div>
 
                 {/* Total Line */}
                 <div className="py-4 border-t border-zinc-200 flex items-baseline justify-between">

@@ -218,20 +218,23 @@ function ProductsCatalogContent() {
     const fetchLiveProducts = async () => {
       setIsLoadingProducts(true);
       try {
-        const liveData = await productService.getAll({
-          size: searchParams.get('size') || undefined,
-          resolution: searchParams.get('resolution') || undefined,
-          smart: searchParams.get('smart') || undefined,
-          search: searchParams.get('q') || undefined,
-          sort: searchParams.get('sort') || undefined,
-        });
+        const liveData = await productService.getAll();
         if (isMounted && Array.isArray(liveData)) {
           setProductsList(liveData);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('butterfly_admin_products', JSON.stringify(liveData));
+          }
           setIsLoadingProducts(false);
           return;
         }
       } catch (e: any) {
         console.error('[ProductsPage] Error fetching products from backend API:', e?.message || e);
+        const stored = typeof window !== 'undefined' ? localStorage.getItem('butterfly_admin_products') : null;
+        if (stored && isMounted) {
+          try {
+            setProductsList(JSON.parse(stored));
+          } catch {}
+        }
       }
       if (isMounted) {
         setIsLoadingProducts(false);
@@ -612,7 +615,7 @@ function ProductsCatalogContent() {
   );
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-[#F8FAFC]">
       {/* 1. HERO BANNER: "Explore Our Smart TVs" */}
       <section className="relative w-full bg-[#0a0e14] overflow-hidden">
         {/* Background TV Living Room Image */}
@@ -712,8 +715,10 @@ function ProductsCatalogContent() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-8">
           
           {/* Desktop Left Sidebar Filters (3 cols) */}
-          <aside className="hidden lg:block lg:col-span-3 pr-2">
-            {FilterSidebarContent}
+          <aside className="hidden lg:block lg:col-span-3">
+            <div className="bg-white rounded-3xl border border-slate-200/90 p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] sticky top-28">
+              {FilterSidebarContent}
+            </div>
           </aside>
 
           {/* Right Product Grid (9 cols) */}

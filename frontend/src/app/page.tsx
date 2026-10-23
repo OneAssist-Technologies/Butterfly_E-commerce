@@ -28,7 +28,7 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-white flex flex-col">
+    <main className="min-h-screen bg-[#F8FAFC] flex flex-col">
       {/* 1. Hero Carousel with luxury living room TV & cinematic transitions */}
       <HeroCarousel />
 

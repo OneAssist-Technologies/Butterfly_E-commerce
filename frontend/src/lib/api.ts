@@ -11,6 +11,7 @@ export const apiClient = axios.create({
 
 apiClient.interceptors.request.use(
   (config) => {
+    config.baseURL = config.baseURL || ENV.apiBaseUrl;
     if (typeof window !== 'undefined') {
       const token =
         localStorage.getItem('butterfly_admin_token') ||

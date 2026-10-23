@@ -32,7 +32,7 @@ export function ProductCard({
   return (
     <div
       onClick={() => onViewDetails(product)}
-      className="group relative bg-white border border-zinc-200/90 rounded-2xl p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 cursor-pointer flex flex-col justify-between"
+      className="group relative bg-white border border-slate-200/90 rounded-3xl p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 cursor-pointer flex flex-col justify-between shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]"
     >
       {/* Top row: Badge */}
       <div className="flex items-center justify-start mb-3 min-h-[26px]">
