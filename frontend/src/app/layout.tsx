@@ -1,3 +1,4 @@
+import React, { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
@@ -19,6 +20,14 @@ export const metadata: Metadata = {
   title: 'Butterfly SMART TV | Brighter Colours. Smarter Living.',
   description:
     'Experience stunning visuals, immersive sound, and smart features — all in one with Butterfly Smart TV.',
+  icons: {
+    icon: [
+      { url: '/brand/butterfly-wordmark-badge.png' },
+      { url: '/icon.png' },
+      { url: '/favicon.ico' },
+    ],
+    apple: '/brand/butterfly-wordmark-badge.png',
+  },
 };
 
 export default function RootLayout({
@@ -27,14 +36,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 min-h-screen flex flex-col`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#F8FAFC] text-slate-900 min-h-screen flex flex-col`}
       >
         <AppProviders>
-          <Header />
+          <Suspense fallback={<div className="h-20 bg-white" />}>
+            <Header />
+          </Suspense>
           <div className="flex-1 flex flex-col">{children}</div>
-          <Footer />
+          <Suspense fallback={null}>
+            <Footer />
+          </Suspense>
         </AppProviders>
       </body>
     </html>

@@ -1,12 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
+  --background: #F8FAFC;
   --foreground: #0f172a;
   --primary-red: #e50914;
   --primary-red-hover: #c70811;
   --dark-bg: #0b0f17;
-  --card-bg: #f8fafc;
+  --card-bg: #ffffff;
+  --card-border: #E2E8F0;
+  --canvas-bg: #F8FAFC;
 }
 
 @theme inline {
@@ -17,12 +19,6 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #090d16;
-    --foreground: #f8fafc;
-  }
-}
 
 html {
   scroll-behavior: smooth;

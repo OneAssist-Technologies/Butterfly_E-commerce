@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -10,12 +7,207 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Role {
+  CUSTOMER
+  ADMIN
+  SUPER_ADMIN
+  OPERATOR
+  CATALOG_MANAGER
+}
+
+enum OrderStatus {
+  Processing
+  Dispatched
+  Delivered
+  Cancelled
+}
+
+enum EnquiryStatus {
+  New
+  Contacted
+  Closed
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(uuid())
+  name       String
+  email      String   @unique
+  password   String?
+  role       Role     @default(CUSTOMER)
+  department String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  orders     Order[]
+  reviews    Review[]
 
   @@map("users")
 }
+
+model Product {
+  id                 String      @id @default(uuid())
+  model              String      @unique
+  name               String
+  size               String
+  screenSizeCategory String?
+  badge              String?
+  image              String
+  images             String[]    @default([])
+  resolution         String
+  resolutionCategory String?
+  os                 String
+  smartOS            String?
+  smartCategory      String?
+  sound              String
+  displayTech        String?
+  price              String
+  numericPrice       Int
+  priceCategory      String?
+  brand              String      @default("Butterfly")
+  isFilledButton     Boolean     @default(false)
+  buttonLabel        String?
+  featuredRank       Int?
+  inStock            Boolean     @default(true)
+  features           String[]    @default([])
+  keyFeatures        String[]    @default([])
+  technicalSpecs     Json?
+  warrantyInstallation String?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  orderItems         OrderItem[]
+  reviews            Review[]
+
+  @@map("products")
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  rating    Int      @default(5)
+  title     String?
+  comment   String
+  userName  String
+  userEmail String?
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("reviews")
+}
+
+model Order {
+  id            String      @id @default(uuid())
+  orderNumber   String      @unique
+  customerName  String
+  email         String
+  user          User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId        String?
+  amount        String
+  numericAmount Int
+  payment       String      @default("Prepaid (UPI)")
+  status        OrderStatus @default(Processing)
+  date          String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  items         OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id           String   @id @default(uuid())
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId      String
+  product      Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productId    String?
+  productModel String
+  productName  String
+  price        String
+  numericPrice Int
+  quantity     Int      @default(1)
+  lineTotal    Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("order_items")
+}
+
+model Enquiry {
+  id           String        @id @default(uuid())
+  enquiryNumber String       @unique
+  name         String
+  phone        String
+  email        String
+  city         String
+  message      String?
+  productModel String
+  productPrice String?
+  date         String
+  status       EnquiryStatus @default(New)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@map("enquiries")
+}
+
+model CompanySetting {
+  id             String   @id @default("default")
+  companyName    String   @default("Butterfly Smart TV")
+  email          String   @default("butterflytvs@gmail.com")
+  supportEmail   String   @default("support@butterflytv.in")
+  phone          String   @default("+91 422 430 1234")
+  alternatePhone String?  @default("+91 98765 43210")
+  whatsapp       String?  @default("+91 98765 43210")
+  address        String   @default("Butterfly Smart TV Technologies, Avinashi Road, Peelamedu")
+  city           String   @default("Coimbatore")
+  state          String   @default("Tamil Nadu")
+  pincode        String   @default("641004")
+  country        String   @default("India")
+  locationUrl    String?  @default("https://maps.google.com/?q=Peelamedu+Coimbatore")
+  supportHours   String   @default("Mon - Sat | 9:00 AM - 6:00 PM IST")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("company_settings")
+}
+
+model Offer {
+  id                 String       @id @default(uuid())
+  title              String
+  code               String       @unique
+  description        String
+  offerType          String?      @default("COUPON")
+  discountType       DiscountType @default(PERCENTAGE)
+  discountValue      Int
+  minOrderAmount     Int          @default(0)
+  maxDiscountAmount  Int?
+  badge              String?      @default("Special Offer")
+  badgeColor         String?      @default("red")
+  bannerText         String?
+  showInAnnouncement Boolean      @default(true)
+  showInHomepage     Boolean      @default(true)
+  applyAutomatically Boolean      @default(false)
+  stackable          Boolean      @default(false)
+  applicableSize     String?      @default("ALL")
+  targetProducts     String?
+  maxUsageLimit      Int?
+  usagePerCustomer   Int?         @default(1)
+  termsConditions    String?
+  configuration      Json?        @default("{}")
+  startDate          DateTime?    @default(now())
+  endDate            DateTime?
+  isActive           Boolean      @default(true)
+  usageCount         Int          @default(0)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@map("offers")
+}
+
+

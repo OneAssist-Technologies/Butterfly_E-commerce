@@ -1,9 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { TVProduct } from '@/components/cards/product-card';
-import { X, Trash2, ArrowRight, ShoppingBag } from 'lucide-react';
+import { X, Trash2, ArrowRight, ShoppingBag, Loader2 } from 'lucide-react';
+import { orderService } from '@/services/order.service';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -20,9 +22,22 @@ export function CartDrawer({
   onRemoveItem,
   onClearCart,
 }: CartDrawerProps) {
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+
   if (!isOpen) return null;
 
-  const totalAmount = cartItems.reduce((sum, item) => sum + item.numericPrice, 0);
+  const getItemPrice = (item: TVProduct) => {
+    if (typeof item.numericPrice === 'number' && !isNaN(item.numericPrice) && item.numericPrice > 0) {
+      return item.numericPrice;
+    }
+    const parsed = parseInt(String(item.price || '').replace(/[^0-9]/g, ''));
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
+  const totalAmount = cartItems.reduce((sum, item) => {
+    const qty = (item as any).quantity || 1;
+    return sum + getItemPrice(item) * qty;
+  }, 0);
 
   return (
     <div
@@ -44,7 +59,7 @@ export function CartDrawer({
           <button
             onClick={onClose}
             aria-label="Close Cart"
-            className="p-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
+            className="p-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -63,37 +78,49 @@ export function CartDrawer({
               </p>
             </div>
           ) : (
-            cartItems.map((item, idx) => (
-              <div
-                key={`${item.id}-${idx}`}
-                className="flex items-center gap-4 p-3 rounded-xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-950/40"
-              >
-                <div className="relative w-16 h-12 flex-shrink-0">
-                  <Image
-                    src={item.image}
-                    alt={item.name}
-                    fill
-                    className="object-contain"
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-xs font-bold text-zinc-900 dark:text-white truncate">
-                    {item.model}
-                  </h4>
-                  <p className="text-[11px] text-zinc-500 truncate">{item.name}</p>
-                  <span className="text-xs font-black text-[#E50914] block mt-0.5">
-                    {item.price}
-                  </span>
-                </div>
-                <button
-                  onClick={() => onRemoveItem(idx)}
-                  aria-label="Remove item"
-                  className="p-2 text-zinc-400 hover:text-red-500 transition-colors"
+            cartItems.map((item, idx) => {
+              const qty = (item as any).quantity || 1;
+              return (
+                <div
+                  key={`${item.id}-${idx}`}
+                  className="flex items-center gap-4 p-3 rounded-xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-950/40"
                 >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))
+                  <div className="relative w-16 h-12 flex-shrink-0">
+                    <Image
+                      src={item.image}
+                      alt={item.name}
+                      fill
+                      sizes="64px"
+                      className="object-contain"
+                      unoptimized={true}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-xs font-bold text-zinc-900 dark:text-white truncate">
+                      {item.model}
+                    </h4>
+                    <p className="text-[11px] text-zinc-500 truncate">{item.name}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-xs font-black text-[#E50914]">
+                        {item.price}
+                      </span>
+                      {qty > 1 && (
+                        <span className="text-[10px] font-bold text-zinc-600 dark:text-zinc-400 bg-zinc-200/70 dark:bg-zinc-800 px-1.5 py-0.2 rounded">
+                          Qty: {qty}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => onRemoveItem(idx)}
+                    aria-label="Remove item"
+                    className="p-2 text-zinc-400 hover:text-red-500 transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              );
+            })
           )}
         </div>
 
@@ -107,17 +134,22 @@ export function CartDrawer({
               </span>
             </div>
 
-            <button
-              onClick={() => {
-                alert('Order request placed successfully! Our sales team will connect with you.');
-                onClearCart();
-                onClose();
-              }}
+            <Link
+              href="/cart"
+              onClick={onClose}
               className="w-full py-3.5 px-4 rounded-xl bg-[#E50914] hover:bg-[#c70811] text-white font-bold text-xs tracking-wider uppercase flex items-center justify-center gap-2 shadow-lg shadow-red-600/30 transition-all cursor-pointer"
             >
-              Proceed to Checkout
+              <span>Proceed to Checkout</span>
               <ArrowRight className="w-4 h-4" />
-            </button>
+            </Link>
+
+            <Link
+              href="/cart"
+              onClick={onClose}
+              className="w-full py-2.5 px-4 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/90 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 text-xs font-bold text-center block transition-colors"
+            >
+              View Full Cart Page
+            </Link>
           </div>
         )}
       </div>
