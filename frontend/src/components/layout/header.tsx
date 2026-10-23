@@ -77,84 +77,84 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
       className="sticky top-0 z-50 bg-white border-b border-zinc-200/80 shadow-xs relative"
       onMouseLeave={() => setActiveDropdown(null)}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
-        
-        {/* Official Butterfly Brand Logo */}
-        <Link href="/" className="flex items-center gap-2 group flex-shrink-0 py-1">
-          <div className="relative h-8 sm:h-9 w-48 sm:w-56 transition-transform duration-300 group-hover:scale-105">
-            <Image
-              src="/brand/butterfly-wordmark-red.png"
-              alt="Butterfly Logo"
-              fill
-              sizes="(max-width: 640px) 192px, 224px"
-              className="object-contain object-left"
-              priority
-            />
-          </div>
-          <div className="flex flex-col border-l border-zinc-300 pl-2 py-0.5">
-            <span className="text-[11px] sm:text-xs font-black tracking-wider text-zinc-900 uppercase leading-none whitespace-nowrap">
-              SMART TV
-            </span>
-          </div>
-        </Link>
-
-        {/* Desktop Navigation Links */}
-        <nav className="hidden lg:flex items-center gap-8 h-full">
-          <Link
-            href="/"
-            className={`text-sm font-semibold relative py-2 transition-colors ${
-              isHomeActive
-                ? 'text-zinc-900 after:content-[\'\'] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#E50914]'
-                : 'text-zinc-700 hover:text-[#E50914]'
-            }`}
-          >
-            Home
-          </Link>
-
-          {/* Products Nav Item */}
-          <div
-            className="relative py-2"
-            onMouseEnter={handleMouseEnterProducts}
-            onMouseLeave={handleMouseLeaveProducts}
-          >
-            <div className="flex items-center">
-              <Link
-                href="/products"
-                onClick={() => setActiveDropdown(null)}
-                className={`flex items-center gap-1.5 text-sm font-semibold transition-colors py-2 cursor-pointer ${
-                  isProductsActive || activeDropdown === 'products'
-                    ? 'text-[#E50914] relative after:content-[\'\'] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#E50914]'
-                    : 'text-zinc-700 hover:text-[#E50914]'
-                }`}
-              >
-                Products
-              </Link>
-              <button
-                type="button"
-                aria-label="Toggle Products Mega Menu"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setActiveDropdown(activeDropdown === 'products' ? null : 'products');
-                }}
-                className="py-2 pl-0.5 pr-1 text-zinc-400 hover:text-[#E50914] cursor-pointer"
-              >
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                  activeDropdown === 'products' ? 'rotate-180 text-[#E50914]' : isProductsActive ? 'text-[#E50914]' : 'text-zinc-400'
-                }`} />
-              </button>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+          
+          {/* Official Butterfly Brand Logo */}
+          <Link href="/" className="flex items-center gap-2 group flex-shrink-0 py-1">
+            <div className="relative h-8 sm:h-9 w-48 sm:w-56 transition-transform duration-300 group-hover:scale-105">
+              <Image
+                src="/brand/butterfly-wordmark-red.png"
+                alt="Butterfly Logo"
+                fill
+                sizes="(max-width: 640px) 192px, 224px"
+                className="object-contain object-left"
+                priority
+              />
             </div>
-          </div>
-
-          <Link
-            href="/about"
-            className={`text-sm font-semibold relative py-2 transition-colors ${
-              isAboutActive
-                ? 'text-[#E50914] after:content-[\'\'] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#E50914]'
-                : 'text-zinc-700 hover:text-[#E50914]'
-            }`}
-          >
-            About Us
+            <div className="flex flex-col border-l border-zinc-300 pl-2 py-0.5">
+              <span className="text-[11px] sm:text-xs font-black tracking-wider text-zinc-900 uppercase leading-none whitespace-nowrap">
+                SMART TV
+              </span>
+            </div>
           </Link>
+
+          {/* Desktop Navigation Links */}
+          <nav className="hidden lg:flex items-center gap-8 h-full">
+            <Link
+              href="/"
+              className={`text-sm font-semibold relative py-2 transition-colors ${
+                isHomeActive
+                  ? 'text-zinc-900 after:content-[\'\'] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#E50914]'
+                  : 'text-zinc-700 hover:text-[#E50914]'
+              }`}
+            >
+              Home
+            </Link>
+
+            {/* Products Nav Item */}
+            <div
+              className="relative py-2"
+              onMouseEnter={handleMouseEnterProducts}
+              onMouseLeave={handleMouseLeaveProducts}
+            >
+              <div className="flex items-center">
+                <Link
+                  href="/products"
+                  onClick={() => setActiveDropdown(null)}
+                  className={`flex items-center gap-1.5 text-sm font-semibold transition-colors py-2 cursor-pointer ${
+                    isProductsActive || activeDropdown === 'products'
+                      ? 'text-[#E50914] relative after:content-[\'\'] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#E50914]'
+                      : 'text-zinc-700 hover:text-[#E50914]'
+                  }`}
+                >
+                  Products
+                </Link>
+                <button
+                  type="button"
+                  aria-label="Toggle Products Mega Menu"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveDropdown(activeDropdown === 'products' ? null : 'products');
+                  }}
+                  className="py-2 pl-0.5 pr-1 text-zinc-400 hover:text-[#E50914] cursor-pointer"
+                >
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                    activeDropdown === 'products' ? 'rotate-180 text-[#E50914]' : isProductsActive ? 'text-[#E50914]' : 'text-zinc-400'
+                  }`} />
+                </button>
+              </div>
+            </div>
+
+            <Link
+              href="/about"
+              className={`text-sm font-semibold relative py-2 transition-colors ${
+                isAboutActive
+                  ? 'text-[#E50914] after:content-[\'\'] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#E50914]'
+                  : 'text-zinc-700 hover:text-[#E50914]'
+              }`}
+            >
+              About Us
+            </Link>
 
           {/* Support Dropdown */}
           <div

@@ -106,7 +106,7 @@ export function OrdersTab({
   return (
     <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-150">
       {/* SECTION CONTAINER 1: SEARCH & FILTER */}
-      <section className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-5 sm:p-6 space-y-4">
+      <section className="bg-white rounded-3xl border border-slate-200/90 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] p-5 sm:p-6 space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100 flex-wrap gap-2">
           <div className="flex items-center gap-2.5">
             <span className="w-2 h-2 rounded-full bg-[#E50914]" />
@@ -150,7 +150,7 @@ export function OrdersTab({
       </section>
 
       {/* SECTION CONTAINER 2: ORDERS TABLE */}
-      <section className="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+      <section className="bg-white rounded-3xl border border-slate-200/90 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] overflow-hidden">
         <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between flex-wrap gap-3 bg-white">
           <div className="flex items-center gap-2.5">
             <span className="w-2 h-2 rounded-full bg-amber-500" />

@@ -6,6 +6,7 @@ import Image from 'next/image';
 import {
   LayoutDashboard,
   Tv,
+  Tag,
   Inbox,
   ShoppingBag,
   Users,
@@ -66,7 +67,8 @@ export function AdminSidebar({
             MAIN NAVIGATION
           </p>
           <nav className="mt-2.5 space-y-1">
-            <button
+            <Link
+              href="/admin/overview"
               onClick={() => setActiveTab('overview')}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'overview'
@@ -76,9 +78,10 @@ export function AdminSidebar({
             >
               <LayoutDashboard className="w-4 h-4" />
               <span>Overview</span>
-            </button>
+            </Link>
 
-            <button
+            <Link
+              href="/admin/inventory"
               onClick={() => setActiveTab('products')}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'products'
@@ -88,9 +91,23 @@ export function AdminSidebar({
             >
               <Tv className="w-4 h-4" />
               <span>TV Inventory</span>
-            </button>
+            </Link>
 
-            <button
+            <Link
+              href="/admin/offers"
+              onClick={() => setActiveTab('offers')}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'offers'
+                  ? 'bg-[#E50914] text-white shadow-sm shadow-red-500/20'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+              }`}
+            >
+              <Tag className="w-4 h-4" />
+              <span>Offers & Deals</span>
+            </Link>
+
+            <Link
+              href="/admin/enquiries"
               onClick={() => setActiveTab('enquiries')}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'enquiries'
@@ -100,9 +117,10 @@ export function AdminSidebar({
             >
               <Inbox className="w-4 h-4" />
               <span>Customer Enquiries</span>
-            </button>
+            </Link>
 
-            <button
+            <Link
+              href="/admin/orders"
               onClick={() => setActiveTab('orders')}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'orders'
@@ -112,7 +130,7 @@ export function AdminSidebar({
             >
               <ShoppingBag className="w-4 h-4" />
               <span>Orders & Fulfillment</span>
-            </button>
+            </Link>
           </nav>
         </div>
 
@@ -122,7 +140,8 @@ export function AdminSidebar({
             ADMINISTRATION & SECURITY
           </p>
           <nav className="mt-2.5 space-y-1">
-            <button
+            <Link
+              href="/admin/users"
               onClick={() => setActiveTab('users')}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'users'
@@ -132,9 +151,10 @@ export function AdminSidebar({
             >
               <Users className="w-4 h-4" />
               <span>User Accounts</span>
-            </button>
+            </Link>
 
-            <button
+            <Link
+              href="/admin/settings"
               onClick={() => setActiveTab('settings')}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'settings'
@@ -144,7 +164,7 @@ export function AdminSidebar({
             >
               <Settings className="w-4 h-4" />
               <span>Company Settings</span>
-            </button>
+            </Link>
           </nav>
         </div>
       </div>

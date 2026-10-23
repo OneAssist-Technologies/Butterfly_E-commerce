@@ -28,6 +28,11 @@ enum EnquiryStatus {
   Closed
 }
 
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
 model User {
   id         String   @id @default(uuid())
   name       String
@@ -171,4 +176,38 @@ model CompanySetting {
 
   @@map("company_settings")
 }
+
+model Offer {
+  id                 String       @id @default(uuid())
+  title              String
+  code               String       @unique
+  description        String
+  offerType          String?      @default("COUPON")
+  discountType       DiscountType @default(PERCENTAGE)
+  discountValue      Int
+  minOrderAmount     Int          @default(0)
+  maxDiscountAmount  Int?
+  badge              String?      @default("Special Offer")
+  badgeColor         String?      @default("red")
+  bannerText         String?
+  showInAnnouncement Boolean      @default(true)
+  showInHomepage     Boolean      @default(true)
+  applyAutomatically Boolean      @default(false)
+  stackable          Boolean      @default(false)
+  applicableSize     String?      @default("ALL")
+  targetProducts     String?
+  maxUsageLimit      Int?
+  usagePerCustomer   Int?         @default(1)
+  termsConditions    String?
+  configuration      Json?        @default("{}")
+  startDate          DateTime?    @default(now())
+  endDate            DateTime?
+  isActive           Boolean      @default(true)
+  usageCount         Int          @default(0)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@map("offers")
+}
+
 

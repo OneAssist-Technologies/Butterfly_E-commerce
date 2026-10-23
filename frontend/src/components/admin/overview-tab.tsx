@@ -90,7 +90,7 @@ export function OverviewTab({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         
         {/* Stat 1: Total TV Products */}
-        <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm flex flex-col justify-between hover:border-blue-400 hover:shadow-md transition-all">
+        <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] flex flex-col justify-between hover:border-blue-400 hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
               TOTAL TV MODELS
@@ -108,7 +108,7 @@ export function OverviewTab({
         </div>
 
         {/* Stat 2: Active Inventory Rate */}
-        <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm flex flex-col justify-between hover:border-emerald-400 hover:shadow-md transition-all">
+        <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] flex flex-col justify-between hover:border-emerald-400 hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
               IN-STOCK RATE
@@ -126,7 +126,7 @@ export function OverviewTab({
         </div>
 
         {/* Stat 3: Customer Enquiries */}
-        <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm flex flex-col justify-between hover:border-red-400 hover:shadow-md transition-all">
+        <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] flex flex-col justify-between hover:border-red-400 hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
               CUSTOMER LEADS
@@ -150,7 +150,7 @@ export function OverviewTab({
         </div>
 
         {/* Stat 4: Total Revenue */}
-        <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm flex flex-col justify-between hover:border-amber-400 hover:shadow-md transition-all">
+        <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] flex flex-col justify-between hover:border-amber-400 hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
               TOTAL REVENUE
@@ -172,7 +172,7 @@ export function OverviewTab({
       </div>
 
       {/* 3. Valuation & Recent Inquiries Container */}
-      <section className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 lg:p-7 space-y-6">
+      <section className="bg-white rounded-3xl border border-slate-200/90 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] p-6 lg:p-7 space-y-6">
         <div className="flex items-center justify-between pb-4 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
             <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
@@ -311,7 +311,7 @@ export function OverviewTab({
       </section>
 
       {/* 4. Latest Customer Orders & Dispatches Container */}
-      <section className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 lg:p-7 space-y-6">
+      <section className="bg-white rounded-3xl border border-slate-200/90 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] p-6 lg:p-7 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 border border-amber-100">
@@ -387,7 +387,7 @@ export function OverviewTab({
             {orders.slice(0, 6).map((order) => (
               <div
                 key={order.id}
-                className="p-5 rounded-2xl border border-slate-200 bg-white shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
+                className="p-5 rounded-2xl border border-slate-200/90 bg-slate-50/60 hover:bg-white hover:border-slate-300 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-center justify-between mb-3">

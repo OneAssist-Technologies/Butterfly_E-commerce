@@ -22,6 +22,7 @@ interface AdminHeaderProps {
   onRefresh: () => void;
   // Contextual primary actions
   onOpenAddProduct?: () => void;
+  onOpenAddOffer?: () => void;
   onOpenAddEnquiry?: () => void;
   onOpenAddOrder?: () => void;
   onOpenAddUser?: () => void;
@@ -37,6 +38,7 @@ export function AdminHeader({
   isRefreshing,
   onRefresh,
   onOpenAddProduct,
+  onOpenAddOffer,
   onOpenAddEnquiry,
   onOpenAddOrder,
   onOpenAddUser,
@@ -51,6 +53,8 @@ export function AdminHeader({
         return 'Executive Overview';
       case 'products':
         return 'TV Catalog & Inventory';
+      case 'offers':
+        return 'Offers & Dynamic Promotions';
       case 'enquiries':
         return 'Customer Inquiries & Quotes';
       case 'orders':
@@ -61,6 +65,25 @@ export function AdminHeader({
         return 'Company & Storefront Settings';
       default:
         return 'Admin Dashboard';
+    }
+  };
+
+  const getBreadcrumbLabel = (tab: AdminTab) => {
+    switch (tab) {
+      case 'products':
+        return 'TV Inventory';
+      case 'offers':
+        return 'Offers & Deals';
+      case 'enquiries':
+        return 'Enquiries';
+      case 'orders':
+        return 'Orders & Fulfillment';
+      case 'users':
+        return 'User Accounts';
+      case 'settings':
+        return 'Company Settings';
+      default:
+        return 'Overview';
     }
   };
 
@@ -76,7 +99,7 @@ export function AdminHeader({
         <div className="flex items-center gap-2 text-xs text-slate-400">
           <span>Admin Portal</span>
           <span>/</span>
-          <span className="font-semibold text-slate-800 capitalize">{activeTab}</span>
+          <span className="font-semibold text-slate-800">{getBreadcrumbLabel(activeTab)}</span>
         </div>
         <h1 className="text-xl font-black text-slate-900 tracking-tight mt-0.5">
           {getTabTitle(activeTab)}
@@ -134,6 +157,16 @@ export function AdminHeader({
           >
             <Plus className="w-4 h-4" />
             <span>Add TV Model</span>
+          </button>
+        )}
+
+        {activeTab === 'offers' && onOpenAddOffer && (
+          <button
+            onClick={onOpenAddOffer}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#E50914] text-white text-xs font-bold hover:bg-[#c70811] transition-all shadow-xs cursor-pointer active:scale-95"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Create Offer</span>
           </button>
         )}
 

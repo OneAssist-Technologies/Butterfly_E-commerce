@@ -24,7 +24,7 @@ export function SizeCard({ item, onSelect }: SizeCardProps) {
     <Link
       href={targetHref}
       onClick={() => onSelect?.(item.size)}
-      className="group relative bg-[#f8fafc] border border-zinc-200/90 rounded-2xl p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 cursor-pointer flex flex-col justify-between overflow-hidden block"
+      className="group relative bg-white border border-slate-200/90 rounded-3xl p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 cursor-pointer flex flex-col justify-between overflow-hidden block shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]"
     >
       {/* Subtle hover aura */}
       <div className="absolute inset-0 bg-gradient-to-tr from-[#E50914]/0 via-transparent to-[#E50914]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />

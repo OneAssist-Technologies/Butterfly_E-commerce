@@ -335,7 +335,7 @@ export function InventoryTab({
   return (
     <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-150">
       {/* SECTION CONTAINER 1: SEARCH & FILTERS */}
-      <section className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-5 sm:p-6 space-y-4">
+      <section className="bg-white rounded-3xl border border-slate-200/90 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] p-5 sm:p-6 space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100 flex-wrap gap-2">
           <div className="flex items-center gap-2.5">
             <span className="w-2 h-2 rounded-full bg-[#E50914]" />
@@ -379,7 +379,7 @@ export function InventoryTab({
       </section>
 
       {/* SECTION CONTAINER 2: CATALOG INVENTORY */}
-      <section className="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+      <section className="bg-white rounded-3xl border border-slate-200/90 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] overflow-hidden">
         <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white">
           <div className="flex items-center gap-2.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
@@ -426,14 +426,14 @@ export function InventoryTab({
         </div>
 
         {productsViewMode === 'cards' ? (
-          <div className="p-5 sm:p-6 bg-[#F8F9FA]/40">
+          <div className="p-5 sm:p-6 bg-slate-50/50">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filteredProducts.map((tv) => {
                 const isTvInStock = tv.inStock !== false;
                 return (
                   <div
                     key={tv.id}
-                    className="group bg-white rounded-2xl border border-slate-200/90 hover:border-slate-300 hover:shadow-md transition-all duration-200 flex flex-col justify-between overflow-hidden shadow-2xs"
+                    className="group bg-white rounded-2xl border border-slate-200/90 hover:border-slate-300 hover:shadow-lg transition-all duration-200 flex flex-col justify-between overflow-hidden shadow-xs"
                   >
                     {/* Top Thumbnail */}
                     <div className="p-4 bg-gradient-to-b from-slate-50/80 to-white relative flex flex-col">
