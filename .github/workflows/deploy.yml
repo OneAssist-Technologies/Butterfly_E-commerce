@@ -1,0 +1,60 @@
+name: Deploy Butterfly E-commerce
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: butterfly-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Hostinger VPS
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Deploy backend and frontend
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          port: ${{ secrets.VPS_PORT }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          command_timeout: 25m
+          script: |
+            set -eu
+
+            cd /var/www/butterfly-ecommerce
+
+            export GIT_SSH_COMMAND="ssh -i /root/.ssh/butterfly_ecommerce_cicd -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "Installing and building backend..."
+            cd /var/www/butterfly-ecommerce/backend
+            npm ci
+            npx prisma generate --config prisma7.config.ts
+            npm run build
+
+            echo "Installing and building frontend..."
+            cd /var/www/butterfly-ecommerce/frontend
+            npm ci
+            npm run build
+
+            echo "Applying production database migrations..."
+            cd /var/www/butterfly-ecommerce/backend
+            npx prisma migrate deploy --config prisma7.config.ts
+
+            echo "Restarting Butterfly services only..."
+            pm2 restart butterfly-backend --update-env
+            pm2 restart butterfly-frontend --update-env
+
+            echo "Checking website response..."
+            curl --fail --silent --show-error --max-time 30 https://butterflytv.in/ -o /dev/null
+
+            echo "Deployment completed successfully."
