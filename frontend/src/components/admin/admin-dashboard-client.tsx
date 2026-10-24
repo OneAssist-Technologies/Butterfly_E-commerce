@@ -322,21 +322,22 @@ export function AdminDashboardClient({ initialTab }: AdminDashboardClientProps) 
   };
 
   const handleAddProduct = async (product: CatalogProduct) => {
-    let savedProduct = product;
-    try {
-      const created = await productService.create(product);
-      if (created && created.id) {
-        savedProduct = created;
-      }
-    } catch (err: any) {
-      console.warn('Backend product create warning:', err?.response?.data || err?.message || err);
+    const savedProduct = await productService.create(product);
+    if (!savedProduct || !savedProduct.id) {
+      throw new Error('The server did not confirm that the product was saved.');
     }
-    const updated = [
+
+    setProductsList((current) => [
       savedProduct,
-      ...productsList.filter((p) => p.id !== savedProduct.id && p.model !== savedProduct.model),
-    ];
-    setProductsList(updated);
+      ...current.filter((p) => p.id !== savedProduct.id && p.model !== savedProduct.model),
+    ]);
+
     if (typeof window !== 'undefined') {
+      const current = JSON.parse(localStorage.getItem('butterfly_admin_products') || '[]');
+      const updated = [
+        savedProduct,
+        ...current.filter((p: CatalogProduct) => p.id !== savedProduct.id && p.model !== savedProduct.model),
+      ];
       localStorage.setItem('butterfly_admin_products', JSON.stringify(updated));
       window.dispatchEvent(new Event('butterfly_products_updated'));
     }

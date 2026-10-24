@@ -14,7 +14,7 @@ import { PrismaService } from '../../database/prisma.service.js';
 // Pre-computed dummy bcrypt hash for timing attack mitigation on missing accounts
 const DUMMY_BCRYPT_HASH = '$2a$10$e8m4wW1b2eJ6v6W8a6Z7yOzXk7U4L9a9b2eJ6v6W8a6Z7yOzXk7U4';
 
-export const ADMIN_ALIASES = ['admin@butterfly.com', 'admin@buttterfly.com'];
+export const ADMIN_ALIASES = ['admin@butterfly.com'];
 
 export class AdminLoginDto {
   @IsEmail({}, { message: 'A valid email address is required' })
@@ -82,17 +82,20 @@ export class AuthService implements OnModuleInit {
   ) {}
 
   private getAdminCredentials() {
+    const email =
+      this.configService.get<string>('ADMIN_EMAIL') ||
+      process.env.ADMIN_EMAIL;
+    const password =
+      this.configService.get<string>('ADMIN_PASSWORD') ||
+      process.env.ADMIN_PASSWORD;
+
+    if (!email?.trim() || !password) {
+      throw new Error('ADMIN_EMAIL and ADMIN_PASSWORD must be configured.');
+    }
+
     return {
-      email: (
-        this.configService.get<string>('ADMIN_EMAIL') ||
-        process.env.ADMIN_EMAIL ||
-        'admin@butterfly.com'
-      ).trim().toLowerCase(),
-      alternateEmail: 'admin@buttterfly.com',
-      password:
-        this.configService.get<string>('ADMIN_PASSWORD') ||
-        process.env.ADMIN_PASSWORD ||
-        'Butterfly@2026',
+      email: email.trim().toLowerCase(),
+      password,
       name:
         this.configService.get<string>('ADMIN_NAME') ||
         process.env.ADMIN_NAME ||
@@ -102,11 +105,15 @@ export class AuthService implements OnModuleInit {
   }
 
   private getJwtSecret(): string {
-    return (
+    const secret =
       this.configService.get<string>('JWT_SECRET') ||
-      process.env.JWT_SECRET ||
-      'butterfly_super_secret_jwt_key_2026'
-    );
+      process.env.JWT_SECRET;
+
+    if (!secret) {
+      throw new Error('JWT_SECRET must be configured.');
+    }
+
+    return secret;
   }
 
   async onModuleInit() {
@@ -120,35 +127,32 @@ export class AuthService implements OnModuleInit {
       const adminCreds = this.getAdminCredentials();
       const hashedPassword = await bcrypt.hash(adminCreds.password, 10);
 
-      // Seed both standard and alternate spellings so both work seamlessly
-      for (const email of ADMIN_ALIASES) {
-        const existing = await this.prisma.user.findFirst({
-          where: { email: { equals: email, mode: 'insensitive' } },
-        });
+      const existing = await this.prisma.user.findFirst({
+        where: { email: { equals: adminCreds.email, mode: 'insensitive' } },
+      });
 
-        if (!existing) {
-          await this.prisma.user.create({
-            data: {
-              name: adminCreds.name,
-              email: email,
-              password: hashedPassword,
-              role: 'SUPER_ADMIN',
-              department: 'Executive Administration',
-            },
-          });
-          this.logger.log(`Super Admin user (${email}) created with bcrypt hash in database.`);
-        } else {
-          await this.prisma.user.update({
-            where: { id: existing.id },
-            data: {
-              name: adminCreds.name,
-              role: 'SUPER_ADMIN',
-              password: hashedPassword,
-              department: existing.department || 'Executive Administration',
-            },
-          });
-          this.logger.log(`Super Admin user (${email}) synchronized with secure bcrypt hash in database.`);
-        }
+      if (!existing) {
+        await this.prisma.user.create({
+          data: {
+            name: adminCreds.name,
+            email: adminCreds.email,
+            password: hashedPassword,
+            role: 'SUPER_ADMIN',
+            department: 'Executive Administration',
+          },
+        });
+        this.logger.log(`Configured Super Admin (${adminCreds.email}) created.`);
+      } else {
+        await this.prisma.user.update({
+          where: { id: existing.id },
+          data: {
+            name: adminCreds.name,
+            role: 'SUPER_ADMIN',
+            password: hashedPassword,
+            department: existing.department || 'Executive Administration',
+          },
+        });
+        this.logger.log(`Configured Super Admin (${adminCreds.email}) synchronized.`);
       }
 
       return {
