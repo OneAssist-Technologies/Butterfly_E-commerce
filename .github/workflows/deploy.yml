@@ -55,6 +55,17 @@ jobs:
             pm2 restart butterfly-frontend --update-env
 
             echo "Checking website response..."
-            curl --fail --silent --show-error --max-time 30 https://butterflytv.in/ -o /dev/null
+            for attempt in $(seq 1 12); do
+              if curl --fail --silent --show-error --max-time 10 https://butterflytv.in/ -o /dev/null; then
+                echo "Website health check passed."
+                break
+              fi
+              if [ "$attempt" -eq 12 ]; then
+                echo "Website health check failed after 12 attempts."
+                exit 1
+              fi
+              echo "Website not ready yet; retrying in 5 seconds..."
+              sleep 5
+            done
 
             echo "Deployment completed successfully."
