@@ -87,12 +87,19 @@ model Product {
 
 model Review {
   id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userName  String
+  userEmail String?
+  rating    Int
+  title     String?
+  comment   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("users")
+  @@map("reviews")
 }
 
 model Order {
