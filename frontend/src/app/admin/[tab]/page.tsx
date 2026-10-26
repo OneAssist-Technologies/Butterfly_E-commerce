@@ -42,24 +42,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-async function AdminTabContent({ paramsPromise }: { paramsPromise: Promise<{ tab: string }> }) {
-  const { tab } = await paramsPromise;
+export default async function AdminTabPage({ params }: PageProps) {
+  const { tab } = await params;
   return <AdminDashboardClient initialTab={tab} />;
-}
-
-export default function AdminTabPage({ params }: PageProps) {
-  return (
-    <React.Suspense
-      fallback={
-        <div className="h-screen w-screen bg-[#F8FAFC] flex items-center justify-center">
-          <div className="flex items-center gap-3 text-slate-600 text-sm font-semibold">
-            <div className="w-5 h-5 border-2 border-[#E50914] border-t-transparent rounded-full animate-spin" />
-            <span>Loading Console...</span>
-          </div>
-        </div>
-      }
-    >
-      <AdminTabContent paramsPromise={params} />
-    </React.Suspense>
-  );
 }

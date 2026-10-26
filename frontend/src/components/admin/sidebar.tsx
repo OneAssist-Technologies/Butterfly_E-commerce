@@ -43,7 +43,8 @@ export function AdminSidebar({
       .toUpperCase();
   };
 
-  const handleSelectTab = (tab: AdminTab) => {
+  const handleSelectTab = (e: React.MouseEvent, tab: AdminTab) => {
+    e.preventDefault();
     setActiveTab(tab);
     if (onCloseMobile) onCloseMobile();
   };
@@ -88,7 +89,7 @@ export function AdminSidebar({
           <nav className="mt-2.5 space-y-1">
             <Link
               href="/admin/overview"
-              onClick={() => handleSelectTab('overview')}
+              onClick={(e) => handleSelectTab(e, 'overview')}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'overview'
                   ? 'bg-[#E50914] text-white shadow-sm shadow-red-500/20'
@@ -101,7 +102,7 @@ export function AdminSidebar({
 
             <Link
               href="/admin/inventory"
-              onClick={() => handleSelectTab('products')}
+              onClick={(e) => handleSelectTab(e, 'products')}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'products'
                   ? 'bg-[#E50914] text-white shadow-sm shadow-red-500/20'
@@ -114,7 +115,7 @@ export function AdminSidebar({
 
             <Link
               href="/admin/offers"
-              onClick={() => handleSelectTab('offers')}
+              onClick={(e) => handleSelectTab(e, 'offers')}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'offers'
                   ? 'bg-[#E50914] text-white shadow-sm shadow-red-500/20'
@@ -127,7 +128,7 @@ export function AdminSidebar({
 
             <Link
               href="/admin/enquiries"
-              onClick={() => handleSelectTab('enquiries')}
+              onClick={(e) => handleSelectTab(e, 'enquiries')}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'enquiries'
                   ? 'bg-[#E50914] text-white shadow-sm shadow-red-500/20'
@@ -140,7 +141,7 @@ export function AdminSidebar({
 
             <Link
               href="/admin/orders"
-              onClick={() => handleSelectTab('orders')}
+              onClick={(e) => handleSelectTab(e, 'orders')}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'orders'
                   ? 'bg-[#E50914] text-white shadow-sm shadow-red-500/20'
@@ -161,7 +162,7 @@ export function AdminSidebar({
           <nav className="mt-2.5 space-y-1">
             <Link
               href="/admin/users"
-              onClick={() => handleSelectTab('users')}
+              onClick={(e) => handleSelectTab(e, 'users')}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'users'
                   ? 'bg-[#E50914] text-white shadow-sm shadow-red-500/20'
@@ -174,7 +175,7 @@ export function AdminSidebar({
 
             <Link
               href="/admin/settings"
-              onClick={() => handleSelectTab('settings')}
+              onClick={(e) => handleSelectTab(e, 'settings')}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'settings'
                   ? 'bg-[#E50914] text-white shadow-sm shadow-red-500/20'

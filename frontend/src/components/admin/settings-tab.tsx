@@ -19,6 +19,7 @@ import {
   Info,
   Check,
   AlertCircle,
+  X,
 } from 'lucide-react';
 import { CompanySettings, SizeSelectorCard } from '@/services/settings.service';
 
@@ -246,7 +247,55 @@ export function SettingsTab({
   }, [externalSaveTrigger]);
 
   return (
-    <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-150">
+    <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-150 relative">
+      {/* Floating Success Popup (always visible in viewport) */}
+      {saveSuccess && (
+        <div className="fixed top-6 right-4 sm:right-8 z-50 animate-in slide-in-from-top-4 fade-in duration-300">
+          <div className="flex items-center gap-3.5 bg-emerald-600 text-white px-5 py-4 rounded-2xl shadow-2xl shadow-emerald-900/30 border border-emerald-400">
+            <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-white">Settings Saved Successfully!</h4>
+              <p className="text-xs text-emerald-100 mt-0.5">
+                Company credentials and size selector settings are updated and live.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSaveSuccess(false)}
+              aria-label="Close"
+              className="ml-2 p-1.5 rounded-lg text-emerald-200 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Error Popup */}
+      {saveError && (
+        <div className="fixed top-6 right-4 sm:right-8 z-50 animate-in slide-in-from-top-4 fade-in duration-300">
+          <div className="flex items-center gap-3.5 bg-red-600 text-white px-5 py-4 rounded-2xl shadow-2xl shadow-red-900/30 border border-red-400">
+            <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+              <AlertCircle className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-white">Error Saving Settings</h4>
+              <p className="text-xs text-red-100 mt-0.5">{saveError}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSaveError(null)}
+              aria-label="Close"
+              className="ml-2 p-1.5 rounded-lg text-red-200 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       <section className="bg-white rounded-3xl border border-slate-200/90 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] p-6 sm:p-7 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
           <div className="flex items-center gap-3">
@@ -735,17 +784,43 @@ export function SettingsTab({
 
           {/* Actions Row */}
           <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-xs text-slate-500">
-              Changes are persisted to PostgreSQL and served to all storefront components.
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-slate-500">
+                Changes are persisted to PostgreSQL and served to all storefront components.
+              </p>
+              {saveSuccess && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200 animate-in fade-in">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  Saved!
+                </span>
+              )}
+            </div>
 
             <button
               type="submit"
               disabled={isSaving}
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#E50914] hover:bg-[#c70811] text-white text-xs font-bold transition-all shadow-sm hover:shadow active:scale-95 cursor-pointer disabled:opacity-50"
+              className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-white text-xs font-bold transition-all shadow-sm hover:shadow active:scale-95 cursor-pointer disabled:opacity-50 ${
+                saveSuccess
+                  ? 'bg-emerald-600 hover:bg-emerald-700'
+                  : 'bg-[#E50914] hover:bg-[#c70811]'
+              }`}
             >
-              <Save className="w-4 h-4" />
-              <span>{isSaving ? 'Saving Updates...' : 'Save Settings Changes'}</span>
+              {saveSuccess ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Settings Saved Successfully!</span>
+                </>
+              ) : isSaving ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Saving Updates...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>Save Settings Changes</span>
+                </>
+              )}
             </button>
           </div>
         </form>

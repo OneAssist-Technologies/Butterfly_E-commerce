@@ -69,43 +69,57 @@ export class SettingsService implements OnModuleInit {
   }
 
   async getSettings() {
-    let settings = await this.prisma.companySetting.findUnique({
-      where: { id: 'default' },
-    });
-
-    if (!settings) {
-      settings = await this.prisma.companySetting.create({
-        data: DEFAULT_SETTINGS,
+    try {
+      let settings = await this.prisma.companySetting.findUnique({
+        where: { id: 'default' },
       });
-    } else {
-      const updates: any = {};
-      if (!settings.sizeSelectorCards) updates.sizeSelectorCards = DEFAULT_SIZE_CARDS;
-      if (!(settings as any).availableSizes) updates.availableSizes = DEFAULT_AVAILABLE_SIZES;
-      if (Object.keys(updates).length > 0) {
-        settings = await this.prisma.companySetting.update({
-          where: { id: 'default' },
-          data: updates,
-        });
-      }
-    }
 
-    return settings;
+      if (!settings) {
+        settings = await this.prisma.companySetting.create({
+          data: DEFAULT_SETTINGS,
+        });
+      } else {
+        const updates: any = {};
+        if (!settings.sizeSelectorCards) updates.sizeSelectorCards = DEFAULT_SIZE_CARDS;
+        if (!(settings as any).availableSizes) updates.availableSizes = DEFAULT_AVAILABLE_SIZES;
+        if (Object.keys(updates).length > 0) {
+          try {
+            settings = await this.prisma.companySetting.update({
+              where: { id: 'default' },
+              data: updates,
+            });
+          } catch (updateErr) {
+            this.logger.warn(`Non-critical settings default sync notice: ${updateErr}`);
+          }
+        }
+      }
+
+      return settings;
+    } catch (err) {
+      this.logger.error(`Error in getSettings, returning defaults: ${err instanceof Error ? err.message : err}`);
+      return DEFAULT_SETTINGS;
+    }
   }
 
   async updateSettings(dto: UpdateSettingsDto) {
-    const { id, createdAt, updatedAt, ...cleanDto } = dto as any;
-    const updated = await this.prisma.companySetting.upsert({
-      where: { id: 'default' },
-      update: {
-        ...cleanDto,
-      },
-      create: {
-        ...DEFAULT_SETTINGS,
-        ...cleanDto,
-      },
-    });
+    try {
+      const { id, createdAt, updatedAt, ...cleanDto } = dto as any;
+      const updated = await this.prisma.companySetting.upsert({
+        where: { id: 'default' },
+        update: {
+          ...cleanDto,
+        },
+        create: {
+          ...DEFAULT_SETTINGS,
+          ...cleanDto,
+        },
+      });
 
-    this.logger.log(`Updated company settings: ${updated.email}, ${updated.phone}, ${updated.city}`);
-    return updated;
+      this.logger.log(`Updated company settings: ${updated.email}, ${updated.phone}, ${updated.city}`);
+      return updated;
+    } catch (err) {
+      this.logger.error(`Error in updateSettings: ${err instanceof Error ? err.message : err}`);
+      throw err;
+    }
   }
 }

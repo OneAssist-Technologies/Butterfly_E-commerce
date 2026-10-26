@@ -7,11 +7,6 @@ import {
   Bell,
   RefreshCw,
   ExternalLink,
-  Plus,
-  UserPlus,
-  Save,
-  Moon,
-  ChevronDown,
   Menu,
 } from 'lucide-react';
 import { AdminTab, AdminUserSession } from './types';
@@ -164,67 +159,9 @@ export function AdminHeader({
           <span className="w-2 h-2 rounded-full bg-[#E50914] absolute top-1.5 right-1.5 ring-2 ring-white" />
         </div>
 
-        {/* Contextual primary action */}
-        {activeTab === 'products' && onOpenAddProduct && (
-          <button
-            onClick={onOpenAddProduct}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#E50914] text-white text-xs font-bold hover:bg-[#c70811] transition-all shadow-xs cursor-pointer active:scale-95"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add TV Model</span>
-          </button>
-        )}
 
-        {activeTab === 'offers' && onOpenAddOffer && (
-          <button
-            onClick={onOpenAddOffer}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#E50914] text-white text-xs font-bold hover:bg-[#c70811] transition-all shadow-xs cursor-pointer active:scale-95"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Create Offer</span>
-          </button>
-        )}
 
-        {activeTab === 'enquiries' && onOpenAddEnquiry && (
-          <button
-            onClick={onOpenAddEnquiry}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#E50914] text-white text-xs font-bold hover:bg-[#c70811] transition-all shadow-xs cursor-pointer active:scale-95"
-          >
-            <Plus className="w-4 h-4" />
-            <span>New Enquiry</span>
-          </button>
-        )}
 
-        {activeTab === 'orders' && onOpenAddOrder && (
-          <button
-            onClick={onOpenAddOrder}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#E50914] text-white text-xs font-bold hover:bg-[#c70811] transition-all shadow-xs cursor-pointer active:scale-95"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Create Order</span>
-          </button>
-        )}
-
-        {activeTab === 'users' && onOpenAddUser && (
-          <button
-            onClick={onOpenAddUser}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#E50914] text-white text-xs font-bold hover:bg-[#c70811] transition-all shadow-xs cursor-pointer active:scale-95"
-          >
-            <UserPlus className="w-4 h-4" />
-            <span>Add Team Member</span>
-          </button>
-        )}
-
-        {activeTab === 'settings' && onSaveSettings && (
-          <button
-            onClick={onSaveSettings}
-            disabled={settingsSaving}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#E50914] text-white text-xs font-bold hover:bg-[#c70811] transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
-          >
-            <Save className="w-4 h-4" />
-            <span>{settingsSaving ? 'Saving...' : 'Save Settings'}</span>
-          </button>
-        )}
 
         {/* User Pill (inspired by reference image top right) */}
         <div className="flex items-center gap-2 pl-2 border-l border-slate-200">

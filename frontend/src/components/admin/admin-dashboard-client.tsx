@@ -62,7 +62,12 @@ export function AdminDashboardClient({ initialTab }: AdminDashboardClientProps) 
   const router = useRouter();
   const pathname = usePathname();
 
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(() => {
+    if (typeof window !== 'undefined') {
+      return !!localStorage.getItem('butterfly_admin_token');
+    }
+    return null;
+  });
   const [activeTab, setActiveTabState] = useState<AdminTab>(() =>
     resolveTabFromPathname(pathname, initialTab),
   );
@@ -77,7 +82,7 @@ export function AdminDashboardClient({ initialTab }: AdminDashboardClientProps) 
     }
   }, [pathname, initialTab]);
 
-  // Handle tab switching by navigating to the respected separate URL
+  // Handle tab switching in-memory with seamless history pushState (0ms flicker-free transition)
   const handleTabChange = useCallback(
     (tab: AdminTab) => {
       setActiveTabState(tab);
@@ -91,12 +96,24 @@ export function AdminDashboardClient({ initialTab }: AdminDashboardClientProps) 
         settings: '/admin/settings',
       };
       const targetUrl = routeMap[tab] || `/admin/${tab}`;
-      if (pathname !== targetUrl) {
-        router.push(targetUrl);
+      if (typeof window !== 'undefined' && window.location.pathname !== targetUrl) {
+        window.history.pushState(null, '', targetUrl);
       }
     },
-    [router, pathname],
+    [],
   );
+
+  // Synchronize on browser history popstate (Back/Forward buttons)
+  useEffect(() => {
+    const handlePopState = () => {
+      if (typeof window !== 'undefined') {
+        const resolved = resolveTabFromPathname(window.location.pathname, initialTab);
+        setActiveTabState(resolved);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [initialTab]);
 
   // Active Admin Session State
   const [currentUser, setCurrentUser] = useState<AdminUserSession>({
