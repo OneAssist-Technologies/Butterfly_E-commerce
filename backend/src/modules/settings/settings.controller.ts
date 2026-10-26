@@ -24,7 +24,7 @@ export class SettingsController {
 
   @Put()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('SUPER_ADMIN', 'ADMIN', 'OPERATOR')
+  @Roles('SUPER_ADMIN', 'ADMIN', 'OPERATOR', 'CATALOG_MANAGER')
   @HttpCode(HttpStatus.OK)
   async updateSettings(@Body() dto: UpdateSettingsDto) {
     return this.settingsService.updateSettings(dto);

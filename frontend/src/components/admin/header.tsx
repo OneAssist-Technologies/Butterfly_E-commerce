@@ -12,6 +12,7 @@ import {
   Save,
   Moon,
   ChevronDown,
+  Menu,
 } from 'lucide-react';
 import { AdminTab, AdminUserSession } from './types';
 
@@ -30,6 +31,7 @@ interface AdminHeaderProps {
   settingsSaving?: boolean;
   globalSearchQuery?: string;
   setGlobalSearchQuery?: (q: string) => void;
+  onToggleMobileSidebar?: () => void;
 }
 
 export function AdminHeader({
@@ -46,6 +48,7 @@ export function AdminHeader({
   settingsSaving,
   globalSearchQuery,
   setGlobalSearchQuery,
+  onToggleMobileSidebar,
 }: AdminHeaderProps) {
   const getTabTitle = (tab: AdminTab) => {
     switch (tab) {
@@ -93,17 +96,29 @@ export function AdminHeader({
   };
 
   return (
-    <header className="bg-white border-b border-slate-200 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 sticky top-0 z-10 shadow-xs">
-      {/* Left: Breadcrumb & Title */}
-      <div>
-        <div className="flex items-center gap-2 text-xs text-slate-400">
-          <span>Admin Portal</span>
-          <span>/</span>
-          <span className="font-semibold text-slate-800">{getBreadcrumbLabel(activeTab)}</span>
+    <header className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3.5 sm:py-4 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 sticky top-0 z-10 shadow-xs">
+      {/* Left: Mobile Toggle & Breadcrumb & Title */}
+      <div className="flex items-center gap-3">
+        {onToggleMobileSidebar && (
+          <button
+            type="button"
+            onClick={onToggleMobileSidebar}
+            aria-label="Toggle navigation"
+            className="md:hidden p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer border border-slate-200 shrink-0"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
+        <div>
+          <div className="flex items-center gap-2 text-xs text-slate-400">
+            <span>Admin Portal</span>
+            <span>/</span>
+            <span className="font-semibold text-slate-800">{getBreadcrumbLabel(activeTab)}</span>
+          </div>
+          <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight mt-0.5">
+            {getTabTitle(activeTab)}
+          </h1>
         </div>
-        <h1 className="text-xl font-black text-slate-900 tracking-tight mt-0.5">
-          {getTabTitle(activeTab)}
-        </h1>
       </div>
 
       {/* Center: Global Search Input inspired by Reference UI */}

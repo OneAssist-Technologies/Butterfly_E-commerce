@@ -50,7 +50,7 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   });
 
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   logger.log(`Backend server running on http://localhost:${port}/api/v1`);
   logger.log(`Health check available at http://localhost:${port}/api/v1/health`);
 }

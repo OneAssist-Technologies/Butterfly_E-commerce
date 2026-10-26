@@ -12,7 +12,7 @@ import {
   Users,
   Settings,
   LogOut,
-  ShieldCheck,
+  X,
 } from 'lucide-react';
 import { AdminTab, AdminUserSession } from './types';
 
@@ -21,6 +21,8 @@ interface AdminSidebarProps {
   setActiveTab: (tab: AdminTab) => void;
   currentUser: AdminUserSession;
   onSignOut: () => void;
+  mobileOpen?: boolean;
+  onCloseMobile?: () => void;
 }
 
 export function AdminSidebar({
@@ -28,6 +30,8 @@ export function AdminSidebar({
   setActiveTab,
   currentUser,
   onSignOut,
+  mobileOpen = false,
+  onCloseMobile,
 }: AdminSidebarProps) {
   const getInitials = (name: string) => {
     if (!name) return 'AD';
@@ -39,8 +43,13 @@ export function AdminSidebar({
       .toUpperCase();
   };
 
-  return (
-    <aside className="w-full md:w-64 h-auto md:h-screen bg-white border-r border-slate-200/90 flex flex-col justify-between p-5 flex-shrink-0 shadow-sm z-20 select-none md:overflow-y-auto text-slate-800">
+  const handleSelectTab = (tab: AdminTab) => {
+    setActiveTab(tab);
+    if (onCloseMobile) onCloseMobile();
+  };
+
+  const sidebarContent = (
+    <div className="flex flex-col justify-between h-full">
       <div>
         {/* Brand Header */}
         <div className="flex items-center justify-between pb-5 border-b border-slate-100">
@@ -59,6 +68,16 @@ export function AdminSidebar({
               ADMIN
             </span>
           </Link>
+
+          {onCloseMobile && (
+            <button
+              onClick={onCloseMobile}
+              className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              aria-label="Close navigation"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
         {/* Section 1: Main Navigation */}
@@ -69,7 +88,7 @@ export function AdminSidebar({
           <nav className="mt-2.5 space-y-1">
             <Link
               href="/admin/overview"
-              onClick={() => setActiveTab('overview')}
+              onClick={() => handleSelectTab('overview')}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'overview'
                   ? 'bg-[#E50914] text-white shadow-sm shadow-red-500/20'
@@ -82,7 +101,7 @@ export function AdminSidebar({
 
             <Link
               href="/admin/inventory"
-              onClick={() => setActiveTab('products')}
+              onClick={() => handleSelectTab('products')}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'products'
                   ? 'bg-[#E50914] text-white shadow-sm shadow-red-500/20'
@@ -95,7 +114,7 @@ export function AdminSidebar({
 
             <Link
               href="/admin/offers"
-              onClick={() => setActiveTab('offers')}
+              onClick={() => handleSelectTab('offers')}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'offers'
                   ? 'bg-[#E50914] text-white shadow-sm shadow-red-500/20'
@@ -103,12 +122,12 @@ export function AdminSidebar({
               }`}
             >
               <Tag className="w-4 h-4" />
-              <span>Offers & Deals</span>
+              <span>Offers &amp; Deals</span>
             </Link>
 
             <Link
               href="/admin/enquiries"
-              onClick={() => setActiveTab('enquiries')}
+              onClick={() => handleSelectTab('enquiries')}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'enquiries'
                   ? 'bg-[#E50914] text-white shadow-sm shadow-red-500/20'
@@ -121,7 +140,7 @@ export function AdminSidebar({
 
             <Link
               href="/admin/orders"
-              onClick={() => setActiveTab('orders')}
+              onClick={() => handleSelectTab('orders')}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'orders'
                   ? 'bg-[#E50914] text-white shadow-sm shadow-red-500/20'
@@ -129,20 +148,20 @@ export function AdminSidebar({
               }`}
             >
               <ShoppingBag className="w-4 h-4" />
-              <span>Orders & Fulfillment</span>
+              <span>Orders &amp; Dispatch</span>
             </Link>
           </nav>
         </div>
 
-        {/* Section 2: Administration & Security */}
-        <div className="mt-6 pt-5 border-t border-slate-100">
+        {/* Section 2: Administration */}
+        <div className="mt-6">
           <p className="px-3 text-[10px] font-black tracking-widest text-slate-400 uppercase">
-            ADMINISTRATION & SECURITY
+            ADMINISTRATION
           </p>
           <nav className="mt-2.5 space-y-1">
             <Link
               href="/admin/users"
-              onClick={() => setActiveTab('users')}
+              onClick={() => handleSelectTab('users')}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'users'
                   ? 'bg-[#E50914] text-white shadow-sm shadow-red-500/20'
@@ -155,7 +174,7 @@ export function AdminSidebar({
 
             <Link
               href="/admin/settings"
-              onClick={() => setActiveTab('settings')}
+              onClick={() => handleSelectTab('settings')}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'settings'
                   ? 'bg-[#E50914] text-white shadow-sm shadow-red-500/20'
@@ -200,6 +219,28 @@ export function AdminSidebar({
           <span>Sign Out</span>
         </button>
       </div>
-    </aside>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Desktop Persistent Sidebar */}
+      <aside className="hidden md:flex w-64 h-screen bg-white border-r border-slate-200/90 flex-col justify-between p-5 flex-shrink-0 shadow-sm z-20 select-none overflow-y-auto text-slate-800">
+        {sidebarContent}
+      </aside>
+
+      {/* Mobile Slide-over Drawer with Backdrop */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex">
+          <div
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-in fade-in"
+            onClick={onCloseMobile}
+          />
+          <aside className="relative w-72 max-w-[85vw] bg-white h-full shadow-2xl p-5 overflow-y-auto z-10 flex flex-col justify-between animate-in slide-in-from-left duration-200">
+            {sidebarContent}
+          </aside>
+        </div>
+      )}
+    </>
   );
 }

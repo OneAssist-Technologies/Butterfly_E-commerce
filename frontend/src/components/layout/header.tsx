@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Search, User, ShoppingBag, ChevronDown, Menu, X, ArrowRight } from 'lucide-react';
 import { useCart } from '@/providers';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 interface HeaderProps {
   cartCount?: number;
@@ -19,11 +19,45 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
   const handleOpenCart = onOpenCart ?? contextOpenCart;
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Synchronize search term from URL query parameter 'q'
+  React.useEffect(() => {
+    const q = searchParams?.get('q') || '';
+    setSearchTerm((prev) => (prev !== q ? q : prev));
+  }, [searchParams]);
+
+  // Prevent background scrolling when mobile menu drawer is open (bulletproof for mobile & desktop)
+  React.useEffect(() => {
+    if (mobileMenuOpen) {
+      const scrollY = window.scrollY;
+      const originalHtmlOverflow = document.documentElement.style.overflow;
+      const originalBodyOverflow = document.body.style.overflow;
+      const originalBodyPosition = document.body.style.position;
+      const originalBodyTop = document.body.style.top;
+      const originalBodyWidth = document.body.style.width;
+
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+
+      return () => {
+        document.documentElement.style.overflow = originalHtmlOverflow;
+        document.body.style.overflow = originalBodyOverflow;
+        document.body.style.position = originalBodyPosition;
+        document.body.style.top = originalBodyTop;
+        document.body.style.width = originalBodyWidth;
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [mobileMenuOpen]);
 
   // Close dropdown on route change
   React.useEffect(() => {
@@ -65,10 +99,13 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setMobileMenuOpen(false);
     if (onSearch) {
       onSearch(searchTerm);
     } else if (searchTerm.trim()) {
       router.push(`/products?q=${encodeURIComponent(searchTerm.trim())}`);
+    } else if (pathname === '/products') {
+      router.push('/products');
     }
   };
 
@@ -77,22 +114,22 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
       className="sticky top-0 z-50 bg-white border-b border-zinc-200/80 shadow-xs relative"
       onMouseLeave={() => setActiveDropdown(null)}
     >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2 sm:gap-4">
           
           {/* Official Butterfly Brand Logo */}
-          <Link href="/" className="flex items-center gap-2 group flex-shrink-0 py-1">
-            <div className="relative h-8 sm:h-9 w-48 sm:w-56 transition-transform duration-300 group-hover:scale-105">
+          <Link href="/" className="flex items-center gap-1.5 sm:gap-2 group flex-shrink-0 py-1">
+            <div className="relative h-7 sm:h-8 md:h-9 w-32 xs:w-40 sm:w-48 md:w-56 transition-transform duration-300 group-hover:scale-105">
               <Image
                 src="/brand/butterfly-wordmark-red.png"
                 alt="Butterfly Logo"
                 fill
-                sizes="(max-width: 640px) 192px, 224px"
+                sizes="(max-width: 480px) 140px, (max-width: 640px) 192px, 224px"
                 className="object-contain object-left"
                 priority
               />
             </div>
-            <div className="flex flex-col border-l border-zinc-300 pl-2 py-0.5">
-              <span className="text-[11px] sm:text-xs font-black tracking-wider text-zinc-900 uppercase leading-none whitespace-nowrap">
+            <div className="hidden sm:flex flex-col border-l border-zinc-300 pl-2 py-0.5">
+              <span className="text-[10px] sm:text-xs font-black tracking-wider text-zinc-900 uppercase leading-none whitespace-nowrap">
                 SMART TV
               </span>
             </div>
@@ -102,10 +139,10 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
           <nav className="hidden lg:flex items-center gap-8 h-full">
             <Link
               href="/"
-              className={`text-sm font-semibold relative py-2 transition-colors ${
+              className={`text-sm font-semibold relative py-2 transition-colors after:content-[''] after:absolute after:bottom-0 after:left-0 after:h-0.5 after:bg-[#E50914] after:transition-all after:duration-200 ${
                 isHomeActive
-                  ? 'text-zinc-900 after:content-[\'\'] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#E50914]'
-                  : 'text-zinc-700 hover:text-[#E50914]'
+                  ? 'text-[#E50914] after:w-full'
+                  : 'text-zinc-700 hover:text-[#E50914] after:w-0 hover:after:w-full'
               }`}
             >
               Home
@@ -113,7 +150,7 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
 
             {/* Products Nav Item */}
             <div
-              className="relative py-2"
+              className="relative py-2 flex items-center group"
               onMouseEnter={handleMouseEnterProducts}
               onMouseLeave={handleMouseLeaveProducts}
             >
@@ -121,10 +158,10 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
                 <Link
                   href="/products"
                   onClick={() => setActiveDropdown(null)}
-                  className={`flex items-center gap-1.5 text-sm font-semibold transition-colors py-2 cursor-pointer ${
+                  className={`flex items-center gap-1.5 text-sm font-semibold relative py-2 cursor-pointer transition-colors after:content-[''] after:absolute after:bottom-0 after:left-0 after:h-0.5 after:bg-[#E50914] after:transition-all after:duration-200 ${
                     isProductsActive || activeDropdown === 'products'
-                      ? 'text-[#E50914] relative after:content-[\'\'] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#E50914]'
-                      : 'text-zinc-700 hover:text-[#E50914]'
+                      ? 'text-[#E50914] after:w-full'
+                      : 'text-zinc-700 hover:text-[#E50914] group-hover:text-[#E50914] after:w-0 hover:after:w-full group-hover:after:w-full'
                   }`}
                 >
                   Products
@@ -136,10 +173,14 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
                     e.stopPropagation();
                     setActiveDropdown(activeDropdown === 'products' ? null : 'products');
                   }}
-                  className="py-2 pl-0.5 pr-1 text-zinc-400 hover:text-[#E50914] cursor-pointer"
+                  className={`py-2 pl-0.5 pr-1 cursor-pointer transition-colors ${
+                    activeDropdown === 'products' || isProductsActive
+                      ? 'text-[#E50914]'
+                      : 'text-zinc-400 hover:text-[#E50914] group-hover:text-[#E50914]'
+                  }`}
                 >
                   <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                    activeDropdown === 'products' ? 'rotate-180 text-[#E50914]' : isProductsActive ? 'text-[#E50914]' : 'text-zinc-400'
+                    activeDropdown === 'products' ? 'rotate-180 text-[#E50914]' : isProductsActive ? 'text-[#E50914]' : 'text-zinc-400 group-hover:text-[#E50914]'
                   }`} />
                 </button>
               </div>
@@ -147,92 +188,96 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
 
             <Link
               href="/about"
-              className={`text-sm font-semibold relative py-2 transition-colors ${
+              className={`text-sm font-semibold relative py-2 transition-colors after:content-[''] after:absolute after:bottom-0 after:left-0 after:h-0.5 after:bg-[#E50914] after:transition-all after:duration-200 ${
                 isAboutActive
-                  ? 'text-[#E50914] after:content-[\'\'] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#E50914]'
-                  : 'text-zinc-700 hover:text-[#E50914]'
+                  ? 'text-[#E50914] after:w-full'
+                  : 'text-zinc-700 hover:text-[#E50914] after:w-0 hover:after:w-full'
               }`}
             >
               About Us
             </Link>
 
-          {/* Support Dropdown */}
-          <div
-            className="h-full flex items-center relative"
-            onMouseEnter={handleMouseEnterSupport}
-            onMouseLeave={handleMouseLeaveSupport}
-          >
-            <div className="flex items-center">
-              <Link
-                href="/support"
-                onClick={() => setActiveDropdown(null)}
-                className={`flex items-center gap-1.5 text-sm font-semibold transition-colors py-2 cursor-pointer ${
-                  isSupportActive
-                    ? 'text-[#E50914] relative after:content-[\'\'] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#E50914]'
-                    : 'text-zinc-700 hover:text-[#E50914]'
-                }`}
-              >
-                Support
-              </Link>
-              <button
-                type="button"
-                aria-label="Toggle Support Dropdown"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setActiveDropdown(activeDropdown === 'support' ? null : 'support');
-                }}
-                className="py-2 pl-0.5 pr-1 text-zinc-400 hover:text-[#E50914] cursor-pointer"
-              >
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                  activeDropdown === 'support' ? 'rotate-180 text-[#E50914]' : isSupportActive ? 'text-[#E50914]' : 'text-zinc-400'
-                }`} />
-              </button>
-            </div>
-
-            {activeDropdown === 'support' && (
-              <div
-                onMouseEnter={handleMouseEnterSupport}
-                onMouseLeave={handleMouseLeaveSupport}
-                className="absolute top-full left-0 w-60 bg-white border border-zinc-200 rounded-xl shadow-xl py-2 animate-in fade-in slide-in-from-top-2 duration-200 z-50"
-              >
+            {/* Support Dropdown */}
+            <div
+              className="relative py-2 flex items-center group"
+              onMouseEnter={handleMouseEnterSupport}
+              onMouseLeave={handleMouseLeaveSupport}
+            >
+              <div className="flex items-center">
                 <Link
                   href="/support"
                   onClick={() => setActiveDropdown(null)}
-                  className="block px-4 py-2.5 text-sm text-zinc-800 hover:bg-zinc-50 hover:text-[#E50914] transition-colors"
+                  className={`flex items-center gap-1.5 text-sm font-semibold relative py-2 cursor-pointer transition-colors after:content-[''] after:absolute after:bottom-0 after:left-0 after:h-0.5 after:bg-[#E50914] after:transition-all after:duration-200 ${
+                    isSupportActive || activeDropdown === 'support'
+                      ? 'text-[#E50914] after:w-full'
+                      : 'text-zinc-700 hover:text-[#E50914] group-hover:text-[#E50914] after:w-0 hover:after:w-full group-hover:after:w-full'
+                  }`}
                 >
-                  <span className="font-semibold block">Help Center &amp; FAQs</span>
-                  <span className="text-xs text-zinc-500">Guides, manuals &amp; setup</span>
+                  Support
                 </Link>
-                <Link
-                  href="/support#service-centers"
-                  onClick={() => setActiveDropdown(null)}
-                  className="block px-4 py-2.5 text-sm text-zinc-800 hover:bg-zinc-50 hover:text-[#E50914] transition-colors"
+                <button
+                  type="button"
+                  aria-label="Toggle Support Dropdown"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveDropdown(activeDropdown === 'support' ? null : 'support');
+                  }}
+                  className={`py-2 pl-0.5 pr-1 cursor-pointer transition-colors ${
+                    activeDropdown === 'support' || isSupportActive
+                      ? 'text-[#E50914]'
+                      : 'text-zinc-400 hover:text-[#E50914] group-hover:text-[#E50914]'
+                  }`}
                 >
-                  <span className="font-semibold block">Service Centers</span>
-                  <span className="text-xs text-zinc-500">Pan-India authorized support</span>
-                </Link>
-                <Link
-                  href="/support#warranty"
-                  onClick={() => setActiveDropdown(null)}
-                  className="block px-4 py-2.5 text-sm text-zinc-800 hover:bg-zinc-50 hover:text-[#E50914] transition-colors"
-                >
-                  <span className="font-semibold block">Warranty Registration</span>
-                  <span className="text-xs text-zinc-500">Register &amp; claim warranty</span>
-                </Link>
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                    activeDropdown === 'support' ? 'rotate-180 text-[#E50914]' : isSupportActive ? 'text-[#E50914]' : 'text-zinc-400 group-hover:text-[#E50914]'
+                  }`} />
+                </button>
               </div>
-            )}
-          </div>
 
-          <Link
-            href="/contact"
-            className={`text-sm font-semibold relative py-2 transition-colors ${
-              isContactActive
-                ? 'text-[#E50914] after:content-[\'\'] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#E50914]'
-                : 'text-zinc-700 hover:text-[#E50914]'
-            }`}
-          >
-            Contact
-          </Link>
+              {activeDropdown === 'support' && (
+                <div
+                  onMouseEnter={handleMouseEnterSupport}
+                  onMouseLeave={handleMouseLeaveSupport}
+                  className="absolute top-full left-0 w-60 bg-white border border-zinc-200 rounded-xl shadow-xl py-2 animate-in fade-in slide-in-from-top-2 duration-200 z-50"
+                >
+                  <Link
+                    href="/support"
+                    onClick={() => setActiveDropdown(null)}
+                    className="block px-4 py-2.5 text-sm text-zinc-800 hover:bg-zinc-50 hover:text-[#E50914] transition-colors"
+                  >
+                    <span className="font-semibold block">Help Center &amp; FAQs</span>
+                    <span className="text-xs text-zinc-500">Guides, manuals &amp; setup</span>
+                  </Link>
+                  <Link
+                    href="/support#service-centers"
+                    onClick={() => setActiveDropdown(null)}
+                    className="block px-4 py-2.5 text-sm text-zinc-800 hover:bg-zinc-50 hover:text-[#E50914] transition-colors"
+                  >
+                    <span className="font-semibold block">Service Centers</span>
+                    <span className="text-xs text-zinc-500">Pan-India authorized support</span>
+                  </Link>
+                  <Link
+                    href="/support#warranty"
+                    onClick={() => setActiveDropdown(null)}
+                    className="block px-4 py-2.5 text-sm text-zinc-800 hover:bg-zinc-50 hover:text-[#E50914] transition-colors"
+                  >
+                    <span className="font-semibold block">Warranty Registration</span>
+                    <span className="text-xs text-zinc-500">Register &amp; claim warranty</span>
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            <Link
+              href="/contact"
+              className={`text-sm font-semibold relative py-2 transition-colors after:content-[''] after:absolute after:bottom-0 after:left-0 after:h-0.5 after:bg-[#E50914] after:transition-all after:duration-200 ${
+                isContactActive
+                  ? 'text-[#E50914] after:w-full'
+                  : 'text-zinc-700 hover:text-[#E50914] after:w-0 hover:after:w-full'
+              }`}
+            >
+              Contact
+            </Link>
         </nav>
 
         {/* Right Action Icons & Search */}
@@ -244,16 +289,33 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search TVs, features..."
-              className="w-56 lg:w-64 pl-4 pr-10 py-2 rounded-full border border-zinc-200 bg-zinc-100/80 text-sm text-zinc-900 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#E50914]/50 focus:border-[#E50914] focus:bg-white transition-all"
+              placeholder="Search TVs (e.g. 55&quot;, 4K, QLED)..."
+              className="w-56 lg:w-68 pl-4 pr-16 py-2 rounded-full border border-zinc-200 bg-zinc-100/80 text-sm text-zinc-900 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#E50914]/50 focus:border-[#E50914] focus:bg-white transition-all"
             />
-            <button
-              type="submit"
-              aria-label="Search"
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-900 transition-colors cursor-pointer"
-            >
-              <Search className="w-4 h-4" />
-            </button>
+            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchTerm('');
+                    if (pathname === '/products') {
+                      router.push('/products');
+                    }
+                  }}
+                  className="p-1 text-zinc-400 hover:text-zinc-700 cursor-pointer rounded-full"
+                  aria-label="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+              <button
+                type="submit"
+                aria-label="Search"
+                className="text-zinc-500 hover:text-zinc-900 transition-colors cursor-pointer p-1"
+              >
+                <Search className="w-4 h-4" />
+              </button>
+            </div>
           </form>
 
           {/* User Account Link */}
@@ -451,95 +513,185 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
         </div>
       )}
 
-      {/* Mobile Menu Dropdown */}
+      {/* Mobile Slide-Over Drawer Popup (slides from left to right, fixed background) */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-white border-b border-zinc-200 px-6 py-4 space-y-3">
-          <Link
-            href="/"
+        <div className="fixed inset-0 z-50 lg:hidden flex justify-start">
+          {/* Dimmed Background Overlay (Fixed & non-scrollable) */}
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200 touch-none overscroll-none"
             onClick={() => setMobileMenuOpen(false)}
-            className={`block py-2 text-base font-semibold ${
-              isHomeActive ? 'text-[#E50914]' : 'text-zinc-800 hover:text-[#E50914]'
-            }`}
-          >
-            Home
-          </Link>
+            onTouchMove={(e) => e.preventDefault()}
+            aria-hidden="true"
+          />
 
-          {/* Mobile Products with TV Inches Quick Select */}
-          <div>
-            <Link
-              href="/products"
-              onClick={() => setMobileMenuOpen(false)}
-              className={`block py-2 text-base font-semibold ${
-                isProductsActive ? 'text-[#E50914]' : 'text-zinc-800 hover:text-[#E50914]'
-              }`}
-            >
-              Products
-            </Link>
-            <div className="grid grid-cols-3 gap-2 py-2 pl-2 border-l-2 border-red-200 mb-2">
+          {/* Left Popup Drawer (slides left to right) */}
+          <div className="relative w-full max-w-[340px] sm:max-w-sm bg-white h-full shadow-2xl flex flex-col z-10 overflow-y-auto overscroll-contain animate-in slide-in-from-left duration-300">
+            {/* Top Drawer Header (matching official Butterfly mobile design) */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100">
               <Link
-                href="/products?size=32%22"
+                href="/"
                 onClick={() => setMobileMenuOpen(false)}
-                className="text-xs font-bold text-zinc-600 hover:text-[#E50914] bg-zinc-50 p-2 rounded-lg text-center"
+                className="relative h-7 w-32"
               >
-                32&quot; TV
+                <Image
+                  src="/brand/butterfly-wordmark-red.png"
+                  alt="Butterfly Logo"
+                  fill
+                  sizes="128px"
+                  className="object-contain object-left"
+                  priority
+                />
               </Link>
-              <Link
-                href="/products?size=43%22"
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-xs font-bold text-zinc-600 hover:text-[#E50914] bg-zinc-50 p-2 rounded-lg text-center"
-              >
-                43&quot; TV
-              </Link>
-              <Link
-                href="/products?size=50%22"
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-xs font-bold text-zinc-600 hover:text-[#E50914] bg-zinc-50 p-2 rounded-lg text-center"
-              >
-                50&quot; TV
-              </Link>
-              <Link
-                href="/products?size=55%22"
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-xs font-bold text-zinc-600 hover:text-[#E50914] bg-zinc-50 p-2 rounded-lg text-center"
-              >
-                55&quot; TV
-              </Link>
-              <Link
-                href="/products?size=65%22"
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-xs font-bold text-zinc-600 hover:text-[#E50914] bg-zinc-50 p-2 rounded-lg text-center"
-              >
-                65&quot; TV
-              </Link>
+              <div className="flex items-center gap-3.5 text-zinc-700">
+                <Link
+                  href="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  aria-label="User Account"
+                  className="p-1 hover:text-[#E50914] transition-colors"
+                >
+                  <User className="w-5 h-5" />
+                </Link>
+                <Link
+                  href="/cart"
+                  onClick={() => setMobileMenuOpen(false)}
+                  aria-label="Cart"
+                  className="relative p-1 hover:text-[#E50914] transition-colors"
+                >
+                  <ShoppingBag className="w-5 h-5" />
+                  {activeCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-[#E50914] text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                      {activeCount}
+                    </span>
+                  )}
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setMobileMenuOpen(false)}
+                  aria-label="Close menu"
+                  className="p-1 text-zinc-600 hover:text-zinc-900 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Drawer Body Content */}
+            <div className="p-5 space-y-4 flex-1">
+              {/* Search Bar */}
+              <form onSubmit={handleSearchSubmit} className="relative">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search TVs, models, features..."
+                  className="w-full pl-4 pr-11 py-2.5 rounded-full border border-zinc-200 bg-zinc-50 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#E50914]/40 focus:border-[#E50914] focus:bg-white transition-all shadow-2xs"
+                />
+                <button
+                  type="submit"
+                  aria-label="Search"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 transition-colors"
+                >
+                  <Search className="w-4 h-4" />
+                </button>
+              </form>
+
+              {/* Navigation Links */}
+              <div className="divide-y divide-zinc-100 text-sm font-semibold pt-1">
+                <Link
+                  href="/"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`block py-3 transition-colors ${
+                    isHomeActive ? 'text-[#E50914]' : 'text-zinc-800 hover:text-[#E50914]'
+                  }`}
+                >
+                  Home
+                </Link>
+
+                {/* Mobile Products with TV Inches Quick Select */}
+                <div className="pt-2.5 pb-2">
+                  <Link
+                    href="/products"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center justify-between py-1.5 transition-colors ${
+                      isProductsActive ? 'text-[#E50914]' : 'text-[#E50914] hover:text-[#c70811]'
+                    }`}
+                  >
+                    <span className="font-bold">Products Catalog</span>
+                    <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-sm bg-red-50 text-[#E50914]">
+                      ALL MODELS
+                    </span>
+                  </Link>
+                  <div className="grid grid-cols-5 gap-1.5 pt-2 pb-1">
+                    {['32"', '43"', '50"', '55"', '65"'].map((sz) => (
+                      <Link
+                        key={sz}
+                        href={`/products?size=${encodeURIComponent(sz)}`}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="text-xs font-bold text-zinc-700 hover:text-white hover:bg-[#E50914] bg-zinc-100 py-2 rounded-lg text-center transition-colors shadow-2xs"
+                      >
+                        {sz}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+
+                <Link
+                  href="/about"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`block py-3 transition-colors ${
+                    isAboutActive ? 'text-[#E50914]' : 'text-zinc-800 hover:text-[#E50914]'
+                  }`}
+                >
+                  About Us
+                </Link>
+
+                <Link
+                  href="/support"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`block py-3 transition-colors ${
+                    isSupportActive ? 'text-[#E50914]' : 'text-zinc-800 hover:text-[#E50914]'
+                  }`}
+                >
+                  Customer Support
+                </Link>
+
+                <Link
+                  href="/contact"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`block py-3 transition-colors ${
+                    isContactActive ? 'text-[#E50914]' : 'text-zinc-800 hover:text-[#E50914]'
+                  }`}
+                >
+                  Contact &amp; Showrooms
+                </Link>
+
+                <Link
+                  href="/cart"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center justify-between py-3 text-zinc-800 hover:text-[#E50914] transition-colors"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <ShoppingBag className="w-4 h-4 text-[#E50914]" />
+                    <span>My Cart</span>
+                  </span>
+                  {activeCount > 0 && (
+                    <span className="bg-[#E50914] text-white text-[11px] font-bold rounded-full px-2 py-0.5">
+                      {activeCount} items
+                    </span>
+                  )}
+                </Link>
+
+                <Link
+                  href="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2.5 py-3 text-zinc-800 hover:text-[#E50914] transition-colors"
+                >
+                  <User className="w-4 h-4 text-[#E50914]" />
+                  <span>Account Login</span>
+                </Link>
+              </div>
             </div>
           </div>
-          <Link
-            href="/about"
-            onClick={() => setMobileMenuOpen(false)}
-            className={`block py-2 text-base font-semibold ${
-              isAboutActive ? 'text-[#E50914]' : 'text-zinc-800 hover:text-[#E50914]'
-            }`}
-          >
-            About Us
-          </Link>
-          <Link
-            href="/support"
-            onClick={() => setMobileMenuOpen(false)}
-            className={`block py-2 text-base font-semibold ${
-              isSupportActive ? 'text-[#E50914]' : 'text-zinc-800 hover:text-[#E50914]'
-            }`}
-          >
-            Support
-          </Link>
-          <Link
-            href="/contact"
-            onClick={() => setMobileMenuOpen(false)}
-            className={`block py-2 text-base font-semibold ${
-              isContactActive ? 'text-[#E50914]' : 'text-zinc-800 hover:text-[#E50914]'
-            }`}
-          >
-            Contact
-          </Link>
         </div>
       )}
     </header>

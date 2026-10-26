@@ -55,24 +55,27 @@ export class ProductsService {
     const where: any = {};
     const andConditions: any[] = [];
 
-    // Filter by screen size(s) - e.g. "55"" or "43",55""
+    // Filter by screen size(s) - e.g. "55"", "55", "55 inch", or "43",55""
     if (query?.size && query.size !== 'All') {
-      const sizes = query.size.split(',').map((s) => s.trim()).filter(Boolean);
-      if (sizes.length === 1) {
-        andConditions.push({
-          OR: [
-            { size: sizes[0] },
-            { screenSizeCategory: sizes[0] },
-          ],
-        });
-      } else if (sizes.length > 1) {
-        andConditions.push({
-          OR: [
-            { size: { in: sizes } },
-            { screenSizeCategory: { in: sizes } },
-          ],
-        });
-      }
+      const rawSizes = query.size.split(',').map((s) => s.trim()).filter(Boolean);
+      const expandedSizes = new Set<string>();
+      rawSizes.forEach((sz) => {
+        expandedSizes.add(sz);
+        const num = sz.match(/\d{2,3}/)?.[0];
+        if (num) {
+          expandedSizes.add(num);
+          expandedSizes.add(`${num}"`);
+          expandedSizes.add(`${num} inch`);
+          expandedSizes.add(`${num} Inch`);
+        }
+      });
+      const sizeList = Array.from(expandedSizes);
+      andConditions.push({
+        OR: [
+          { size: { in: sizeList } },
+          { screenSizeCategory: { in: sizeList } },
+        ],
+      });
     }
 
     // Filter by resolution(s) - e.g. "4K UHD" or "Full HD"
@@ -122,17 +125,34 @@ export class ProductsService {
       }
     }
 
-    // Search keyword in name, model, size, or resolution
+    // Search keyword in name, model, size, screenSizeCategory, resolution, or OS
     if (query?.search && query.search.trim()) {
       const s = query.search.trim();
-      andConditions.push({
-        OR: [
-          { name: { contains: s, mode: 'insensitive' } },
-          { model: { contains: s, mode: 'insensitive' } },
-          { size: { contains: s, mode: 'insensitive' } },
-          { resolution: { contains: s, mode: 'insensitive' } },
-        ],
-      });
+      const numMatch = s.match(/(\d{2,3})/)?.[1];
+      const searchOr: any[] = [
+        { name: { contains: s, mode: 'insensitive' } },
+        { model: { contains: s, mode: 'insensitive' } },
+        { size: { contains: s, mode: 'insensitive' } },
+        { screenSizeCategory: { contains: s, mode: 'insensitive' } },
+        { resolution: { contains: s, mode: 'insensitive' } },
+        { resolutionCategory: { contains: s, mode: 'insensitive' } },
+        { os: { contains: s, mode: 'insensitive' } },
+        { smartOS: { contains: s, mode: 'insensitive' } },
+        { displayTech: { contains: s, mode: 'insensitive' } },
+      ];
+
+      // If search query mentions a TV size number (e.g. "55", "55 inch", "55-inch", "55"")
+      if (numMatch) {
+        searchOr.push(
+          { size: { contains: numMatch, mode: 'insensitive' } },
+          { size: { contains: `${numMatch}"`, mode: 'insensitive' } },
+          { screenSizeCategory: { contains: numMatch, mode: 'insensitive' } },
+          { model: { contains: numMatch, mode: 'insensitive' } },
+          { name: { contains: numMatch, mode: 'insensitive' } },
+        );
+      }
+
+      andConditions.push({ OR: searchOr });
     }
 
     if (andConditions.length > 0) {
@@ -140,7 +160,7 @@ export class ProductsService {
     }
 
     // Sorting order
-    let orderBy: any = [{ featuredRank: 'asc' }, { createdAt: 'desc' }];
+    let orderBy: any = [{ isTopSelling: 'desc' }, { featuredRank: 'asc' }, { createdAt: 'desc' }];
     if (query?.sort === 'price-asc') {
       orderBy = [{ numericPrice: 'asc' }];
     } else if (query?.sort === 'price-desc') {
@@ -172,6 +192,7 @@ export class ProductsService {
         isFilledButton: true,
         buttonLabel: true,
         featuredRank: true,
+        isTopSelling: true,
         inStock: true,
         features: true,
         keyFeatures: true,
@@ -220,6 +241,7 @@ export class ProductsService {
         isFilledButton: true,
         buttonLabel: true,
         featuredRank: true,
+        isTopSelling: true,
         inStock: true,
         features: true,
         keyFeatures: true,

@@ -1,15 +1,27 @@
-import { IsString, IsOptional, IsEmail } from 'class-validator';
+import { IsString, IsOptional } from 'class-validator';
 
 export class UpdateSettingsDto {
   @IsString()
   @IsOptional()
+  id?: string;
+
+  @IsString()
+  @IsOptional()
+  createdAt?: string;
+
+  @IsString()
+  @IsOptional()
+  updatedAt?: string;
+
+  @IsString()
+  @IsOptional()
   companyName?: string;
 
-  @IsEmail()
+  @IsString()
   @IsOptional()
   email?: string;
 
-  @IsEmail()
+  @IsString()
   @IsOptional()
   supportEmail?: string;
 
@@ -52,4 +64,10 @@ export class UpdateSettingsDto {
   @IsString()
   @IsOptional()
   supportHours?: string;
+
+  @IsOptional()
+  sizeSelectorCards?: any;
+
+  @IsOptional()
+  availableSizes?: any;
 }

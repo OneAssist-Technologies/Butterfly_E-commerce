@@ -71,6 +71,7 @@ model Product {
   isFilledButton     Boolean     @default(false)
   buttonLabel        String?
   featuredRank       Int?
+  isTopSelling       Boolean     @default(false)
   inStock            Boolean     @default(true)
   features           String[]    @default([])
   keyFeatures        String[]    @default([])
@@ -86,19 +87,12 @@ model Product {
 
 model Review {
   id        String   @id @default(uuid())
-  rating    Int      @default(5)
-  title     String?
-  comment   String
-  userName  String
-  userEmail String?
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name      String
+  email     String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("reviews")
+  @@map("users")
 }
 
 model Order {
@@ -171,6 +165,8 @@ model CompanySetting {
   country        String   @default("India")
   locationUrl    String?  @default("https://maps.google.com/?q=Peelamedu+Coimbatore")
   supportHours   String   @default("Mon - Sat | 9:00 AM - 6:00 PM IST")
+  sizeSelectorCards Json?
+  availableSizes    Json?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

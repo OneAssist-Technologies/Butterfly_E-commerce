@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ProductCard, TVProduct } from '@/components/cards/product-card';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { productService } from '@/services/product.service';
+import { getStoredProducts, CatalogProduct } from '@/data/products';
 
 interface BestSellingProps {
   onViewDetails: (product: TVProduct) => void;
@@ -17,56 +18,70 @@ export function BestSelling({
   onAddToCart,
   selectedFilterSize,
 }: BestSellingProps) {
+  const [activeFilter, setActiveFilter] = useState<string>(selectedFilterSize || 'All');
   const [products, setProducts] = useState<TVProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const mapToTvProducts = (catalog: CatalogProduct[]): TVProduct[] => {
+    let candidates = catalog.filter((p) => p.inStock !== false);
+
+    if (selectedFilterSize) {
+      candidates = candidates.filter(
+        (p) =>
+          p.size === selectedFilterSize ||
+          p.screenSizeCategory === selectedFilterSize
+      );
+    }
+
+    // Priority: Products explicitly marked as Top Selling by Admin come first
+    candidates.sort((a, b) => {
+      if (a.isTopSelling && !b.isTopSelling) return -1;
+      if (!a.isTopSelling && b.isTopSelling) return 1;
+      const rankA = typeof a.featuredRank === 'number' ? a.featuredRank : 99;
+      const rankB = typeof b.featuredRank === 'number' ? b.featuredRank : 99;
+      return rankA - rankB;
+    });
+
+    return candidates.slice(0, 4).map((p, idx) => ({
+      id: p.id,
+      model: p.model,
+      name: p.name,
+      size: p.size,
+      badge:
+        p.badge ||
+        (p.isTopSelling
+          ? 'Best Seller'
+          : idx === 0
+          ? 'Best Seller'
+          : idx === 1
+          ? 'Popular'
+          : idx === 2
+          ? 'New'
+          : undefined),
+      image: p.image || '/menu_tv_43.jpg',
+      resolution: p.resolution,
+      os: p.os || p.smartOS || 'Google TV',
+      sound: p.sound || '2 x 10W Stereo Speakers',
+      price: p.price,
+      numericPrice: p.numericPrice || p.priceNumber || 0,
+      isFilledButton: idx === 0,
+      isTopSelling: p.isTopSelling,
+    }));
+  };
 
   const fetchLiveFeaturedProducts = async () => {
     try {
       const liveCatalog = await productService.getAll();
       if (Array.isArray(liveCatalog) && liveCatalog.length > 0) {
-        // Filter in-stock products
-        let candidates = liveCatalog.filter((p) => p.inStock !== false);
-
-        // Filter by size if filter is active
-        if (selectedFilterSize) {
-          candidates = candidates.filter(
-            (p) =>
-              p.size === selectedFilterSize ||
-              p.screenSizeCategory === selectedFilterSize
-          );
-        }
-
-        // Sort by featuredRank (lowest first), fallback to price or order
-        candidates.sort((a, b) => {
-          const rankA = typeof a.featuredRank === 'number' ? a.featuredRank : 99;
-          const rankB = typeof b.featuredRank === 'number' ? b.featuredRank : 99;
-          return rankA - rankB;
-        });
-
-        // Map live catalog item to TVProduct
-        const mapped: TVProduct[] = candidates.slice(0, 4).map((p, idx) => ({
-          id: p.id,
-          model: p.model,
-          name: p.name,
-          size: p.size,
-          badge:
-            p.badge ||
-            (idx === 0 ? 'Best Seller' : idx === 1 ? 'Popular' : idx === 2 ? 'New' : undefined),
-          image: p.image || '/tv_art.jpg',
-          resolution: p.resolution,
-          os: p.os || p.smartOS || 'Google TV',
-          sound: p.sound || '2 x 10W Stereo Speakers',
-          price: p.price,
-          numericPrice: p.numericPrice || p.priceNumber || 0,
-          isFilledButton: idx === 0,
-        }));
-
-        setProducts(mapped);
+        setProducts(mapToTvProducts(liveCatalog));
       } else {
-        setProducts([]);
+        const stored = getStoredProducts();
+        setProducts(mapToTvProducts(stored));
       }
-    } catch (err) {
-      console.warn('[BestSelling] Failed to fetch live products:', err);
+    } catch {
+      // Graceful fallback to stored products on network disconnects
+      const stored = getStoredProducts();
+      setProducts(mapToTvProducts(stored));
     } finally {
       setIsLoading(false);
     }
