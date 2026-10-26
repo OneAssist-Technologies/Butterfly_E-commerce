@@ -9,6 +9,9 @@ import {
   Eye,
   EyeOff,
   CheckCircle2,
+  Check,
+  X,
+  ShieldCheck,
 } from 'lucide-react';
 import { AuthTvShowcase } from '@/components/auth/auth-tv-showcase';
 import { authService } from '@/services/auth.service';
@@ -27,8 +30,92 @@ export default function SignupPage() {
   const [successMsg, setSuccessMsg] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
+  // Real-time password health & criteria evaluation
+  const passwordHealth = React.useMemo(() => {
+    if (!password) {
+      return {
+        score: 0,
+        label: 'Enter password',
+        color: 'bg-zinc-200',
+        textColor: 'text-zinc-400',
+        checks: {
+          length: false,
+          lower: false,
+          upper: false,
+          number: false,
+          symbol: false,
+        },
+        isValid: false,
+      };
+    }
+
+    const checks = {
+      length: password.length >= 8,
+      lower: /[a-z]/.test(password),
+      upper: /[A-Z]/.test(password),
+      number: /[0-9]/.test(password),
+      symbol: /[^A-Za-z0-9]/.test(password),
+    };
+
+    const passedCount = Object.values(checks).filter(Boolean).length;
+    const isValid = checks.length && checks.number && (checks.lower || checks.upper);
+
+    if (password.length < 6 || passedCount <= 1) {
+      return {
+        score: 1,
+        label: 'Weak',
+        color: 'bg-red-500',
+        textColor: 'text-red-500',
+        checks,
+        isValid,
+      };
+    }
+    if (passedCount === 2 || passedCount === 3) {
+      return {
+        score: 2,
+        label: 'Fair',
+        color: 'bg-amber-500',
+        textColor: 'text-amber-500',
+        checks,
+        isValid,
+      };
+    }
+    if (passedCount === 4) {
+      return {
+        score: 3,
+        label: 'Good',
+        color: 'bg-emerald-500',
+        textColor: 'text-emerald-500',
+        checks,
+        isValid: true,
+      };
+    }
+    return {
+      score: 4,
+      label: 'Strong',
+      color: 'bg-emerald-600',
+      textColor: 'text-emerald-600',
+      checks,
+      isValid: true,
+    };
+  }, [password]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Password Health & Security Validation Checks
+    if (password.length < 8) {
+      setErrorMsg('Password must be at least 8 characters long');
+      return;
+    }
+    if (!/[0-9]/.test(password)) {
+      setErrorMsg('Password must include at least one number (0-9)');
+      return;
+    }
+    if (!/[A-Za-z]/.test(password)) {
+      setErrorMsg('Password must include at least one letter');
+      return;
+    }
     if (password !== confirmPassword) {
       setErrorMsg('Passwords do not match');
       return;
@@ -191,7 +278,10 @@ export default function SignupPage() {
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (errorMsg) setErrorMsg('');
+                  }}
                   placeholder="Minimum 8 characters"
                   className="w-full px-4 py-2.5 pr-11 rounded-xl border border-zinc-300 text-sm text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#E50914]/20 focus:border-[#E50914] transition-all bg-white"
                 />
@@ -204,6 +294,92 @@ export default function SignupPage() {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+
+              {/* Password Health / Strength Bar */}
+              {password && (
+                <div className="mt-2 space-y-2 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-zinc-500 font-medium flex items-center gap-1">
+                      <ShieldCheck className="w-3.5 h-3.5 text-zinc-400" />
+                      Password Health:
+                    </span>
+                    <span className={`font-bold ${passwordHealth.textColor}`}>
+                      {passwordHealth.label}
+                    </span>
+                  </div>
+
+                  {/* 4-Level Health Meter */}
+                  <div className="grid grid-cols-4 gap-1.5 h-1.5">
+                    {[1, 2, 3, 4].map((step) => (
+                      <div
+                        key={step}
+                        className={`h-full rounded-full transition-all duration-300 ${
+                          step <= passwordHealth.score
+                            ? passwordHealth.color
+                            : 'bg-zinc-200'
+                        }`}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Criteria Checklist Badges for Validation */}
+                  <div className="grid grid-cols-2 gap-1.5 pt-1 text-[11px]">
+                    <div
+                      className={`flex items-center gap-1.5 ${
+                        passwordHealth.checks.length ? 'text-emerald-600 font-medium' : 'text-zinc-400'
+                      }`}
+                    >
+                      {passwordHealth.checks.length ? (
+                        <Check className="w-3 h-3 text-emerald-600 flex-shrink-0" />
+                      ) : (
+                        <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 ml-0.5 mr-1 flex-shrink-0" />
+                      )}
+                      <span>8+ characters</span>
+                    </div>
+
+                    <div
+                      className={`flex items-center gap-1.5 ${
+                        passwordHealth.checks.number ? 'text-emerald-600 font-medium' : 'text-zinc-400'
+                      }`}
+                    >
+                      {passwordHealth.checks.number ? (
+                        <Check className="w-3 h-3 text-emerald-600 flex-shrink-0" />
+                      ) : (
+                        <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 ml-0.5 mr-1 flex-shrink-0" />
+                      )}
+                      <span>At least 1 number</span>
+                    </div>
+
+                    <div
+                      className={`flex items-center gap-1.5 ${
+                        passwordHealth.checks.lower && passwordHealth.checks.upper
+                          ? 'text-emerald-600 font-medium'
+                          : 'text-zinc-400'
+                      }`}
+                    >
+                      {passwordHealth.checks.lower && passwordHealth.checks.upper ? (
+                        <Check className="w-3 h-3 text-emerald-600 flex-shrink-0" />
+                      ) : (
+                        <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 ml-0.5 mr-1 flex-shrink-0" />
+                      )}
+                      <span>Upper &amp; lowercase</span>
+                    </div>
+
+                    <div
+                      className={`flex items-center gap-1.5 ${
+                        passwordHealth.checks.symbol ? 'text-emerald-600 font-medium' : 'text-zinc-400'
+                      }`}
+                    >
+                      {passwordHealth.checks.symbol ? (
+                        <Check className="w-3 h-3 text-emerald-600 flex-shrink-0" />
+                      ) : (
+                        <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 ml-0.5 mr-1 flex-shrink-0" />
+                      )}
+                      <span>Special symbol</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>
@@ -219,7 +395,10 @@ export default function SignupPage() {
                   type={showConfirmPassword ? 'text' : 'password'}
                   required
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    if (errorMsg) setErrorMsg('');
+                  }}
                   placeholder="Enter password again"
                   className="w-full px-4 py-2.5 pr-11 rounded-xl border border-zinc-300 text-sm text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#E50914]/20 focus:border-[#E50914] transition-all bg-white"
                 />
@@ -232,6 +411,20 @@ export default function SignupPage() {
                   {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+
+              {confirmPassword && (
+                <div className="mt-1.5 flex items-center gap-1 text-xs">
+                  {password === confirmPassword ? (
+                    <span className="text-emerald-600 flex items-center gap-1 font-medium">
+                      <Check className="w-3.5 h-3.5 text-emerald-600" /> Passwords match
+                    </span>
+                  ) : (
+                    <span className="text-red-500 flex items-center gap-1 font-medium">
+                      <X className="w-3.5 h-3.5 text-red-500" /> Passwords do not match
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Terms checkbox */}

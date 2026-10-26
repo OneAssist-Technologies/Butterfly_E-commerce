@@ -137,6 +137,7 @@ export function AdminDashboardClient({ initialTab }: AdminDashboardClientProps) 
   const [triggerAddUser, setTriggerAddUser] = useState(false);
   const [triggerSaveSettings, setTriggerSaveSettings] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Dynamic Calculated Metrics
   const metrics: AdminMetrics = useMemo(() => {
@@ -175,14 +176,15 @@ export function AdminDashboardClient({ initialTab }: AdminDashboardClientProps) 
   const fetchAdminDashboardData = useCallback(async (silent = false) => {
     if (!silent) setIsRefreshing(true);
     try {
-      const [liveProducts, liveOrders, liveEnquiries, liveUsers, liveSettings, liveOffers] =
+      const [liveProducts, liveOrders, liveEnquiries, liveUsers, liveOffers, liveSettings] =
         await Promise.allSettled([
           productService.getAll(),
           orderService.getAll(),
           enquiryService.getAll(),
           authService.getUsers(),
-          settingsService.getSettings(),
           offerService.getAdminOffers(),
+          // Only fetch settings during initial load or explicit manual refresh, not during 15s background polling
+          !silent ? settingsService.getSettings() : Promise.resolve(null),
         ]);
 
       if (liveProducts.status === 'fulfilled' && Array.isArray(liveProducts.value)) {
@@ -579,9 +581,13 @@ export function AdminDashboardClient({ initialTab }: AdminDashboardClientProps) 
     try {
       const saved = await settingsService.updateSettings(newSettings);
       setSettings(saved);
-    } catch (e) {
-      console.warn('Backend settings update warning:', e);
-      setSettings(newSettings);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('butterfly_company_settings', JSON.stringify(saved));
+        window.dispatchEvent(new Event('butterfly_settings_updated'));
+      }
+    } catch (e: any) {
+      console.error('Backend settings update error:', e?.response?.data || e);
+      throw e;
     } finally {
       setSettingsSaving(false);
       setTriggerSaveSettings(false);
@@ -614,6 +620,8 @@ export function AdminDashboardClient({ initialTab }: AdminDashboardClientProps) 
         setActiveTab={handleTabChange}
         currentUser={currentUser}
         onSignOut={handleSignOut}
+        mobileOpen={mobileSidebarOpen}
+        onCloseMobile={() => setMobileSidebarOpen(false)}
       />
 
       {/* 2. Main Content Area */}
@@ -633,10 +641,11 @@ export function AdminDashboardClient({ initialTab }: AdminDashboardClientProps) 
           onOpenAddUser={() => setTriggerAddUser(true)}
           onSaveSettings={() => setTriggerSaveSettings(true)}
           settingsSaving={settingsSaving}
+          onToggleMobileSidebar={() => setMobileSidebarOpen((prev) => !prev)}
         />
 
         {/* Tab Body */}
-        <div className="p-6 lg:p-8 space-y-6">
+        <div className="p-4 sm:p-6 lg:p-8 space-y-6">
           {activeTab === 'overview' && (
             <OverviewTab
               currentUser={currentUser}
@@ -666,6 +675,7 @@ export function AdminDashboardClient({ initialTab }: AdminDashboardClientProps) 
             <OffersTab
               offers={offersList}
               productsList={productsList}
+              availableSizes={settings.availableSizes}
               onAddOffer={handleAddOffer}
               onUpdateOffer={handleUpdateOffer}
               onDeleteOffer={handleDeleteOffer}

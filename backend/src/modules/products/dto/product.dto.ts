@@ -95,6 +95,10 @@ export class CreateProductDto {
 
   @IsBoolean()
   @IsOptional()
+  isTopSelling?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
   inStock?: boolean;
 
   @IsArray()
@@ -145,6 +149,10 @@ export class UpdateProductDto {
   @IsBoolean()
   @IsOptional()
   inStock?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  isTopSelling?: boolean;
 
   @IsString()
   @IsOptional()

@@ -11,7 +11,7 @@ interface AuthTvShowcaseProps {
 }
 
 export function AuthTvShowcase({
-  tag = 'BUTTERFLY SMART TV',
+  tag = 'BUTTERFLY SMART TV',  
   title,
   subtitle,
 }: AuthTvShowcaseProps) {
@@ -60,14 +60,14 @@ export function AuthTvShowcase({
             <div className="relative w-full h-full rounded-xl overflow-hidden bg-black flex flex-col items-center justify-center p-6 shadow-inner">
               {/* Vibrant Cinematic Display Background */}
               <Image
-                src="/tv_lake.jpg"
+                src="/menu_tv_65.jpg"
                 alt="Display Ambient"
                 fill
                 priority
-                className="object-cover opacity-60 transition-transform duration-700 group-hover:scale-105"
+                className="object-cover opacity-75 transition-transform duration-700 group-hover:scale-105"
                 sizes="500px"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/70" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/60" />
 
               {/* ORIGINAL BUTTERFLY LOGO ON TV DISPLAY SCREEN */}
               <div className="relative z-10 flex flex-col items-center justify-center transition-transform duration-300 group-hover:scale-105">

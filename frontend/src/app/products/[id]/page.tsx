@@ -6,7 +6,6 @@ import { ProductDetailsClient } from '@/components/products/product-details-clie
 import { ArrowLeft, Tv } from 'lucide-react';
 import { ENV } from '@/config/env';
 
-export const instant = false;
 
 interface PageProps {
   params: Promise<{

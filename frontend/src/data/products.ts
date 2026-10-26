@@ -8,6 +8,7 @@ export interface CatalogProduct extends TVProduct {
   brand: 'Butterfly';
   buttonLabel?: 'View Details →' | 'Enquire Now' | string;
   featuredRank?: number;
+  isTopSelling?: boolean;
   inStock?: boolean;
   priceNumber?: number;
   displayTech?: string;

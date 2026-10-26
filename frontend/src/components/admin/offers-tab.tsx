@@ -33,10 +33,12 @@ import {
 } from 'lucide-react';
 import { Offer, CreateOfferPayload, DiscountType } from '@/services/offer.service';
 import { CatalogProduct } from '@/data/products';
+import { settingsService } from '@/services/settings.service';
 
 interface OffersTabProps {
   offers: Offer[];
   productsList?: CatalogProduct[];
+  availableSizes?: string[];
   onAddOffer: (payload: CreateOfferPayload) => Promise<void>;
   onUpdateOffer: (id: string, payload: Partial<CreateOfferPayload>) => Promise<void>;
   onDeleteOffer: (id: string) => Promise<void>;
@@ -73,6 +75,7 @@ export const BADGE_COLORS = [
 export function OffersTab({
   offers,
   productsList = [],
+  availableSizes = [],
   onAddOffer,
   onUpdateOffer,
   onDeleteOffer,
@@ -85,6 +88,65 @@ export function OffersTab({
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'active' | 'inactive' | 'percentage' | 'fixed'>('all');
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  // Dynamic Screen Sizes loaded from admin settings & storage
+  const [dynamicSizes, setDynamicSizes] = useState<string[]>(availableSizes || []);
+
+  useEffect(() => {
+    if (availableSizes && availableSizes.length > 0) {
+      setDynamicSizes(availableSizes);
+    }
+  }, [availableSizes]);
+
+  useEffect(() => {
+    const loadSizes = async () => {
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem('butterfly_tv_sizes');
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) {
+              setDynamicSizes(parsed);
+            }
+          } catch {}
+        }
+      }
+      try {
+        const st = await settingsService.getSettings();
+        if (Array.isArray(st.availableSizes)) {
+          setDynamicSizes(st.availableSizes);
+        }
+      } catch {}
+    };
+
+    loadSizes();
+
+    const handleSizesUpdated = (e: any) => {
+      if (e.detail && Array.isArray(e.detail)) {
+        setDynamicSizes(e.detail);
+      }
+    };
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'butterfly_tv_sizes' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) {
+            setDynamicSizes(parsed);
+          }
+        } catch {}
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('butterfly_sizes_updated', handleSizesUpdated);
+      window.addEventListener('storage', handleStorageChange);
+      return () => {
+        window.removeEventListener('butterfly_sizes_updated', handleSizesUpdated);
+        window.removeEventListener('storage', handleStorageChange);
+      };
+    }
+  }, []);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -853,12 +915,10 @@ export function OffersTab({
                     onChange={(e) => setFormApplicableSize(e.target.value)}
                     className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#E50914]/20 focus:border-[#E50914]"
                   >
-                    <option value="ALL">All Screen Sizes (32" to 85")</option>
-                    <option value='32"'>32" Screen TVs</option>
-                    <option value='43"'>43" Screen TVs</option>
-                    <option value='55"'>55" Screen TVs</option>
-                    <option value='65"'>65" Screen TVs</option>
-                    <option value='75"+'>75" & Larger TVs</option>
+                    <option value="ALL">All Screen Sizes</option>
+                    {dynamicSizes.map((sz) => (
+                      <option key={sz} value={sz}>{sz} Screen TVs</option>
+                    ))}
                   </select>
                 </div>
               </div>

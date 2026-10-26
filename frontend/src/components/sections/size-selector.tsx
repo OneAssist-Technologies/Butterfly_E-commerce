@@ -6,11 +6,13 @@ import { SizeCard, SizeOption } from '@/components/cards/size-card';
 import { ArrowRight, Layers } from 'lucide-react';
 import { productService } from '@/services/product.service';
 
+import { settingsService, SizeSelectorCard } from '@/services/settings.service';
+
 const BASE_SIZE_CONFIGS: { size: string; defaultTagline: string; defaultImage: string }[] = [
-  { size: '32"', defaultTagline: 'Compact & Smart', defaultImage: '/tv_lake.jpg' },
-  { size: '43"', defaultTagline: 'Perfect for Every Home', defaultImage: '/tv_art.jpg' },
-  { size: '55"', defaultTagline: 'Bigger Screen, Bigger Joy', defaultImage: '/tv_space.jpg' },
-  { size: '65"', defaultTagline: 'The Ultimate Experience', defaultImage: '/tv_city.jpg' },
+  { size: '32"', defaultTagline: 'Compact & Smart', defaultImage: '/menu_tv_32.jpg' },
+  { size: '43"', defaultTagline: 'Perfect for Every Home', defaultImage: '/menu_tv_43.jpg' },
+  { size: '55"', defaultTagline: 'Bigger Screen, Bigger Joy', defaultImage: '/menu_tv_55.jpg' },
+  { size: '65"', defaultTagline: 'The Ultimate Experience', defaultImage: '/menu_tv_65.jpg' },
 ];
 
 interface SizeSelectorProps {
@@ -29,46 +31,71 @@ export function SizeSelector({ onSelectSize }: SizeSelectorProps) {
 
   useEffect(() => {
     let isMounted = true;
-    productService
-      .getAll()
-      .then((catalog) => {
-        if (!isMounted || !Array.isArray(catalog) || catalog.length === 0) return;
 
-        // Group counts by size
+    const loadData = async () => {
+      try {
+        // Fetch dynamic admin settings and products catalog in parallel
+        const [settings, catalog] = await Promise.allSettled([
+          settingsService.getSettings(),
+          productService.getAll(),
+        ]);
+
+        if (!isMounted) return;
+
+        // Dynamic settings cards configured from admin
+        const adminCards: SizeSelectorCard[] =
+          settings.status === 'fulfilled' && Array.isArray(settings.value?.sizeSelectorCards)
+            ? settings.value.sizeSelectorCards
+            : [];
+
+        // Count models per size if catalog exists
         const counts: Record<string, number> = {};
-        const images: Record<string, string> = {};
-
-        catalog.forEach((p) => {
-          const s = p.size || p.screenSizeCategory;
-          if (s) {
-            counts[s] = (counts[s] || 0) + 1;
-            if (!images[s] && p.image) {
-              images[s] = p.image;
+        if (catalog.status === 'fulfilled' && Array.isArray(catalog.value)) {
+          catalog.value.forEach((p) => {
+            const s = p.size || p.screenSizeCategory;
+            if (s) {
+              counts[s] = (counts[s] || 0) + 1;
             }
-          }
-        });
+          });
+        }
 
         const updated = BASE_SIZE_CONFIGS.map((cfg) => {
+          const matchingAdminCard = adminCards.find((c) => c.size === cfg.size);
           const count = counts[cfg.size];
           const dynamicTagline =
-            count && count > 0
+            matchingAdminCard?.tagline ||
+            (count && count > 0
               ? `${count} Model${count > 1 ? 's' : ''} Available`
-              : cfg.defaultTagline;
+              : cfg.defaultTagline);
+
+          const finalImage =
+            matchingAdminCard?.image || cfg.defaultImage;
 
           return {
             size: cfg.size,
             tagline: dynamicTagline,
-            image: images[cfg.size] || cfg.defaultImage,
+            image: finalImage,
             href: `/products?size=${encodeURIComponent(cfg.size)}`,
           };
         });
 
         setSizeOptions(updated);
-      })
-      .catch(() => {});
+      } catch {
+        // Fallback already in place
+      }
+    };
 
+    loadData();
+
+    // Listen for live admin settings updates
+    const handleSettingsUpdated = () => {
+      loadData();
+    };
+
+    window.addEventListener('butterfly_settings_updated', handleSettingsUpdated);
     return () => {
       isMounted = false;
+      window.removeEventListener('butterfly_settings_updated', handleSettingsUpdated);
     };
   }, []);
 
@@ -99,8 +126,8 @@ export function SizeSelector({ onSelectSize }: SizeSelectorProps) {
           </Link>
         </div>
 
-        {/* Responsive 4-Column Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Responsive Grid: 2x2 on mobile, 4-column on desktop */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
           {sizeOptions.map((item) => (
             <SizeCard key={item.size} item={item} onSelect={onSelectSize} />
           ))}
