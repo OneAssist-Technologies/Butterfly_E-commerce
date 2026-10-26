@@ -17,6 +17,7 @@ export interface TVProduct {
   price: string;
   numericPrice: number;
   isFilledButton?: boolean;
+  isTopSelling?: boolean;
 }
 
 interface ProductCardProps {
@@ -29,6 +30,12 @@ export function ProductCard({
   product,
   onViewDetails,
 }: ProductCardProps) {
+  const [imgSrc, setImgSrc] = React.useState(product.image || '/menu_tv_43.jpg');
+
+  React.useEffect(() => {
+    setImgSrc(product.image || '/menu_tv_43.jpg');
+  }, [product.image]);
+
   return (
     <div
       onClick={() => onViewDetails(product)}
@@ -55,12 +62,14 @@ export function ProductCard({
       <div className="relative w-full aspect-[16/10] my-2 overflow-hidden flex items-center justify-center p-2">
         <div className="relative w-full h-full transition-transform duration-500 ease-out group-hover:scale-105">
           <Image
-            src={product.image}
+            src={imgSrc}
             alt={product.name}
             fill
+            loading="eager"
             className="object-contain"
             sizes="(max-width: 768px) 100vw, 25vw"
             unoptimized={true}
+            onError={() => setImgSrc('/menu_tv_43.jpg')}
           />
         </div>
       </div>

@@ -2,7 +2,6 @@ import React from 'react';
 import { Metadata } from 'next';
 import { AdminDashboardClient } from '@/components/admin/admin-dashboard-client';
 
-export const instant = false;
 
 interface PageProps {
   params: Promise<{

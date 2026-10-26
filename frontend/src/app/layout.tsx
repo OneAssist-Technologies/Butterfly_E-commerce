@@ -1,10 +1,17 @@
 import React, { Suspense } from 'react';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { AppProviders } from '@/providers';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: '#070b12',
+};
 
 const geistSans = Geist({
   variable: '--font-geist-sans',

@@ -181,6 +181,12 @@ export default function SupportPage() {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        const el = document.getElementById('faqs');
+                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }}
                     placeholder="Search for help articles, setup guides, or FAQs..."
                     className="w-full pl-12 pr-4 py-3.5 rounded-full bg-white text-zinc-900 placeholder-zinc-500 text-sm shadow-xl focus:outline-none focus:ring-2 focus:ring-[#E50914] transition-all"
                   />

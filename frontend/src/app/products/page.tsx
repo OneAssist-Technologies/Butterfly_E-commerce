@@ -12,15 +12,129 @@ import {
   ChevronRight,
   SlidersHorizontal,
   X,
+  Search,
 } from 'lucide-react';
 import { ALL_PRODUCTS, CatalogProduct } from '@/data/products';
 import { productService } from '@/services/product.service';
+import { settingsService } from '@/services/settings.service';
 import { ProductCatalogCard } from '@/components/cards/product-catalog-card';
 import { EnquiryModal } from '@/components/shared/enquiry-modal';
 import { TVProduct } from '@/components/cards/product-card';
 import { useCart } from '@/providers';
 
 type SortOption = 'featured' | 'price-asc' | 'price-desc' | 'name-asc';
+
+/**
+ * Intelligent product search matcher supporting TV sizes (e.g. '55', '55"', '55 inch', '55-inch'),
+ * multi-term queries ('55 4k', '65 google tv'), resolutions, operating systems, and features.
+ */
+export function matchesProductSearch(prod: CatalogProduct, query: string): boolean {
+  if (!query || !query.trim()) return true;
+  const rawQ = query.trim().toLowerCase();
+
+  // Extract numeric screen size from product
+  const prodSizeNum =
+    (prod.size || '').match(/\d{2,3}/)?.[0] ||
+    (prod.screenSizeCategory || '').match(/\d{2,3}/)?.[0] ||
+    (prod.name || '').match(/(\d{2,3})["'”\s]/)?.[1] ||
+    (prod.model || '').match(/(\d{2,3})/)?.[1] ||
+    '';
+
+  const sizeVariations = prodSizeNum
+    ? [
+        prodSizeNum,
+        `${prodSizeNum}"`,
+        `${prodSizeNum} inch`,
+        `${prodSizeNum} inches`,
+        `${prodSizeNum}-inch`,
+        `${prodSizeNum}in`,
+        `${prodSizeNum}tv`,
+        `${prodSizeNum} tv`,
+        `${prodSizeNum}" tv`,
+        `${prodSizeNum} inch tv`,
+        `${prodSizeNum}inch`,
+      ]
+    : [];
+
+  const corpus = [
+    prod.name || '',
+    prod.model || '',
+    prod.size || '',
+    prod.screenSizeCategory || '',
+    prod.resolution || '',
+    prod.resolutionCategory || '',
+    prod.os || '',
+    prod.smartOS || '',
+    prod.smartCategory || '',
+    prod.displayTech || '',
+    prod.sound || '',
+    prod.badge || '',
+    ...(Array.isArray(prod.features) ? prod.features : []),
+    ...(Array.isArray(prod.keyFeatures) ? prod.keyFeatures : []),
+    ...sizeVariations,
+  ]
+    .join(' ')
+    .toLowerCase();
+
+  // 1. Direct corpus substring match
+  if (corpus.includes(rawQ)) return true;
+
+  // 2. Extract TV size number in search query (e.g., "55", "55 inch", "55\"", "55-inch", "43")
+  const querySizeMatch =
+    rawQ.match(/\b(\d{2,3})\s*(?:inch(?:es)?|in|"|'|-inch)?\b/i) ||
+    rawQ.match(/(\d{2,3})/);
+  const querySizeNum = querySizeMatch ? querySizeMatch[1] : null;
+
+  if (querySizeNum) {
+    const isSizeMatch =
+      prodSizeNum === querySizeNum ||
+      (prod.size && prod.size.includes(querySizeNum)) ||
+      (prod.screenSizeCategory && prod.screenSizeCategory.includes(querySizeNum)) ||
+      (prod.name && prod.name.includes(querySizeNum)) ||
+      (prod.model && prod.model.toLowerCase().includes(querySizeNum));
+
+    if (!isSizeMatch) {
+      return false;
+    }
+  }
+
+  // 3. Extract tokens from query, skipping size and generic noise words
+  const tokens = rawQ
+    .replace(/[",'-]/g, ' ')
+    .split(/\s+/)
+    .filter((token) => {
+      if (!token) return false;
+      if (
+        querySizeNum &&
+        (token === querySizeNum ||
+          token === `${querySizeNum}in` ||
+          token === `${querySizeNum}inch`)
+      ) {
+        return false;
+      }
+      if (['inch', 'inches', 'in', 'tv', 'tvs', 'television', 'smart'].includes(token)) {
+        return false;
+      }
+      return true;
+    });
+
+  if (tokens.length === 0) {
+    return true;
+  }
+
+  return tokens.every((token) => {
+    if (token === '4k' || token === 'uhd') {
+      return corpus.includes('4k') || corpus.includes('uhd') || corpus.includes('ultra hd');
+    }
+    if (token === 'fhd' || token === '1080p') {
+      return corpus.includes('full hd') || corpus.includes('1080') || corpus.includes('fhd');
+    }
+    if (token === 'hd' || token === '720p') {
+      return corpus.includes('hd') || corpus.includes('720');
+    }
+    return corpus.includes(token);
+  });
+}
 
 function ProductsCatalogContent() {
   const { addToCart } = useCart();
@@ -33,6 +147,81 @@ function ProductsCatalogContent() {
   const router = useRouter();
   // State for enquiry modal
   const [enquiryProduct, setEnquiryProduct] = useState<TVProduct | null>(null);
+
+  // In-page search input state synchronized with queryParam
+  const [catalogSearchInput, setCatalogSearchInput] = useState(queryParam || '');
+
+  useEffect(() => {
+    const q = queryParam || '';
+    setCatalogSearchInput((prev) => (prev !== q ? q : prev));
+  }, [queryParam]);
+
+  // Dynamic available TV sizes state (fully reactive to admin changes)
+  const [availableSizes, setAvailableSizes] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('butterfly_tv_sizes');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) return parsed;
+        }
+      } catch {}
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    const loadSizes = async () => {
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem('butterfly_tv_sizes');
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) {
+              setAvailableSizes(parsed);
+            }
+          } catch {}
+        }
+      }
+      try {
+        const st = await settingsService.getSettings();
+        if (Array.isArray(st.availableSizes)) {
+          setAvailableSizes(st.availableSizes);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('butterfly_tv_sizes', JSON.stringify(st.availableSizes));
+          }
+        }
+      } catch {}
+    };
+
+    loadSizes();
+
+    const handleSizesUpdated = (e: any) => {
+      if (e.detail && Array.isArray(e.detail)) {
+        setAvailableSizes(e.detail);
+      }
+    };
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'butterfly_tv_sizes' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) {
+            setAvailableSizes(parsed);
+          }
+        } catch {}
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('butterfly_sizes_updated', handleSizesUpdated);
+      window.addEventListener('storage', handleStorageChange);
+      return () => {
+        window.removeEventListener('butterfly_sizes_updated', handleSizesUpdated);
+        window.removeEventListener('storage', handleStorageChange);
+      };
+    }
+  }, []);
 
   // Filter states
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
@@ -115,11 +304,16 @@ function ProductsCatalogContent() {
       sort?: SortOption;
       page?: number;
       reset?: boolean;
+      q?: string;
     }) => {
       const next = new URLSearchParams();
 
       if (!newParams.reset) {
-        if (queryParam) next.set('q', queryParam);
+        const effectiveQ =
+          newParams.q !== undefined ? newParams.q : (queryParam || '');
+        if (effectiveQ && effectiveQ.trim()) {
+          next.set('q', effectiveQ.trim());
+        }
 
         const finalSizes = newParams.sizes !== undefined ? newParams.sizes : selectedSizes;
         const finalResolutions =
@@ -195,7 +389,13 @@ function ProductsCatalogContent() {
     setSelectedPrices([]);
     setSortBy('featured');
     setCurrentPage(1);
+    setCatalogSearchInput('');
     updateUrl({ reset: true });
+  };
+
+  const handleCatalogSearchSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    updateUrl({ q: catalogSearchInput.trim(), page: 1 });
   };
 
   const handleSortChange = (newSort: SortOption) => {
@@ -249,7 +449,7 @@ function ProductsCatalogContent() {
       isMounted = false;
       window.removeEventListener('butterfly_products_updated', fetchLiveProducts);
     };
-  }, [searchParams]);
+  }, []);
 
   // Helper functions for dynamic attributes & categorization
   const getProductSizeLabel = (p: CatalogProduct): string => {
@@ -294,22 +494,29 @@ function ProductsCatalogContent() {
     return 'Above ₹60,000';
   };
 
-  // Dynamic filter options and counts computed in real-time from productsList
+  // Dynamic filter options and counts computed in real-time from productsList & availableSizes
   const filterCounts = useMemo(() => {
-    // 1. Dynamic Screen Sizes
+    // 1. Dynamic Screen Sizes: Always display active sizes configured by admin
+    const activeSizes = availableSizes.length > 0
+      ? availableSizes
+      : Array.from(new Set(productsList.map((p) => getProductSizeLabel(p)).filter(Boolean)));
+
     const sizeMap: Record<string, number> = {};
+    activeSizes.forEach((sz) => {
+      sizeMap[sz] = 0;
+    });
+
     productsList.forEach((p) => {
       const s = getProductSizeLabel(p);
-      sizeMap[s] = (sizeMap[s] || 0) + 1;
+      if (sizeMap[s] !== undefined) {
+        sizeMap[s] += 1;
+      }
     });
-    const sizes = Object.entries(sizeMap)
-      .map(([label, count]) => ({
-        label,
-        count,
-        num: parseInt(label.replace(/[^0-9]/g, ''), 10) || 999,
-      }))
-      .sort((a, b) => a.num - b.num)
-      .map(({ label, count }) => ({ label, count }));
+
+    const sizes = activeSizes.map((label) => ({
+      label,
+      count: sizeMap[label] || 0,
+    }));
 
     // 2. Dynamic Resolutions
     const resMap: Record<string, number> = {};
@@ -360,22 +567,15 @@ function ProductsCatalogContent() {
     ];
 
     return { sizes, resolutions, smartFeatures, prices };
-  }, [productsList]);
+  }, [productsList, availableSizes]);
 
   // Dynamically Filtered & Sorted products
   const filteredProducts = useMemo(() => {
     return productsList
       .filter((prod) => {
-        // Keyword search from header search bar
+        // Keyword & TV size search from header or catalog search bar
         if (queryParam) {
-          const q = queryParam.toLowerCase().trim();
-          const matches =
-            prod.model.toLowerCase().includes(q) ||
-            prod.name.toLowerCase().includes(q) ||
-            (prod.resolution && prod.resolution.toLowerCase().includes(q)) ||
-            (prod.os && prod.os.toLowerCase().includes(q)) ||
-            (prod.sound && prod.sound.toLowerCase().includes(q));
-          if (!matches) return false;
+          if (!matchesProductSearch(prod, queryParam)) return false;
         }
 
         // Screen Size filter
@@ -383,10 +583,16 @@ function ProductsCatalogContent() {
           const size = getProductSizeLabel(prod);
           const rawSize = prod.size || '';
           const catSize = prod.screenSizeCategory || '';
+          const prodNum =
+            (prod.size || '').match(/\d{2,3}/)?.[0] ||
+            (prod.screenSizeCategory || '').match(/\d{2,3}/)?.[0] ||
+            (prod.name || '').match(/(\d{2,3})["'”\s]/)?.[1];
+
           const match =
             selectedSizes.includes(size) ||
             selectedSizes.includes(rawSize) ||
-            selectedSizes.includes(catSize);
+            selectedSizes.includes(catSize) ||
+            (prodNum ? selectedSizes.some((s) => s.includes(prodNum)) : false);
           if (!match) return false;
         }
 
@@ -677,7 +883,40 @@ function ProductsCatalogContent() {
             </p>
           </div>
 
-          <div className="flex items-center justify-between sm:justify-end gap-4 flex-wrap">
+          <div className="flex items-center justify-between sm:justify-end gap-3 flex-wrap">
+            {/* Inline Catalog Search Bar */}
+            <form onSubmit={handleCatalogSearchSubmit} className="relative w-full sm:w-64">
+              <input
+                type="text"
+                value={catalogSearchInput}
+                onChange={(e) => setCatalogSearchInput(e.target.value)}
+                placeholder="Search TVs, sizes (e.g. 55&quot;, 4K)..."
+                className="w-full pl-8 pr-14 py-2 rounded-xl border border-zinc-200 bg-white text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#E50914]/40 focus:border-[#E50914] shadow-xs transition-all"
+              />
+              <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                {catalogSearchInput && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCatalogSearchInput('');
+                      updateUrl({ q: '', page: 1 });
+                    }}
+                    className="p-1 text-zinc-400 hover:text-zinc-700 cursor-pointer rounded-full"
+                    aria-label="Clear search"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  className="px-2 py-1 bg-[#E50914] text-white rounded-lg text-[10px] font-bold hover:bg-[#c70811] transition-colors cursor-pointer"
+                >
+                  Search
+                </button>
+              </div>
+            </form>
+
             {/* Mobile Filter Button */}
             <button
               onClick={() => setMobileFiltersOpen(true)}
@@ -687,13 +926,13 @@ function ProductsCatalogContent() {
               Filters
             </button>
 
-            <span className="text-xs text-zinc-500">
-              Showing {totalItems === 0 ? 0 : startIndex + 1}-{endIndex} of {totalItems} products
+            <span className="text-xs text-zinc-500 whitespace-nowrap">
+              {totalItems === 0 ? '0 products' : `Showing ${totalItems === 0 ? 0 : startIndex + 1}-${endIndex} of ${totalItems}`}
             </span>
 
             {/* Sort Dropdown */}
             <div className="flex items-center gap-2 text-xs">
-              <span className="text-zinc-500 font-medium hidden sm:inline">Sort by:</span>
+              <span className="text-zinc-500 font-medium hidden sm:inline">Sort:</span>
               <div className="relative">
                 <select
                   value={sortBy}
@@ -723,18 +962,67 @@ function ProductsCatalogContent() {
 
           {/* Right Product Grid (9 cols) */}
           <main className="lg:col-span-9 flex flex-col justify-between">
+            {/* Active Search Banner */}
+            {queryParam && (
+              <div className="mb-6 flex flex-wrap items-center justify-between gap-3 bg-red-50/70 border border-red-200/80 rounded-2xl p-3 sm:px-4 sm:py-3 animate-in fade-in duration-200">
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-800">
+                  <div className="w-6 h-6 rounded-full bg-[#E50914]/10 flex items-center justify-center flex-shrink-0 text-[#E50914]">
+                    <Search className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <span>
+                      Search results for <span className="font-bold text-[#E50914]">&ldquo;{queryParam}&rdquo;</span>
+                    </span>
+                    <span className="text-zinc-500 ml-1.5 text-xs font-normal">
+                      ({filteredProducts.length} {filteredProducts.length === 1 ? 'TV model' : 'TV models'} found)
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setCatalogSearchInput('');
+                    updateUrl({ q: '', page: 1 });
+                  }}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-[#E50914] hover:text-[#c70811] bg-white border border-red-200 hover:border-red-300 rounded-lg px-2.5 py-1.5 shadow-2xs transition-colors cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Clear Search
+                </button>
+              </div>
+            )}
+
             {currentItems.length === 0 ? (
               <div className="text-center py-20 bg-zinc-50 rounded-2xl border border-zinc-100 p-8">
-                <h3 className="text-base font-bold text-zinc-800 mb-2">No Smart TVs Match Your Filters</h3>
+                <div className="w-12 h-12 rounded-full bg-red-50 text-[#E50914] flex items-center justify-center mx-auto mb-3">
+                  <Search className="w-5 h-5" />
+                </div>
+                <h3 className="text-base font-bold text-zinc-800 mb-2">
+                  {queryParam ? `No Smart TVs match "${queryParam}"` : 'No Smart TVs Match Your Filters'}
+                </h3>
                 <p className="text-xs text-zinc-500 max-w-sm mx-auto mb-5">
-                  Try unchecking some filter options or reset all filters to view our full collection of TVs.
+                  {queryParam
+                    ? 'Try searching with another TV size (e.g. "55 inch", "43", "65"), resolution ("4K UHD"), or smart platform.'
+                    : 'Try unchecking some filter options or reset all filters to view our full collection of TVs.'}
                 </p>
-                <button
-                  onClick={handleResetFilters}
-                  className="px-5 py-2.5 rounded-xl bg-[#E50914] text-white text-xs font-semibold hover:bg-[#c70811] transition-colors"
-                >
-                  Reset All Filters
-                </button>
+                <div className="flex items-center justify-center gap-3">
+                  {queryParam && (
+                    <button
+                      onClick={() => {
+                        setCatalogSearchInput('');
+                        updateUrl({ q: '', page: 1 });
+                      }}
+                      className="px-4 py-2 rounded-xl border border-red-200 bg-white text-[#E50914] hover:bg-red-50 text-xs font-semibold transition-colors"
+                    >
+                      Clear Search
+                    </button>
+                  )}
+                  <button
+                    onClick={handleResetFilters}
+                    className="px-5 py-2.5 rounded-xl bg-[#E50914] text-white text-xs font-semibold hover:bg-[#c70811] transition-colors"
+                  >
+                    Reset All Filters
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -742,8 +1030,8 @@ function ProductsCatalogContent() {
                   <ProductCatalogCard
                     key={product.id}
                     product={product}
-                    onViewDetails={(prod) => router.push(`/products/${prod.id}`)}
-                    onEnquire={(prod) => setEnquiryProduct(prod)}
+                    onViewDetails={(prod: TVProduct) => router.push(`/products/${prod.id}`)}
+                    onEnquire={(prod: TVProduct) => setEnquiryProduct(prod)}
                   />
                 ))}
               </div>

@@ -162,15 +162,15 @@ export default function AboutPage() {
               </div>
 
               {/* Coimbatore Location Card Overlay on Bottom Right */}
-              <div className="absolute bottom-5 right-5 bg-white/95 backdrop-blur-md px-5 py-3.5 rounded-2xl shadow-xl border border-zinc-200 flex items-center gap-3.5">
-                <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-[#E50914] shrink-0">
-                  <MapPin className="w-5 h-5" />
+              <div className="absolute bottom-3 right-3 sm:bottom-5 sm:right-5 bg-white/95 backdrop-blur-md px-3 sm:px-5 py-2 sm:py-3.5 rounded-xl sm:rounded-2xl shadow-xl border border-zinc-200 flex items-center gap-2.5 sm:gap-3.5 max-w-[85%]">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-red-50 flex items-center justify-center text-[#E50914] shrink-0">
+                  <MapPin className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-black text-zinc-900">
+                  <h4 className="text-xs sm:text-sm font-black text-zinc-900">
                     Coimbatore
                   </h4>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-[10px] sm:text-xs text-zinc-500">
                     Our Home. Our Strength.
                   </p>
                 </div>
@@ -258,7 +258,7 @@ export default function AboutPage() {
             {/* Background image of TV flower art */}
             <div className="absolute inset-0 z-0 opacity-50">
               <Image
-                src="/tv_art.jpg"
+                src="/hero_tv_showroom.jpg"
                 alt="Butterfly 4K UHD Art Display"
                 fill
                 sizes="(max-width: 1024px) 100vw, 40vw"
