@@ -1,6 +1,6 @@
 import React from 'react';
 import { Metadata } from 'next';
-import { AdminDashboardClient } from '@/components/admin/admin-dashboard-client';
+import { AdminPageClient } from '@/components/admin/admin-page-client';
 
 export const metadata: Metadata = {
   title: 'Executive Overview | Butterfly Admin Console',
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function AdminRootPage() {
-  return <AdminDashboardClient initialTab="overview" />;
+  return <AdminPageClient initialTab="overview" />;
 }

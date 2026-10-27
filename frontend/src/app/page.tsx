@@ -13,7 +13,7 @@ import { useCart } from '@/providers';
 export default function Home() {
   const router = useRouter();
   const [selectedSizeFilter, setSelectedSizeFilter] = useState<string | null>(null);
-  const { addToCart } = useCart();
+  const { addToCart, openCart } = useCart();
 
   const handleSelectSize = (size: string) => {
     router.push(`/products?size=${encodeURIComponent(size)}`);

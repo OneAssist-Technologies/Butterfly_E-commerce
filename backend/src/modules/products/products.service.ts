@@ -10,25 +10,34 @@ export class ProductsService {
 
   private getBaseUrl(): string {
     const backendUrl = process.env.BACKEND_URL || process.env.BASE_URL;
-    if (backendUrl) {
+    if (backendUrl && !backendUrl.includes('localhost') && !backendUrl.includes('127.0.0.1')) {
       return backendUrl.replace(/\/$/, '');
     }
-    return 'http://localhost:3001';
+    // Return empty string so product images always use clean, portable relative URLs (/api/v1/products/:id/image)
+    // without leaking localhost into live production responses
+    return '';
   }
 
   private mapProductImageUrl(product: any) {
     if (!product) return product;
     const baseUrl = this.getBaseUrl();
     const isDataUrl = typeof product.image === 'string' && product.image.startsWith('data:');
-    const imageUrl = isDataUrl
+    let imageUrl = isDataUrl
       ? `${baseUrl}/api/v1/products/${product.id}/image`
       : product.image;
+
+    if (typeof imageUrl === 'string' && (imageUrl.includes('localhost:') || imageUrl.includes('127.0.0.1:'))) {
+      imageUrl = imageUrl.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/, '');
+    }
 
     let images = product.images;
     if (Array.isArray(images) && images.length > 0) {
       images = images.map((img: string) => {
         if (typeof img === 'string' && img.startsWith('data:')) {
           return `${baseUrl}/api/v1/products/${product.id}/image`;
+        }
+        if (typeof img === 'string' && (img.includes('localhost:') || img.includes('127.0.0.1:'))) {
+          return img.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/, '');
         }
         return img;
       });
@@ -345,7 +354,9 @@ export class ProductsService {
     });
   }
 
-  async getImageBuffer(idOrModel: string): Promise<{ buffer: Buffer; mimeType: string }> {
+  async getImageBuffer(
+    idOrModel: string,
+  ): Promise<{ buffer: Buffer; mimeType: string } | { redirectUrl: string }> {
     const product = await this.prisma.product.findFirst({
       where: {
         OR: [
@@ -363,16 +374,23 @@ export class ProductsService {
     }
 
     if (product.image.startsWith('data:')) {
-      const matches = product.image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-      if (matches && matches.length === 3) {
+      const commaIndex = product.image.indexOf(',');
+      if (commaIndex !== -1) {
+        const meta = product.image.substring(0, commaIndex);
+        const base64Data = product.image.substring(commaIndex + 1).replace(/\s/g, '');
+        const mimeMatch = meta.match(/data:([^;,]+)/);
+        const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
         return {
-          mimeType: matches[1],
-          buffer: Buffer.from(matches[2], 'base64'),
+          mimeType,
+          buffer: Buffer.from(base64Data, 'base64'),
         };
       }
     }
 
-    throw new NotFoundException(`No binary image stored for product '${idOrModel}'.`);
+    // For static assets or remote URLs, redirect
+    return {
+      redirectUrl: product.image,
+    };
   }
 
   async create(dto: CreateProductDto) {

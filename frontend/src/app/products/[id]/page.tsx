@@ -1,11 +1,8 @@
 import React from 'react';
 import { Metadata } from 'next';
-import Link from 'next/link';
 import { ALL_PRODUCTS, CatalogProduct, getProductById, getSimilarProducts } from '@/data/products';
-import { ProductDetailsClient } from '@/components/products/product-details-client';
-import { ArrowLeft, Tv } from 'lucide-react';
+import { ProductDetailWrapper } from '@/components/products/product-detail-wrapper';
 import { ENV } from '@/config/env';
-
 
 interface PageProps {
   params: Promise<{
@@ -19,8 +16,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!product) {
     return {
-      title: 'Product Not Found | Butterfly Smart TV',
-      description: 'The requested Butterfly Smart TV model could not be found.',
+      title: 'Smart TV Details | Butterfly Smart TV',
+      description: 'Explore ultra high definition smart televisions by Butterfly.',
     };
   }
 
@@ -43,54 +40,96 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 async function getLiveProduct(id: string): Promise<CatalogProduct | undefined> {
-  try {
-    const res = await fetch(`${ENV.apiBaseUrl}/products/${encodeURIComponent(id)}`, {
-      cache: 'no-store',
-    });
-    if (res.ok) {
-      return await res.json();
+  const candidateBases = [
+    process.env.INTERNAL_API_URL,
+    process.env.BACKEND_URL ? `${process.env.BACKEND_URL.replace(/\/$/, '')}/api/v1` : null,
+    'http://127.0.0.1:3001/api/v1',
+    'http://localhost:3001/api/v1',
+    ENV.apiBaseUrl,
+    'https://butterflytv.in/api/v1',
+  ].filter(Boolean) as string[];
+
+  for (const base of candidateBases) {
+    try {
+      const res = await fetch(`${base}/products/${encodeURIComponent(id)}`, {
+        cache: 'no-store',
+        headers: { Accept: 'application/json' },
+        signal: AbortSignal.timeout(2000),
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch {
+      // Continue to next candidate endpoint
     }
-  } catch {
-    // Fall back to fixture if backend is temporarily unavailable
   }
+
   return getProductById(id);
 }
 
 async function getLiveSimilarProducts(currentProduct: CatalogProduct): Promise<CatalogProduct[]> {
-  try {
-    const sizeParam = encodeURIComponent(currentProduct.screenSizeCategory || currentProduct.size);
-    const res = await fetch(`${ENV.apiBaseUrl}/products?size=${sizeParam}`, {
-      cache: 'no-store',
-    });
-    if (res.ok) {
-      const items: CatalogProduct[] = await res.json();
-      const filtered = items.filter((p) => p.id !== currentProduct.id);
-      if (filtered.length > 0) return filtered.slice(0, 4);
+  const candidateBases = [
+    process.env.INTERNAL_API_URL,
+    process.env.BACKEND_URL ? `${process.env.BACKEND_URL.replace(/\/$/, '')}/api/v1` : null,
+    'http://127.0.0.1:3001/api/v1',
+    'http://localhost:3001/api/v1',
+    ENV.apiBaseUrl,
+    'https://butterflytv.in/api/v1',
+  ].filter(Boolean) as string[];
+
+  const sizeParam = encodeURIComponent(currentProduct.screenSizeCategory || currentProduct.size);
+
+  for (const base of candidateBases) {
+    try {
+      const res = await fetch(`${base}/products?size=${sizeParam}`, {
+        cache: 'no-store',
+        signal: AbortSignal.timeout(2000),
+      });
+      if (res.ok) {
+        const items: CatalogProduct[] = await res.json();
+        const filtered = items.filter((p) => p.id !== currentProduct.id);
+        if (filtered.length > 0) return filtered.slice(0, 4);
+      }
+      const allRes = await fetch(`${base}/products`, {
+        cache: 'no-store',
+        signal: AbortSignal.timeout(2000),
+      });
+      if (allRes.ok) {
+        const allItems: CatalogProduct[] = await allRes.json();
+        return allItems.filter((p) => p.id !== currentProduct.id).slice(0, 4);
+      }
+    } catch {
+      // Continue to next candidate
     }
-    const allRes = await fetch(`${ENV.apiBaseUrl}/products`, {
-      cache: 'no-store',
-    });
-    if (allRes.ok) {
-      const allItems: CatalogProduct[] = await allRes.json();
-      return allItems.filter((p) => p.id !== currentProduct.id).slice(0, 4);
-    }
-  } catch {
-    // Fall back to fixture
   }
+
   return getSimilarProducts(currentProduct, 4);
 }
 
 async function getAllLiveProducts(): Promise<CatalogProduct[]> {
-  try {
-    const res = await fetch(`${ENV.apiBaseUrl}/products`, {
-      cache: 'no-store',
-    });
-    if (res.ok) {
-      return await res.json();
+  const candidateBases = [
+    process.env.INTERNAL_API_URL,
+    process.env.BACKEND_URL ? `${process.env.BACKEND_URL.replace(/\/$/, '')}/api/v1` : null,
+    'http://127.0.0.1:3001/api/v1',
+    'http://localhost:3001/api/v1',
+    ENV.apiBaseUrl,
+    'https://butterflytv.in/api/v1',
+  ].filter(Boolean) as string[];
+
+  for (const base of candidateBases) {
+    try {
+      const res = await fetch(`${base}/products`, {
+        cache: 'no-store',
+        signal: AbortSignal.timeout(2000),
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch {
+      // Continue to next candidate
     }
-  } catch {
-    // Fall back to fixture
   }
+
   return ALL_PRODUCTS;
 }
 
@@ -103,26 +142,9 @@ async function ProductDetailsContent({
   const product = await getLiveProduct(id);
 
   if (!product) {
-    return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center px-4 py-20 text-center bg-[#fbfbfd]">
-        <div className="w-16 h-16 rounded-2xl bg-red-50 text-[#E50914] flex items-center justify-center mb-4">
-          <Tv className="w-8 h-8" />
-        </div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-zinc-900 mb-2">
-          Television Model Not Found
-        </h1>
-        <p className="text-sm text-zinc-500 max-w-md mb-8">
-          The Butterfly TV model you are looking for ({id}) is either unavailable or has been discontinued.
-        </p>
-        <Link
-          href="/products"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#E50914] text-white text-xs font-bold hover:bg-[#c70811] transition-colors shadow-md"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Browse All Available Smart TVs</span>
-        </Link>
-      </div>
-    );
+    // If SSR could not reach backend via loopback, defer to client wrapper
+    // which has direct access to browser network, reverse proxy and local storage
+    return <ProductDetailWrapper initialProduct={null} productId={id} />;
   }
 
   const [similarProducts, allProducts] = await Promise.all([
@@ -131,10 +153,11 @@ async function ProductDetailsContent({
   ]);
 
   return (
-    <ProductDetailsClient
-      product={product}
-      similarProducts={similarProducts}
-      allProducts={allProducts}
+    <ProductDetailWrapper
+      initialProduct={product}
+      productId={id}
+      initialSimilarProducts={similarProducts}
+      initialAllProducts={allProducts}
     />
   );
 }

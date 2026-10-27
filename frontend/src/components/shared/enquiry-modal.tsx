@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { X, CheckCircle2, Send, PhoneCall, AlertCircle } from 'lucide-react';
+import { X, CheckCircle2, Send, PhoneCall, AlertCircle, Sparkles } from 'lucide-react';
 import { TVProduct } from '@/components/cards/product-card';
 import { enquiryService } from '@/services/enquiry.service';
 
@@ -190,9 +190,53 @@ export function EnquiryModal({ product, onClose }: EnquiryModalProps) {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  Questions / Notes (Optional)
-                </label>
+                <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
+                  <label className="block text-xs font-semibold text-zinc-700">
+                    Questions / Notes (Optional)
+                  </label>
+                  <span className="text-[10px] text-zinc-400 flex items-center gap-1">
+                    <Sparkles className="w-2.5 h-2.5 text-[#E50914]" /> Quick suggestions:
+                  </span>
+                </div>
+
+                {/* Suggestion Chips */}
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {[
+                    'I want to install my TV / Wall mounting',
+                    'Looking for best festive deals & discount',
+                    'Need doorstep delivery & demo',
+                    'Check warranty coverage period',
+                  ].map((sug) => {
+                    const isSelected = formData.message.includes(sug);
+                    return (
+                      <button
+                        key={sug}
+                        type="button"
+                        onClick={() => {
+                          setFormData((prev) => {
+                            if (!prev.message.trim()) {
+                              return { ...prev, message: sug };
+                            }
+                            if (prev.message.includes(sug)) {
+                              const nextMsg = prev.message.replace(sug, '').trim();
+                              return { ...prev, message: nextMsg };
+                            }
+                            return { ...prev, message: `${prev.message.trim()}. ${sug}` };
+                          });
+                        }}
+                        className={`text-[10px] px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-red-50 border-red-300 text-[#E50914] font-semibold'
+                            : 'bg-zinc-100/80 hover:bg-zinc-200/70 border-zinc-200 text-zinc-600'
+                        }`}
+                      >
+                        {isSelected ? '✓ ' : '+ '}
+                        {sug}
+                      </button>
+                    );
+                  })}
+                </div>
+
                 <textarea
                   rows={2}
                   placeholder="Ask about discounts, wall mounting or installation..."

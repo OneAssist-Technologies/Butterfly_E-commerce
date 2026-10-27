@@ -16,6 +16,7 @@ import {
   Shield,
   HelpCircle,
   MessageSquare,
+  Sparkles,
 } from 'lucide-react';
 import { enquiryService } from '@/services/enquiry.service';
 import { ALL_PRODUCTS } from '@/data/products';
@@ -377,10 +378,60 @@ export default function ContactPage() {
               </div>
 
               {/* Row 4: Message */}
-              <div>
-                <label className="block text-xs font-bold text-zinc-700 mb-1.5">
-                  Your Message or Question
-                </label>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <label className="block text-xs font-bold text-zinc-700">
+                    Your Message or Question
+                  </label>
+                  <span className="text-[11px] font-semibold text-zinc-500 flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5 text-[#E50914]" /> Quick suggestions (click to fill):
+                  </span>
+                </div>
+
+                {/* Suggestion Chips */}
+                <div className="flex flex-wrap gap-2 pt-0.5">
+                  {[
+                    'I want to install my TV / Wall mounting request',
+                    'Looking for best festive deals & pricing offers',
+                    'Need doorstep delivery & home demo in my city',
+                    'Inquiring about 3-year warranty and service coverage',
+                    'Help me choose the best screen size for my room',
+                    'Corporate / Bulk dealership purchase quotation',
+                  ].map((sug) => {
+                    const isSelected = formData.message.includes(sug);
+                    return (
+                      <button
+                        key={sug}
+                        type="button"
+                        onClick={() => {
+                          setFormData((prev) => {
+                            if (!prev.message.trim()) {
+                              return { ...prev, message: sug };
+                            }
+                            if (prev.message.includes(sug)) {
+                              // Toggle off if already selected
+                              const nextMsg = prev.message
+                                .replace(sug, '')
+                                .replace(/\n\n+/g, '\n')
+                                .trim();
+                              return { ...prev, message: nextMsg };
+                            }
+                            return { ...prev, message: `${prev.message.trim()}\n• ${sug}` };
+                          });
+                        }}
+                        className={`text-xs px-3 py-1.5 rounded-full border transition-all text-left flex items-center gap-1.5 cursor-pointer ${
+                          isSelected
+                            ? 'bg-red-50 border-red-300 text-[#E50914] font-bold shadow-xs'
+                            : 'bg-zinc-100 hover:bg-red-50 hover:border-red-200 hover:text-zinc-900 border-zinc-200/80 text-zinc-700 font-medium'
+                        }`}
+                      >
+                        <span className="text-[#E50914] font-bold">{isSelected ? '✓' : '+'}</span>
+                        <span>{sug}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
                 <textarea
                   rows={4}
                   placeholder="How can we assist you? Tell us about your requirement or query..."
@@ -388,6 +439,19 @@ export default function ContactPage() {
                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50/50 text-sm text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#E50914] focus:bg-white transition-all resize-none"
                 />
+
+                <div className="flex items-center justify-between text-[11px] text-zinc-400">
+                  <span>💡 Tip: Click suggestions above to auto-fill or type your specific requirement.</span>
+                  {formData.message && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, message: '' }))}
+                      className="text-zinc-500 hover:text-[#E50914] font-semibold underline cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Submit Button */}
