@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { ArrowRight, Heart, Tv, ShieldCheck, Volume2 } from 'lucide-react';
+import { Heart, Tv, ShieldCheck, Volume2, ShoppingBag, Check } from 'lucide-react';
 import { TVProduct } from './product-card';
+import { useCart } from '@/providers';
 
 export interface CatalogCardProps {
   product: TVProduct & {
@@ -11,31 +12,33 @@ export interface CatalogCardProps {
   };
   onViewDetails: (product: TVProduct) => void;
   onEnquire?: (product: TVProduct) => void;
+  onAddToCart?: (product: TVProduct) => void;
 }
 
 export function ProductCatalogCard({
   product,
   onViewDetails,
   onEnquire,
+  onAddToCart,
 }: CatalogCardProps) {
   const [isLiked, setIsLiked] = useState(false);
+  const [isAdded, setIsAdded] = useState(false);
+  const { addToCart, openCart } = useCart();
 
   const handleHeartClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsLiked(!isLiked);
   };
 
-  const handleActionClick = (e: React.MouseEvent) => {
+  const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (product.isFilledButton) {
-      onViewDetails(product);
+    if (onAddToCart) {
+      onAddToCart(product);
     } else {
-      if (onEnquire) {
-        onEnquire(product);
-      } else {
-        onViewDetails(product);
-      }
+      addToCart(product);
     }
+    setIsAdded(true);
+    setTimeout(() => setIsAdded(false), 1500);
   };
 
   return (
@@ -126,14 +129,24 @@ export function ProductCatalogCard({
 
         <button
           type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onViewDetails(product);
-          }}
-          className="w-full py-2.5 px-4 rounded-lg bg-[#E50914] text-white hover:bg-[#c70811] text-xs font-semibold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shadow-xs"
+          onClick={handleAddToCart}
+          className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shadow-xs active:scale-[0.98] ${
+            isAdded
+              ? 'bg-emerald-600 text-white'
+              : 'bg-[#E50914] text-white hover:bg-[#c70811]'
+          }`}
         >
-          <span>View Details</span>
-          <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+          {isAdded ? (
+            <>
+              <Check className="w-4 h-4 stroke-[2.5]" />
+              <span>Added to Cart</span>
+            </>
+          ) : (
+            <>
+              <ShoppingBag className="w-4 h-4" />
+              <span>Add to Cart</span>
+            </>
+          )}
         </button>
       </div>
     </div>

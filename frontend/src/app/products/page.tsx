@@ -24,6 +24,84 @@ import { useCart } from '@/providers';
 
 type SortOption = 'featured' | 'price-asc' | 'price-desc' | 'name-asc';
 
+export interface PriceRangeOption {
+  id: string;
+  label: string;
+  matches: (price: number) => boolean;
+}
+
+export const PRICE_RANGE_OPTIONS: PriceRangeOption[] = [
+  {
+    id: 'under-20k',
+    label: 'Under ₹20,000',
+    matches: (price: number) => price < 20000,
+  },
+  {
+    id: '20k-40k',
+    label: '₹20,000 – ₹40,000',
+    matches: (price: number) => price >= 20000 && price <= 40000,
+  },
+  {
+    id: '40k-60k',
+    label: '₹40,000 – ₹60,000',
+    matches: (price: number) => price > 40000 && price <= 60000,
+  },
+  {
+    id: 'above-60k',
+    label: 'Above ₹60,000',
+    matches: (price: number) => price > 60000,
+  },
+];
+
+export function parsePriceParam(priceParam: string | null): string[] {
+  if (!priceParam) return [];
+
+  const knownIds = new Set(PRICE_RANGE_OPTIONS.map((o) => o.id));
+  const rawParts = priceParam.split(',').map((p) => p.trim()).filter(Boolean);
+
+  const matchedValid = rawParts.filter((p) => knownIds.has(p));
+  if (matchedValid.length > 0) {
+    return matchedValid;
+  }
+
+  const matched = new Set<string>();
+  const normalized = decodeURIComponent(priceParam).toLowerCase().replace(/,/g, '');
+
+  if (
+    normalized.includes('under 20') ||
+    normalized.includes('under 20000') ||
+    normalized.includes('<20') ||
+    normalized.includes('under-20k')
+  ) {
+    matched.add('under-20k');
+  }
+  if (
+    (normalized.includes('20') && normalized.includes('40')) ||
+    normalized.includes('20000') ||
+    normalized.includes('20k-40k')
+  ) {
+    matched.add('20k-40k');
+  }
+  if (
+    (normalized.includes('40') && normalized.includes('60')) ||
+    normalized.includes('40000') ||
+    normalized.includes('40k-60k')
+  ) {
+    matched.add('40k-60k');
+  }
+  if (
+    normalized.includes('above 60') ||
+    normalized.includes('above 60000') ||
+    normalized.includes('>60') ||
+    normalized.includes('above-60k') ||
+    (normalized.includes('60') && !normalized.includes('40'))
+  ) {
+    matched.add('above-60k');
+  }
+
+  return Array.from(matched);
+}
+
 /**
  * Intelligent product search matcher supporting TV sizes (e.g. '55', '55"', '55 inch', '55-inch'),
  * multi-term queries ('55 4k', '65 google tv'), resolutions, operating systems, and features.
@@ -157,18 +235,7 @@ function ProductsCatalogContent() {
   }, [queryParam]);
 
   // Dynamic available TV sizes state (fully reactive to admin changes)
-  const [availableSizes, setAvailableSizes] = useState<string[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('butterfly_tv_sizes');
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) return parsed;
-        }
-      } catch {}
-    }
-    return [];
-  });
+  const [availableSizes, setAvailableSizes] = useState<string[]>([]);
 
   useEffect(() => {
     const loadSizes = async () => {
@@ -278,7 +345,7 @@ function ProductsCatalogContent() {
 
     const priceVal = searchParams.get('price');
     if (priceVal) {
-      setSelectedPrices(priceVal.split(',').map((p) => p.trim()).filter(Boolean));
+      setSelectedPrices(parsePriceParam(priceVal));
     } else {
       setSelectedPrices([]);
     }
@@ -483,7 +550,11 @@ function ProductsCatalogContent() {
     if (typeof p.priceNumber === 'number' && !isNaN(p.priceNumber) && p.priceNumber > 0) {
       return p.priceNumber;
     }
-    const cleaned = String(p.price || '').replace(/[^0-9]/g, '');
+    if (typeof (p as any).price === 'number' && !isNaN((p as any).price) && (p as any).price > 0) {
+      return (p as any).price;
+    }
+    const str = String(p.price || '').split('.')[0];
+    const cleaned = str.replace(/[^0-9]/g, '');
     return parseInt(cleaned, 10) || 0;
   };
 
@@ -549,22 +620,23 @@ function ProductsCatalogContent() {
     });
 
     // 4. Dynamic Price Ranges
-    const priceMap: Record<string, number> = {
-      'Under ₹20,000': 0,
-      '₹20,000 – ₹40,000': 0,
-      '₹40,000 – ₹60,000': 0,
-      'Above ₹60,000': 0,
-    };
-    productsList.forEach((p) => {
-      const cat = getProductPriceCategory(getProductPriceNumber(p));
-      priceMap[cat] = (priceMap[cat] || 0) + 1;
+    const prices = PRICE_RANGE_OPTIONS.map((opt) => {
+      const count = productsList.filter((p) => {
+        const num = getProductPriceNumber(p);
+        if (opt.matches(num)) return true;
+        if (num === 0 && p.priceCategory) {
+          const cleanCat = p.priceCategory.replace(/\s+/g, ' ').replace(/-/g, '–');
+          const cleanLabel = opt.label.replace(/\s+/g, ' ').replace(/-/g, '–');
+          return cleanCat.includes(cleanLabel) || cleanLabel.includes(cleanCat);
+        }
+        return false;
+      }).length;
+      return {
+        id: opt.id,
+        label: opt.label,
+        count,
+      };
     });
-    const prices = [
-      { label: 'Under ₹20,000', count: priceMap['Under ₹20,000'] },
-      { label: '₹20,000 – ₹40,000', count: priceMap['₹20,000 – ₹40,000'] },
-      { label: '₹40,000 – ₹60,000', count: priceMap['₹40,000 – ₹60,000'] },
-      { label: 'Above ₹60,000', count: priceMap['Above ₹60,000'] },
-    ];
 
     return { sizes, resolutions, smartFeatures, prices };
   }, [productsList, availableSizes]);
@@ -617,10 +689,19 @@ function ProductsCatalogContent() {
 
         // Price range filter
         if (selectedPrices.length > 0) {
-          const cat = getProductPriceCategory(getProductPriceNumber(prod));
-          if (!selectedPrices.includes(cat) && !selectedPrices.includes(prod.priceCategory)) {
+          const priceNum = getProductPriceNumber(prod);
+          const matchesAnySelectedPrice = selectedPrices.some((priceId) => {
+            const opt = PRICE_RANGE_OPTIONS.find((o) => o.id === priceId);
+            if (!opt) return false;
+            if (opt.matches(priceNum)) return true;
+            if (priceNum === 0 && prod.priceCategory) {
+              const cleanCat = prod.priceCategory.replace(/\s+/g, ' ').replace(/-/g, '–');
+              const cleanLabel = opt.label.replace(/\s+/g, ' ').replace(/-/g, '–');
+              return cleanCat.includes(cleanLabel) || cleanLabel.includes(cleanCat);
+            }
             return false;
-          }
+          });
+          if (!matchesAnySelectedPrice) return false;
         }
 
         return true;
@@ -786,17 +867,17 @@ function ProductsCatalogContent() {
 
         {openSections.price && (
           <div className="space-y-2.5">
-            {filterCounts.prices.map(({ label, count }) => {
-              const checked = selectedPrices.includes(label);
+            {filterCounts.prices.map(({ id, label, count }) => {
+              const checked = selectedPrices.includes(id);
               return (
                 <label
-                  key={label}
+                  key={id}
                   className="flex items-center gap-3 text-xs text-zinc-600 hover:text-zinc-900 cursor-pointer select-none group"
                 >
                   <input
                     type="checkbox"
                     checked={checked}
-                    onChange={() => toggleFilter('price', label)}
+                    onChange={() => toggleFilter('price', id)}
                     className="w-4 h-4 rounded border-zinc-300 text-[#E50914] focus:ring-[#E50914] accent-[#E50914]"
                   />
                   <span className={checked ? 'font-semibold text-zinc-900' : ''}>

@@ -142,14 +142,6 @@ export function CartDrawer({
               <span>Proceed to Checkout</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
-
-            <Link
-              href="/cart"
-              onClick={onClose}
-              className="w-full py-2.5 px-4 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/90 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 text-xs font-bold text-center block transition-colors"
-            >
-              View Full Cart Page
-            </Link>
           </div>
         )}
       </div>

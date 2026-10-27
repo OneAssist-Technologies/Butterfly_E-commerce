@@ -24,6 +24,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://butterflytv.in'),
   title: 'Butterfly SMART TV | Brighter Colours. Smarter Living.',
   description:
     'Experience stunning visuals, immersive sound, and smart features — all in one with Butterfly Smart TV.',

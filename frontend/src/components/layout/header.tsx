@@ -15,7 +15,13 @@ interface HeaderProps {
 
 export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
   const { cartCount: contextCount, openCart: contextOpenCart } = useCart();
-  const activeCount = cartCount ?? contextCount;
+  const [mounted, setMounted] = useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const activeCount = mounted ? (cartCount ?? contextCount) : 0;
   const handleOpenCart = onOpenCart ?? contextOpenCart;
   const pathname = usePathname();
   const router = useRouter();
@@ -76,16 +82,6 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
     }, 200);
   };
 
-  const handleMouseEnterSupport = () => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    setActiveDropdown('support');
-  };
-
-  const handleMouseLeaveSupport = () => {
-    timeoutRef.current = setTimeout(() => {
-      setActiveDropdown(null);
-    }, 200);
-  };
 
   if (pathname === '/login' || pathname === '/signup' || pathname?.startsWith('/admin')) {
     return null;
@@ -197,76 +193,16 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
               About Us
             </Link>
 
-            {/* Support Dropdown */}
-            <div
-              className="relative py-2 flex items-center group"
-              onMouseEnter={handleMouseEnterSupport}
-              onMouseLeave={handleMouseLeaveSupport}
+            <Link
+              href="/support"
+              className={`text-sm font-semibold relative py-2 transition-colors after:content-[''] after:absolute after:bottom-0 after:left-0 after:h-0.5 after:bg-[#E50914] after:transition-all after:duration-200 ${
+                isSupportActive
+                  ? 'text-[#E50914] after:w-full'
+                  : 'text-zinc-700 hover:text-[#E50914] after:w-0 hover:after:w-full'
+              }`}
             >
-              <div className="flex items-center">
-                <Link
-                  href="/support"
-                  onClick={() => setActiveDropdown(null)}
-                  className={`flex items-center gap-1.5 text-sm font-semibold relative py-2 cursor-pointer transition-colors after:content-[''] after:absolute after:bottom-0 after:left-0 after:h-0.5 after:bg-[#E50914] after:transition-all after:duration-200 ${
-                    isSupportActive || activeDropdown === 'support'
-                      ? 'text-[#E50914] after:w-full'
-                      : 'text-zinc-700 hover:text-[#E50914] group-hover:text-[#E50914] after:w-0 hover:after:w-full group-hover:after:w-full'
-                  }`}
-                >
-                  Support
-                </Link>
-                <button
-                  type="button"
-                  aria-label="Toggle Support Dropdown"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveDropdown(activeDropdown === 'support' ? null : 'support');
-                  }}
-                  className={`py-2 pl-0.5 pr-1 cursor-pointer transition-colors ${
-                    activeDropdown === 'support' || isSupportActive
-                      ? 'text-[#E50914]'
-                      : 'text-zinc-400 hover:text-[#E50914] group-hover:text-[#E50914]'
-                  }`}
-                >
-                  <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                    activeDropdown === 'support' ? 'rotate-180 text-[#E50914]' : isSupportActive ? 'text-[#E50914]' : 'text-zinc-400 group-hover:text-[#E50914]'
-                  }`} />
-                </button>
-              </div>
-
-              {activeDropdown === 'support' && (
-                <div
-                  onMouseEnter={handleMouseEnterSupport}
-                  onMouseLeave={handleMouseLeaveSupport}
-                  className="absolute top-full left-0 w-60 bg-white border border-zinc-200 rounded-xl shadow-xl py-2 animate-in fade-in slide-in-from-top-2 duration-200 z-50"
-                >
-                  <Link
-                    href="/support"
-                    onClick={() => setActiveDropdown(null)}
-                    className="block px-4 py-2.5 text-sm text-zinc-800 hover:bg-zinc-50 hover:text-[#E50914] transition-colors"
-                  >
-                    <span className="font-semibold block">Help Center &amp; FAQs</span>
-                    <span className="text-xs text-zinc-500">Guides, manuals &amp; setup</span>
-                  </Link>
-                  <Link
-                    href="/support#service-centers"
-                    onClick={() => setActiveDropdown(null)}
-                    className="block px-4 py-2.5 text-sm text-zinc-800 hover:bg-zinc-50 hover:text-[#E50914] transition-colors"
-                  >
-                    <span className="font-semibold block">Service Centers</span>
-                    <span className="text-xs text-zinc-500">Pan-India authorized support</span>
-                  </Link>
-                  <Link
-                    href="/support#warranty"
-                    onClick={() => setActiveDropdown(null)}
-                    className="block px-4 py-2.5 text-sm text-zinc-800 hover:bg-zinc-50 hover:text-[#E50914] transition-colors"
-                  >
-                    <span className="font-semibold block">Warranty Registration</span>
-                    <span className="text-xs text-zinc-500">Register &amp; claim warranty</span>
-                  </Link>
-                </div>
-              )}
-            </div>
+              Support
+            </Link>
 
             <Link
               href="/contact"
@@ -334,7 +270,7 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
             className="relative p-2 rounded-full text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 transition-colors cursor-pointer"
           >
             <ShoppingBag className="w-5 h-5" />
-            {activeCount > 0 && (
+            {mounted && activeCount > 0 && (
               <span className="absolute top-0.5 right-0.5 bg-[#E50914] text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center animate-pulse">
                 {activeCount}
               </span>
@@ -376,8 +312,8 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
                 onClick={() => setActiveDropdown(null)}
                 className="text-xs font-bold text-zinc-600 hover:text-[#E50914] flex items-center gap-1.5 transition-colors group"
               >
-                <span>View All Smart TVs (36 Models)</span>
-                <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+                {/* <span>View All Smart TVs (36 Models)</span>
+                <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" /> */}
               </Link>
             </div>
 
@@ -525,9 +461,9 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
           />
 
           {/* Left Popup Drawer (slides left to right) */}
-          <div className="relative w-full max-w-[340px] sm:max-w-sm bg-white h-full shadow-2xl flex flex-col z-10 overflow-y-auto overscroll-contain animate-in slide-in-from-left duration-300">
+          <div className="relative w-full max-w-[340px] sm:max-w-sm bg-white h-full shadow-2xl flex flex-col z-10 animate-in slide-in-from-left duration-300">
             {/* Top Drawer Header (matching official Butterfly mobile design) */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100 shrink-0">
               <Link
                 href="/"
                 onClick={() => setMobileMenuOpen(false)}
@@ -542,23 +478,15 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
                   priority
                 />
               </Link>
-              <div className="flex items-center gap-3.5 text-zinc-700">
-                <Link
-                  href="/login"
-                  onClick={() => setMobileMenuOpen(false)}
-                  aria-label="User Account"
-                  className="p-1 hover:text-[#E50914] transition-colors"
-                >
-                  <User className="w-5 h-5" />
-                </Link>
+              <div className="flex items-center gap-2.5 text-zinc-700">
                 <Link
                   href="/cart"
                   onClick={() => setMobileMenuOpen(false)}
                   aria-label="Cart"
-                  className="relative p-1 hover:text-[#E50914] transition-colors"
+                  className="relative p-1.5 hover:text-[#E50914] transition-colors"
                 >
                   <ShoppingBag className="w-5 h-5" />
-                  {activeCount > 0 && (
+                  {mounted && activeCount > 0 && (
                     <span className="absolute -top-1 -right-1 bg-[#E50914] text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
                       {activeCount}
                     </span>
@@ -568,7 +496,7 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
                   type="button"
                   onClick={() => setMobileMenuOpen(false)}
                   aria-label="Close menu"
-                  className="p-1 text-zinc-600 hover:text-zinc-900 transition-colors cursor-pointer"
+                  className="p-1.5 text-zinc-600 hover:text-zinc-900 transition-colors cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -576,7 +504,7 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
             </div>
 
             {/* Drawer Body Content */}
-            <div className="p-5 space-y-4 flex-1">
+            <div className="p-5 space-y-4 flex-1 overflow-y-auto overscroll-contain">
               {/* Search Bar */}
               <form onSubmit={handleSearchSubmit} className="relative">
                 <input
@@ -607,33 +535,24 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
                   Home
                 </Link>
 
-                {/* Mobile Products with TV Inches Quick Select */}
-                <div className="pt-2.5 pb-2">
-                  <Link
-                    href="/products"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center justify-between py-1.5 transition-colors ${
-                      isProductsActive ? 'text-[#E50914]' : 'text-[#E50914] hover:text-[#c70811]'
+                <Link
+                  href="/products"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`group flex items-center justify-between py-3 transition-colors ${
+                    isProductsActive ? 'text-[#E50914]' : 'text-zinc-800 hover:text-[#E50914]'
+                  }`}
+                >
+                  <span>Products Catalog</span>
+                  <span
+                    className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-sm transition-colors ${
+                      isProductsActive
+                        ? 'bg-red-50 text-[#E50914]'
+                        : 'bg-zinc-100 text-zinc-500 group-hover:bg-red-50 group-hover:text-[#E50914]'
                     }`}
                   >
-                    <span className="font-bold">Products Catalog</span>
-                    <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-sm bg-red-50 text-[#E50914]">
-                      ALL MODELS
-                    </span>
-                  </Link>
-                  <div className="grid grid-cols-5 gap-1.5 pt-2 pb-1">
-                    {['32"', '43"', '50"', '55"', '65"'].map((sz) => (
-                      <Link
-                        key={sz}
-                        href={`/products?size=${encodeURIComponent(sz)}`}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="text-xs font-bold text-zinc-700 hover:text-white hover:bg-[#E50914] bg-zinc-100 py-2 rounded-lg text-center transition-colors shadow-2xs"
-                      >
-                        {sz}
-                      </Link>
-                    ))}
-                  </div>
-                </div>
+                    ALL MODELS
+                  </span>
+                </Link>
 
                 <Link
                   href="/about"
@@ -674,22 +593,37 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
                     <ShoppingBag className="w-4 h-4 text-[#E50914]" />
                     <span>My Cart</span>
                   </span>
-                  {activeCount > 0 && (
+                  {mounted && activeCount > 0 && (
                     <span className="bg-[#E50914] text-white text-[11px] font-bold rounded-full px-2 py-0.5">
                       {activeCount} items
                     </span>
                   )}
                 </Link>
-
-                <Link
-                  href="/login"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-2.5 py-3 text-zinc-800 hover:text-[#E50914] transition-colors"
-                >
-                  <User className="w-4 h-4 text-[#E50914]" />
-                  <span>Account Login</span>
-                </Link>
               </div>
+            </div>
+
+            {/* Separate User Account Section at Bottom */}
+            <div className="p-4 sm:p-5 border-t border-zinc-100 bg-zinc-50/70 shrink-0">
+              <Link
+                href="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between p-3.5 rounded-xl bg-white border border-zinc-200/80 shadow-2xs hover:border-[#E50914]/40 hover:bg-red-50/20 transition-all group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center text-[#E50914] group-hover:bg-[#E50914] group-hover:text-white transition-colors">
+                    <User className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="block text-xs font-bold text-zinc-900 group-hover:text-[#E50914] transition-colors">
+                      Account Login
+                    </span>
+                    <span className="block text-[11px] text-zinc-500 font-medium">
+                      Manage orders &amp; profile
+                    </span>
+                  </div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-[#E50914] group-hover:translate-x-0.5 transition-all" />
+              </Link>
             </div>
           </div>
         </div>

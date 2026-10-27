@@ -18,6 +18,7 @@ import {
   AdminUserAccount,
   AdminUserSession,
   AdminMetrics,
+  ADMIN_TABS_CONFIG,
 } from '@/components/admin/types';
 import { AdminSidebar } from '@/components/admin/sidebar';
 import { AdminHeader } from '@/components/admin/header';
@@ -33,24 +34,20 @@ export function resolveTabFromPathname(pathname: string, initialTab?: string): A
   const p = (pathname || '').toLowerCase();
   const init = (initialTab || '').toLowerCase();
 
-  if (p.includes('/admin/inventory') || p.includes('/admin/products') || init === 'inventory' || init === 'products') {
-    return 'products';
+  // 1. Resolve from initialTab if provided
+  for (const [key, config] of Object.entries(ADMIN_TABS_CONFIG)) {
+    if (init === key || init === config.route.replace('/admin/', '')) {
+      return key as AdminTab;
+    }
   }
-  if (p.includes('/admin/offers') || init === 'offers') {
-    return 'offers';
+
+  // 2. Resolve from pathname
+  for (const [key, config] of Object.entries(ADMIN_TABS_CONFIG)) {
+    if (p.includes(config.route) || (key === 'products' && p.includes('/admin/products'))) {
+      return key as AdminTab;
+    }
   }
-  if (p.includes('/admin/enquiries') || init === 'enquiries') {
-    return 'enquiries';
-  }
-  if (p.includes('/admin/orders') || init === 'orders') {
-    return 'orders';
-  }
-  if (p.includes('/admin/users') || init === 'users') {
-    return 'users';
-  }
-  if (p.includes('/admin/settings') || init === 'settings') {
-    return 'settings';
-  }
+
   return 'overview';
 }
 
@@ -62,45 +59,72 @@ export function AdminDashboardClient({ initialTab }: AdminDashboardClientProps) 
   const router = useRouter();
   const pathname = usePathname();
 
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(() => {
-    if (typeof window !== 'undefined') {
-      return !!localStorage.getItem('butterfly_admin_token');
-    }
-    return null;
-  });
+  // Consistent hydration state
+  const [mounted, setMounted] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [activeTab, setActiveTabState] = useState<AdminTab>(() =>
     resolveTabFromPathname(pathname, initialTab),
   );
+
+  // Smooth 1-second loading transition state
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [pendingTab, setPendingTab] = useState<AdminTab | null>(null);
+  const [navProgress, setNavProgress] = useState(0);
+
+  const navTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const progressTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Clean up timers on unmount
+  useEffect(() => {
+    return () => {
+      if (navTimerRef.current) clearTimeout(navTimerRef.current);
+      if (progressTimerRef.current) clearTimeout(progressTimerRef.current);
+    };
+  }, []);
+
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
 
-  // Keep activeTab in sync with browser URL changes (e.g. forward/back buttons or Link navigation)
-  useEffect(() => {
-    if (pathname) {
-      const resolved = resolveTabFromPathname(pathname, initialTab);
-      setActiveTabState(resolved);
-    }
-  }, [pathname, initialTab]);
-
-  // Handle tab switching in-memory with seamless history pushState (0ms flicker-free transition)
+  // Handle smooth tab navigation with dedicated 1-second loading animation
   const handleTabChange = useCallback(
     (tab: AdminTab) => {
-      setActiveTabState(tab);
-      const routeMap: Record<AdminTab, string> = {
-        overview: '/admin/overview',
-        products: '/admin/inventory',
-        offers: '/admin/offers',
-        enquiries: '/admin/enquiries',
-        orders: '/admin/orders',
-        users: '/admin/users',
-        settings: '/admin/settings',
-      };
-      const targetUrl = routeMap[tab] || `/admin/${tab}`;
-      if (typeof window !== 'undefined' && window.location.pathname !== targetUrl) {
-        window.history.pushState(null, '', targetUrl);
+      if (tab === activeTab && !isNavigating) {
+        return;
       }
+      if (isNavigating) {
+        return;
+      }
+
+      setPendingTab(tab);
+      setIsNavigating(true);
+      setNavProgress(15);
+
+      // Animate progress smoothly over the 1-second window
+      const progTimer = setTimeout(() => {
+        setNavProgress(90);
+      }, 250);
+      progressTimerRef.current = progTimer;
+
+      const timer = setTimeout(() => {
+        const config = ADMIN_TABS_CONFIG[tab];
+        const targetUrl = config ? config.route : `/admin/${tab}`;
+
+        setNavProgress(100);
+        setActiveTabState(tab);
+        if (typeof window !== 'undefined' && window.location.pathname !== targetUrl) {
+          window.history.pushState(null, '', targetUrl);
+        }
+
+        setTimeout(() => {
+          setIsNavigating(false);
+          setPendingTab(null);
+          setNavProgress(0);
+        }, 120);
+      }, 1000);
+
+      navTimerRef.current = timer;
     },
-    [],
+    [activeTab, isNavigating],
   );
 
   // Synchronize on browser history popstate (Back/Forward buttons)
@@ -273,7 +297,8 @@ export function AdminDashboardClient({ initialTab }: AdminDashboardClientProps) 
 
   // 1. Auth Guard & Initial Data Hydration
   useEffect(() => {
-    const token = localStorage.getItem('butterfly_admin_token');
+    setMounted(true);
+    const token = typeof window !== 'undefined' ? localStorage.getItem('butterfly_admin_token') : null;
     if (!token) {
       router.replace('/login');
       return;
@@ -292,7 +317,7 @@ export function AdminDashboardClient({ initialTab }: AdminDashboardClientProps) 
 
     fetchAdminDashboardData(false);
 
-    // 15-second background auto-polling for customer inquiries
+    // 15-second background auto-polling for customerEnquiries
     const pollTimer = setInterval(() => {
       fetchAdminDashboardData(true);
     }, 15000);
@@ -345,7 +370,12 @@ export function AdminDashboardClient({ initialTab }: AdminDashboardClientProps) 
     try {
       const created = await productService.create(product);
       if (created && created.id) {
-        savedProduct = created;
+        savedProduct = {
+          ...product,
+          ...created,
+          image: created.image || product.image,
+          images: Array.isArray(created.images) && created.images.length > 0 ? created.images : product.images,
+        };
       }
     } catch (err: any) {
       console.warn('Backend product create warning:', err?.response?.data || err?.message || err);
@@ -370,8 +400,8 @@ export function AdminDashboardClient({ initialTab }: AdminDashboardClientProps) 
     }
     try {
       await productService.update(id, product);
-    } catch (err) {
-      console.warn('Backend product update warning:', err);
+    } catch (err: any) {
+      console.warn('Backend product update warning:', err?.response?.data || err?.message || err);
     }
   };
 
@@ -610,29 +640,61 @@ export function AdminDashboardClient({ initialTab }: AdminDashboardClientProps) 
     }
   };
 
-  // Loading Screen
-  if (isAuthenticated === null) {
+  // Loading Screen for initial mounting / auth check
+  if (!mounted || !isAuthenticated) {
     return (
       <div
-        className="h-screen w-screen bg-[#F8FAFC] flex items-center justify-center"
+        className="h-screen w-screen bg-[#F8FAFC] flex items-center justify-center select-none"
         suppressHydrationWarning
       >
-        <div className="flex items-center gap-3 text-slate-600 text-sm font-semibold">
-          <div className="w-5 h-5 border-2 border-[#E50914] border-t-transparent rounded-full animate-spin" />
-          <span>Loading Butterfly Admin Console...</span>
+        <div className="flex flex-col items-center gap-4 animate-in fade-in duration-200">
+          <div className="flex items-center gap-2.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#E50914] animate-ping" />
+            <span className="text-xs font-black uppercase tracking-widest text-slate-800">
+              Butterfly Admin Console
+            </span>
+          </div>
+          <div className="flex items-center gap-3 text-slate-500 text-xs font-semibold">
+            <div className="w-4 h-4 border-2 border-[#E50914] border-t-transparent rounded-full animate-spin" />
+            <span>Loading workspace...</span>
+          </div>
         </div>
       </div>
     );
   }
 
+  const pendingTabConfig = pendingTab ? ADMIN_TABS_CONFIG[pendingTab] : null;
+
   return (
     <div
-      className="h-screen w-screen overflow-hidden bg-[#F8FAFC] text-slate-900 flex flex-col md:flex-row font-sans"
+      className="h-screen w-screen overflow-hidden bg-[#F8FAFC] text-slate-900 flex flex-col md:flex-row font-sans relative"
       suppressHydrationWarning
     >
+      {/* Sleek Top Progress Bar */}
+      {isNavigating && (
+        <div className="fixed top-0 left-0 right-0 h-[3px] z-50 overflow-hidden bg-slate-100/60 pointer-events-none">
+          <div
+            className="h-full bg-gradient-to-r from-[#E50914] via-red-500 to-[#E50914] transition-all duration-1000 ease-out shadow-xs shadow-red-500/40"
+            style={{ width: `${navProgress}%` }}
+          />
+        </div>
+      )}
+
+      {/* Modern Uncluttered Floating Loading Pill */}
+      {isNavigating && pendingTabConfig && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-in fade-in slide-in-from-top-2 duration-150">
+          <div className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/95 backdrop-blur-md border border-slate-200/90 shadow-xl shadow-slate-900/10 text-slate-800 text-xs font-semibold">
+            <span className="w-3.5 h-3.5 border-2 border-[#E50914] border-t-transparent rounded-full animate-spin shrink-0" />
+            <span>Loading {pendingTabConfig.label}...</span>
+          </div>
+        </div>
+      )}
+
       {/* 1. Modular Sidebar with dedicated URLs */}
       <AdminSidebar
         activeTab={activeTab}
+        pendingTab={pendingTab}
+        isNavigating={isNavigating}
         setActiveTab={handleTabChange}
         currentUser={currentUser}
         onSignOut={handleSignOut}
@@ -641,7 +703,10 @@ export function AdminDashboardClient({ initialTab }: AdminDashboardClientProps) 
       />
 
       {/* 2. Main Content Area */}
-      <main className="flex-1 h-full max-h-screen overflow-y-auto flex flex-col min-w-0 bg-[#F8FAFC]">
+      <main
+        className={`flex-1 h-full max-h-screen overflow-y-auto flex flex-col min-w-0 bg-[#F8FAFC] transition-opacity duration-200 ${isNavigating ? 'opacity-70 pointer-events-none' : 'opacity-100'
+          }`}
+      >
         {/* Top Header with Contextual Breadcrumbs */}
         <AdminHeader
           activeTab={activeTab}

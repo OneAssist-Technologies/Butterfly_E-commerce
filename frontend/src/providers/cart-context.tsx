@@ -85,7 +85,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setCartItems([]);
   };
 
-  const openCart = () => setIsCartOpen(true);
+  const openCart = () => setIsCartOpen(false);
   const closeCart = () => setIsCartOpen(false);
 
   const totalItemCount = cartItems.reduce(

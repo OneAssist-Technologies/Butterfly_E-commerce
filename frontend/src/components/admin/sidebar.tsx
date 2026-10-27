@@ -14,10 +14,12 @@ import {
   LogOut,
   X,
 } from 'lucide-react';
-import { AdminTab, AdminUserSession } from './types';
+import { AdminTab, AdminUserSession, ADMIN_TABS_CONFIG } from './types';
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
+  pendingTab?: AdminTab | null;
+  isNavigating?: boolean;
   setActiveTab: (tab: AdminTab) => void;
   currentUser: AdminUserSession;
   onSignOut: () => void;
@@ -25,8 +27,29 @@ interface AdminSidebarProps {
   onCloseMobile?: () => void;
 }
 
+interface NavItemDef {
+  tab: AdminTab;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+const MAIN_NAV_ITEMS: NavItemDef[] = [
+  { tab: 'overview', label: 'Overview', icon: LayoutDashboard },
+  { tab: 'products', label: 'TV Inventory', icon: Tv },
+  { tab: 'offers', label: 'Offers & Deals', icon: Tag },
+  { tab: 'enquiries', label: 'Customer Enquiries', icon: Inbox },
+  { tab: 'orders', label: 'Orders & Dispatch', icon: ShoppingBag },
+];
+
+const ADMIN_NAV_ITEMS: NavItemDef[] = [
+  { tab: 'users', label: 'User Accounts', icon: Users },
+  { tab: 'settings', label: 'Company Settings', icon: Settings },
+];
+
 export function AdminSidebar({
   activeTab,
+  pendingTab,
+  isNavigating = false,
   setActiveTab,
   currentUser,
   onSignOut,
@@ -47,6 +70,33 @@ export function AdminSidebar({
     e.preventDefault();
     setActiveTab(tab);
     if (onCloseMobile) onCloseMobile();
+  };
+
+  const renderNavLinks = (items: NavItemDef[]) => {
+    return items.map((item) => {
+      const config = ADMIN_TABS_CONFIG[item.tab];
+      const isTarget = isNavigating && pendingTab === item.tab;
+      const isSelected = isTarget || (!isNavigating && activeTab === item.tab);
+      const Icon = item.icon;
+
+      return (
+        <Link
+          key={item.tab}
+          href={config.route}
+          onClick={(e) => handleSelectTab(e, item.tab)}
+          className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            isSelected
+              ? 'bg-[#E50914] text-white shadow-sm shadow-red-500/20'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+          }`}
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <Icon className="w-4 h-4 shrink-0" />
+            <span className="truncate">{item.label}</span>
+          </div>
+        </Link>
+      );
+    });
   };
 
   const sidebarContent = (
@@ -87,70 +137,7 @@ export function AdminSidebar({
             MAIN NAVIGATION
           </p>
           <nav className="mt-2.5 space-y-1">
-            <Link
-              href="/admin/overview"
-              onClick={(e) => handleSelectTab(e, 'overview')}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'overview'
-                  ? 'bg-[#E50914] text-white shadow-sm shadow-red-500/20'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
-              }`}
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              <span>Overview</span>
-            </Link>
-
-            <Link
-              href="/admin/inventory"
-              onClick={(e) => handleSelectTab(e, 'products')}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'products'
-                  ? 'bg-[#E50914] text-white shadow-sm shadow-red-500/20'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
-              }`}
-            >
-              <Tv className="w-4 h-4" />
-              <span>TV Inventory</span>
-            </Link>
-
-            <Link
-              href="/admin/offers"
-              onClick={(e) => handleSelectTab(e, 'offers')}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'offers'
-                  ? 'bg-[#E50914] text-white shadow-sm shadow-red-500/20'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
-              }`}
-            >
-              <Tag className="w-4 h-4" />
-              <span>Offers &amp; Deals</span>
-            </Link>
-
-            <Link
-              href="/admin/enquiries"
-              onClick={(e) => handleSelectTab(e, 'enquiries')}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'enquiries'
-                  ? 'bg-[#E50914] text-white shadow-sm shadow-red-500/20'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
-              }`}
-            >
-              <Inbox className="w-4 h-4" />
-              <span>Customer Enquiries</span>
-            </Link>
-
-            <Link
-              href="/admin/orders"
-              onClick={(e) => handleSelectTab(e, 'orders')}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'orders'
-                  ? 'bg-[#E50914] text-white shadow-sm shadow-red-500/20'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
-              }`}
-            >
-              <ShoppingBag className="w-4 h-4" />
-              <span>Orders &amp; Dispatch</span>
-            </Link>
+            {renderNavLinks(MAIN_NAV_ITEMS)}
           </nav>
         </div>
 
@@ -160,31 +147,7 @@ export function AdminSidebar({
             ADMINISTRATION
           </p>
           <nav className="mt-2.5 space-y-1">
-            <Link
-              href="/admin/users"
-              onClick={(e) => handleSelectTab(e, 'users')}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'users'
-                  ? 'bg-[#E50914] text-white shadow-sm shadow-red-500/20'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
-              }`}
-            >
-              <Users className="w-4 h-4" />
-              <span>User Accounts</span>
-            </Link>
-
-            <Link
-              href="/admin/settings"
-              onClick={(e) => handleSelectTab(e, 'settings')}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'settings'
-                  ? 'bg-[#E50914] text-white shadow-sm shadow-red-500/20'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
-              }`}
-            >
-              <Settings className="w-4 h-4" />
-              <span>Company Settings</span>
-            </Link>
+            {renderNavLinks(ADMIN_NAV_ITEMS)}
           </nav>
         </div>
       </div>

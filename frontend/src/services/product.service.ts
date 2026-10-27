@@ -11,30 +11,138 @@ export interface ProductQueryParams {
   sort?: string;
 }
 
+export function normalizeProductImageUrl(url?: string | null): string {
+  if (!url) return '/menu_tv_43.jpg';
+  if (typeof url !== 'string') return '/menu_tv_43.jpg';
+  if (url.startsWith('data:')) return url;
+
+  let cleaned = url.trim();
+
+  // Strip ANY localhost or 127.0.0.1 host and port so it becomes a portable relative URL
+  if (cleaned.includes('localhost:') || cleaned.includes('127.0.0.1:')) {
+    cleaned = cleaned.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/, '');
+    if (!cleaned.startsWith('/')) {
+      cleaned = '/' + cleaned;
+    }
+  }
+
+  if (cleaned.startsWith('/')) {
+    return cleaned;
+  }
+
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:' && cleaned.startsWith('http://')) {
+    cleaned = cleaned.replace(/^http:\/\//, 'https://');
+  }
+
+  return cleaned;
+}
+
+function sanitizeProductPayload(product: any): any {
+  const allowedKeys = [
+    'model',
+    'name',
+    'size',
+    'screenSizeCategory',
+    'badge',
+    'image',
+    'images',
+    'resolution',
+    'resolutionCategory',
+    'os',
+    'smartOS',
+    'smartCategory',
+    'sound',
+    'displayTech',
+    'price',
+    'numericPrice',
+    'priceCategory',
+    'brand',
+    'isFilledButton',
+    'buttonLabel',
+    'featuredRank',
+    'isTopSelling',
+    'inStock',
+    'features',
+    'keyFeatures',
+    'technicalSpecs',
+    'warrantyInstallation',
+  ];
+
+  const payload: any = {};
+  for (const key of allowedKeys) {
+    if (product[key] !== undefined) {
+      payload[key] = product[key];
+    }
+  }
+
+  if (!payload.os && payload.smartOS) {
+    payload.os = payload.smartOS;
+  }
+  if (!payload.brand) {
+    payload.brand = 'Butterfly';
+  }
+
+  return payload;
+}
+
 export const productService = {
   async getAll(params?: ProductQueryParams): Promise<CatalogProduct[]> {
     const response = await apiClient.get<CatalogProduct[]>('/products', { params });
+    if (Array.isArray(response.data)) {
+      return response.data.map((p) => ({
+        ...p,
+        image: normalizeProductImageUrl(p.image),
+        images:
+          Array.isArray(p.images) && p.images.length > 0
+            ? p.images.map(normalizeProductImageUrl)
+            : [normalizeProductImageUrl(p.image)],
+      }));
+    }
     return response.data;
   },
 
   async getById(id: string): Promise<CatalogProduct> {
     const response = await apiClient.get<CatalogProduct>(`/products/${id}`);
-    return response.data;
+    const data = response.data;
+    if (data) {
+      return {
+        ...data,
+        image: normalizeProductImageUrl(data.image),
+        images:
+          Array.isArray(data.images) && data.images.length > 0
+            ? data.images.map(normalizeProductImageUrl)
+            : [normalizeProductImageUrl(data.image)],
+      };
+    }
+    return data;
   },
 
   async create(product: Partial<CatalogProduct>): Promise<CatalogProduct> {
-    const { priceNumber, ...payload } = product as any;
-    if (payload.id && typeof payload.id === 'string' && payload.id.startsWith('tv-')) {
-      delete payload.id;
-    }
+    const payload = sanitizeProductPayload(product);
     const response = await apiClient.post<CatalogProduct>('/products', payload);
-    return response.data;
+    const data = response.data;
+    return {
+      ...data,
+      image: normalizeProductImageUrl(data?.image) || product.image || '',
+      images:
+        Array.isArray(data?.images) && data.images.length > 0
+          ? data.images.map(normalizeProductImageUrl)
+          : product.images || [normalizeProductImageUrl(data?.image)],
+    };
   },
 
   async update(id: string, product: Partial<CatalogProduct>): Promise<CatalogProduct> {
-    const { priceNumber, id: _id, ...payload } = product as any;
+    const payload = sanitizeProductPayload(product);
     const response = await apiClient.put<CatalogProduct>(`/products/${id}`, payload);
-    return response.data;
+    const data = response.data;
+    return {
+      ...data,
+      image: normalizeProductImageUrl(data?.image) || product.image || '',
+      images:
+        Array.isArray(data?.images) && data.images.length > 0
+          ? data.images.map(normalizeProductImageUrl)
+          : product.images || [normalizeProductImageUrl(data?.image)],
+    };
   },
 
   async toggleStock(id: string): Promise<CatalogProduct> {
