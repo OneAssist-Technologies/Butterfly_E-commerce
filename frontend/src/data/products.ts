@@ -25,6 +25,7 @@ export interface CatalogProduct extends TVProduct {
   };
   warrantyInstallation?: string;
   images?: string[];
+  whatsIncluded?: string[];
 }
 
 /**

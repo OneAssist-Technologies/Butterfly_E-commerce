@@ -50,6 +50,7 @@ const DEFAULT_NEW_PRODUCT = {
   smartOS: 'Google TV',
   image: '',
   keyFeaturesText: '',
+  whatsIncludedText: '',
   refreshRate: '',
   panelType: '',
   hdmiPorts: '',
@@ -269,6 +270,11 @@ export function InventoryTab({
       image: normalizeProductImageUrl(tv.image) || '',
       keyFeaturesText: Array.isArray(tv.keyFeatures || tv.features)
         ? (tv.keyFeatures || tv.features || []).join('\n')
+        : '',
+      whatsIncludedText: Array.isArray(tv.whatsIncluded)
+        ? tv.whatsIncluded.join('\n')
+        : typeof tv.whatsIncluded === 'string'
+        ? tv.whatsIncluded
         : '',
       refreshRate: tv.technicalSpecs?.refreshRate || '',
       panelType: tv.technicalSpecs?.panelType || '',
@@ -527,6 +533,9 @@ export function InventoryTab({
       warrantyInstallation:
         newProduct.warrantyInstallation.trim() ||
         'Complimentary Doorstep Installation Process within 48 hours. 1 Year Comprehensive Brand Warranty + 1 Year Additional on Display Panel.',
+      whatsIncluded: newProduct.whatsIncludedText.trim()
+        ? newProduct.whatsIncludedText.split('\n').map((s) => s.trim()).filter(Boolean)
+        : [],
     };
 
     setImageError(null);
@@ -1542,6 +1551,20 @@ export function InventoryTab({
                       />
                     </div>
                   </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      Wireless Connectivity &amp; Bluetooth
+                    </label>
+                    <input
+                      type="text"
+                      autoComplete="off"
+                      placeholder="e.g. Dual-band Wi-Fi & Bluetooth 5.0"
+                      value={newProduct.wireless}
+                      onChange={(e) => setNewProduct({ ...newProduct, wireless: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-xs font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#E50914]/15 focus:border-[#E50914] transition-all"
+                    />
+                  </div>
                 </div>
 
                 {/* 5. Features & Warranty */}
@@ -1566,6 +1589,23 @@ export function InventoryTab({
                       value={newProduct.keyFeaturesText}
                       onChange={(e) => setNewProduct({ ...newProduct, keyFeaturesText: e.target.value })}
                       placeholder={'Cinema-Grade Visuals & Brilliant Contrast\nUltra-wide 178° viewing angle\nHDR10 and HLG decoding'}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-xs font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#E50914]/15 focus:border-[#E50914] transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                        What&apos;s Included In The Box (One item per line)
+                      </label>
+                      <span className="text-[10px] text-slate-400 font-medium">e.g. 55&quot; Smart TV, Voice Remote, Wall Mount</span>
+                    </div>
+                    <textarea
+                      rows={3}
+                      autoComplete="off"
+                      value={newProduct.whatsIncludedText}
+                      onChange={(e) => setNewProduct({ ...newProduct, whatsIncludedText: e.target.value })}
+                      placeholder={'55" Smart TV\nVoice Remote + AAA Batteries\nWall Mount Bracket\nTable Top Stands\nPower Cable & Adapter\nWarranty Card & User Manual'}
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-xs font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#E50914]/15 focus:border-[#E50914] transition-all"
                     />
                   </div>

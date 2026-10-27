@@ -5,7 +5,6 @@ import Link from 'next/link';
 import {
   Search,
   Bell,
-  RefreshCw,
   ExternalLink,
   Menu,
 } from 'lucide-react';
@@ -132,17 +131,6 @@ export function AdminHeader({
 
       {/* Right: Actions, Notifications & Profile Badge */}
       <div className="flex items-center gap-3">
-        {/* Sync Button */}
-        <button
-          onClick={onRefresh}
-          disabled={isRefreshing}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 transition-colors shadow-xs cursor-pointer disabled:opacity-50"
-          title="Refresh live data from server"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 text-slate-500 ${isRefreshing ? 'animate-spin' : ''}`} />
-          <span>{isRefreshing ? 'Syncing...' : 'Sync'}</span>
-        </button>
-
         {/* View Store */}
         <Link
           href="/"

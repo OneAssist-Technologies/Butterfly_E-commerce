@@ -231,6 +231,22 @@ export function ProductDetailsClient({
     { label: '65"', targetId: productSource.find((p) => p.screenSizeCategory === '65"' || p.size?.includes('65'))?.id },
   ];
 
+  // Dynamic In-The-Box items from database (admin manageable) or fallback kit
+  const dynamicIncludedItems: string[] = useMemo(() => {
+    if (Array.isArray(product.whatsIncluded) && product.whatsIncluded.length > 0) {
+      const items = product.whatsIncluded.map((s) => String(s).trim()).filter(Boolean);
+      if (items.length > 0) return items;
+    }
+    return [
+      `${product.size} Smart TV`,
+      'Voice Remote + AAA',
+      'Wall Mount Bracket',
+      'Table Top Stands',
+      'Power Cable & Adapter',
+      'Warranty Card & Guide',
+    ];
+  }, [product.whatsIncluded, product.size]);
+
   const handleAddToCart = () => {
     for (let i = 0; i < quantity; i++) {
       addToCart(product);
@@ -401,24 +417,103 @@ export function ProductDetailsClient({
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
               <div className="bg-white p-3.5 rounded-2xl border border-zinc-200/80 text-center">
                 <Tv className="w-5 h-5 text-[#E50914] mx-auto mb-1.5" />
-                <span className="block text-xs font-bold text-zinc-900">Bezel-Less</span>
-                <span className="text-[10px] text-zinc-500">Infinity Screen</span>
+                <span className="block text-xs font-bold text-zinc-900 truncate">{product.displayTech || 'Bezel-Less'}</span>
+                <span className="text-[10px] text-zinc-500">Display Panel</span>
               </div>
               <div className="bg-white p-3.5 rounded-2xl border border-zinc-200/80 text-center">
                 <Volume2 className="w-5 h-5 text-[#E50914] mx-auto mb-1.5" />
-                <span className="block text-xs font-bold text-zinc-900">{product.sound}</span>
-                <span className="text-[10px] text-zinc-500">Cinema Sound</span>
+                <span className="block text-xs font-bold text-zinc-900 truncate">{product.sound}</span>
+                <span className="text-[10px] text-zinc-500">Audio System</span>
               </div>
               <div className="bg-white p-3.5 rounded-2xl border border-zinc-200/80 text-center">
                 <Wifi className="w-5 h-5 text-[#E50914] mx-auto mb-1.5" />
-                <span className="block text-xs font-bold text-zinc-900">Dual Wi-Fi</span>
-                <span className="text-[10px] text-zinc-500">+ Bluetooth 5.0</span>
+                <span className="block text-xs font-bold text-zinc-900 truncate">
+                  {product.technicalSpecs?.wireless ? 'Wireless' : 'Dual Wi-Fi'}
+                </span>
+                <span className="text-[10px] text-zinc-500 truncate block">
+                  {product.technicalSpecs?.wireless || '+ Bluetooth 5.0'}
+                </span>
               </div>
               <div className="bg-white p-3.5 rounded-2xl border border-zinc-200/80 text-center">
                 <ShieldCheck className="w-5 h-5 text-[#E50914] mx-auto mb-1.5" />
-                <span className="block text-xs font-bold text-zinc-900">3 Yrs Total</span>
-                <span className="text-[10px] text-zinc-500">Brand Warranty</span>
+                <span className="block text-xs font-bold text-zinc-900 truncate">
+                  {product.warrantyInstallation?.includes('Yr') || product.warrantyInstallation?.includes('Year')
+                    ? 'Brand Warranty'
+                    : '3 Yrs Total'}
+                </span>
+                <span className="text-[10px] text-zinc-500 truncate block">
+                  {product.warrantyInstallation ? 'Official Coverage' : 'Brand Warranty'}
+                </span>
               </div>
+            </div>
+
+            {/* Engineered Highlights & Performance (Fills space under the TV display) */}
+            <div className="bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-[#E50914]" />
+                  <h3 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-zinc-900">
+                    Engineered Highlights & Performance
+                  </h3>
+                </div>
+                <span className="text-[11px] font-bold text-zinc-400">Butterfly Living Tech</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3 rounded-2xl bg-zinc-50/80 border border-zinc-100 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Tv className="w-4 h-4 text-[#E50914]" />
+                    <span className="text-xs font-bold text-zinc-900">{product.resolution} Engine</span>
+                  </div>
+                  <p className="text-[11px] text-zinc-500 leading-relaxed">
+                    {product.displayTech ? `${product.displayTech} with dynamic contrast & 178° viewing angles.` : 'Over a billion rich colors with dynamic contrast enhancement & 178° wide viewing angles.'}
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-zinc-50/80 border border-zinc-100 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Volume2 className="w-4 h-4 text-[#E50914]" />
+                    <span className="text-xs font-bold text-zinc-900">{product.sound}</span>
+                  </div>
+                  <p className="text-[11px] text-zinc-500 leading-relaxed">
+                    High-definition digital sound processing & stereo cinema acoustics.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-zinc-50/80 border border-zinc-100 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Cpu className="w-4 h-4 text-[#E50914]" />
+                    <span className="text-xs font-bold text-zinc-900">{product.os || product.smartOS} Smart Platform</span>
+                  </div>
+                  <p className="text-[11px] text-zinc-500 leading-relaxed">
+                    Instant access to streaming apps, voice assistant remote, and seamless smartphone casting.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-zinc-50/80 border border-zinc-100 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Wifi className="w-4 h-4 text-[#E50914]" />
+                    <span className="text-xs font-bold text-zinc-900">{product.technicalSpecs?.wireless || 'Dual Wi-Fi & Bluetooth'}</span>
+                  </div>
+                  <p className="text-[11px] text-zinc-500 leading-relaxed">
+                    Lag-free streaming plus wireless audio connectivity for soundbars and headphones.
+                  </p>
+                </div>
+              </div>
+
+              {product.keyFeatures && product.keyFeatures.length > 0 && (
+                <div className="pt-2.5 border-t border-zinc-100">
+                  <span className="text-[11px] font-bold text-zinc-700 block mb-2">Key Model Features:</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {product.keyFeatures.slice(0, 4).map((feat, idx) => (
+                      <div key={idx} className="flex items-start gap-2 text-xs text-zinc-600">
+                        <Check className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                        <span className="line-clamp-2">{feat}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -478,7 +573,8 @@ export function ProductDetailsClient({
               <div className="mt-3.5 pt-3 border-t border-zinc-200 flex items-start gap-2.5 text-xs text-zinc-700">
                 <Sparkles className="w-4 h-4 text-[#E50914] flex-shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-bold text-zinc-900">Special Offer:</span> Free wall mount bracket & standard doorstep installation included.
+                  <span className="font-bold text-zinc-900">Installation & Warranty:</span>{' '}
+                  {product.warrantyInstallation || 'Free wall mount bracket & standard doorstep installation included.'}
                 </div>
               </div>
 
@@ -638,136 +734,53 @@ export function ProductDetailsClient({
         </div>
       </section>
 
-      {/* 2. Key Highlights & In-The-Box Showcase (2 Balanced Cards) */}
+      {/* 2. What's Included In The Box Showcase */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-          {/* Key Visual & Smart Capabilities */}
-          <div className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-7 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] flex flex-col justify-between space-y-5">
-            <div>
-              <div className="flex items-center justify-between pb-3 border-b border-zinc-100 mb-4">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-[#E50914]" />
-                  <h3 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-zinc-900">
-                    Engineered Highlights & Performance
-                  </h3>
-                </div>
-                <span className="text-[11px] font-bold text-zinc-400">Butterfly Living Tech</span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <div className="p-3.5 rounded-2xl bg-zinc-50/80 border border-zinc-100 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Tv className="w-4 h-4 text-[#E50914]" />
-                    <span className="text-xs font-bold text-zinc-900">{product.resolution} Vivid Engine</span>
-                  </div>
-                  <p className="text-[11px] text-zinc-500 leading-relaxed">
-                    Over a billion rich colors with dynamic contrast enhancement & 178° wide viewing angles.
-                  </p>
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-zinc-50/80 border border-zinc-100 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Volume2 className="w-4 h-4 text-[#E50914]" />
-                    <span className="text-xs font-bold text-zinc-900">Acoustic Cinema Audio</span>
-                  </div>
-                  <p className="text-[11px] text-zinc-500 leading-relaxed">
-                    {product.sound} with high-definition digital sound processing & deep bass resonance.
-                  </p>
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-zinc-50/80 border border-zinc-100 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Cpu className="w-4 h-4 text-[#E50914]" />
-                    <span className="text-xs font-bold text-zinc-900">{product.os} Smart Platform</span>
-                  </div>
-                  <p className="text-[11px] text-zinc-500 leading-relaxed">
-                    Instant access to 10,000+ apps, voice assistant remote, and seamless smartphone casting.
-                  </p>
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-zinc-50/80 border border-zinc-100 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Wifi className="w-4 h-4 text-[#E50914]" />
-                    <span className="text-xs font-bold text-zinc-900">Dual Wi-Fi & Bluetooth</span>
-                  </div>
-                  <p className="text-[11px] text-zinc-500 leading-relaxed">
-                    Lag-free 5GHz Wi-Fi streaming plus Bluetooth 5.0 for wireless soundbars and headphones.
-                  </p>
-                </div>
-              </div>
+        <div className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-7 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] space-y-5">
+          <div className="flex items-center justify-between pb-3 border-b border-zinc-100 flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <Box className="w-4 h-4 text-[#E50914]" />
+              <h3 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-zinc-900">
+                What&apos;s Included In The Box
+              </h3>
             </div>
-
-            {product.keyFeatures && product.keyFeatures.length > 0 && (
-              <div className="pt-3 border-t border-zinc-100">
-                <span className="text-[11px] font-bold text-zinc-700 block mb-2">Key Model Features:</span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {product.keyFeatures.slice(0, 4).map((feat, idx) => (
-                    <div key={idx} className="flex items-start gap-2 text-xs text-zinc-600">
-                      <Check className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
-                      <span className="line-clamp-2">{feat}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
+              All-Inclusive Kit
+            </span>
           </div>
 
-          {/* In-the-Box & Official Inclusions Card */}
-          <div className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-7 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] flex flex-col justify-between space-y-5">
-            <div>
-              <div className="flex items-center justify-between pb-3 border-b border-zinc-100 mb-4">
-                <div className="flex items-center gap-2">
-                  <Box className="w-4 h-4 text-[#E50914]" />
-                  <h3 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-zinc-900">
-                    What&apos;s Included In The Box
-                  </h3>
-                </div>
-                <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
-                  All-Inclusive Kit
-                </span>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
+            {dynamicIncludedItems.map((item, idx) => (
+              <div
+                key={idx}
+                className="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-100 text-zinc-800 font-semibold flex items-center gap-2.5 hover:bg-zinc-100/70 transition-colors"
+              >
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span className="line-clamp-2">{item}</span>
               </div>
+            ))}
+          </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
-                <div className="p-3 rounded-2xl bg-zinc-50 border border-zinc-100 text-zinc-800 font-semibold flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>{product.size} Smart TV</span>
-                </div>
-                <div className="p-3 rounded-2xl bg-zinc-50 border border-zinc-100 text-zinc-800 font-semibold flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Voice Remote + AAA</span>
-                </div>
-                <div className="p-3 rounded-2xl bg-zinc-50 border border-zinc-100 text-zinc-800 font-semibold flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Wall Mount Bracket</span>
-                </div>
-                <div className="p-3 rounded-2xl bg-zinc-50 border border-zinc-100 text-zinc-800 font-semibold flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Table Top Stands</span>
-                </div>
-                <div className="p-3 rounded-2xl bg-zinc-50 border border-zinc-100 text-zinc-800 font-semibold flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Power Cable & Adapter</span>
-                </div>
-                <div className="p-3 rounded-2xl bg-zinc-50 border border-zinc-100 text-zinc-800 font-semibold flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Warranty Card & Guide</span>
-                </div>
-              </div>
+          {/* Official Support & Installation Note */}
+          <div className="p-4 rounded-2xl bg-red-50/60 border border-red-100 flex items-center gap-3 text-xs text-zinc-800">
+            <div className="w-8 h-8 rounded-xl bg-[#E50914] text-white flex items-center justify-center shrink-0">
+              <Wrench className="w-4 h-4" />
             </div>
-
-            {/* Official Support & Installation Note */}
-            <div className="p-4 rounded-2xl bg-red-50/60 border border-red-100 flex items-center gap-3 text-xs text-zinc-800">
-              <div className="w-8 h-8 rounded-xl bg-[#E50914] text-white flex items-center justify-center shrink-0">
-                <Wrench className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="font-bold text-zinc-900">Standard On-Site Installation Included</p>
-                <p className="text-[11px] text-zinc-500">Official Butterfly technician will coordinate delivery & mounting demo.</p>
-              </div>
+            <div>
+              <p className="font-bold text-zinc-900">
+                {product.warrantyInstallation?.includes('Warranty') || product.warrantyInstallation?.includes('Installation')
+                  ? 'Standard On-Site Installation & Warranty Promise'
+                  : 'Standard On-Site Installation Included'}
+              </p>
+              <p className="text-[11px] text-zinc-500">
+                {product.warrantyInstallation ||
+                  'Official Butterfly technician will coordinate delivery & mounting demo within 48h.'}
+              </p>
             </div>
           </div>
         </div>
       </section>
+
 
       {/* Deep-Dive Detailed Tabs Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-10">

@@ -115,6 +115,10 @@ export class CreateProductDto {
   @IsString()
   @IsOptional()
   warrantyInstallation?: string;
+
+  @IsArray()
+  @IsOptional()
+  whatsIncluded?: string[];
 }
 
 export class UpdateProductDto {
@@ -232,6 +236,10 @@ export class UpdateProductDto {
   @IsString()
   @IsOptional()
   warrantyInstallation?: string;
+
+  @IsArray()
+  @IsOptional()
+  whatsIncluded?: string[];
 }
 
 export class CreateReviewDto {

@@ -66,6 +66,7 @@ function sanitizeProductPayload(product: any): any {
     'keyFeatures',
     'technicalSpecs',
     'warrantyInstallation',
+    'whatsIncluded',
   ];
 
   const payload: any = {};
