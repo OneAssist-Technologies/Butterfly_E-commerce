@@ -30,13 +30,15 @@ import {
   X,
   MessageSquare,
   Loader2,
+  Cpu,
+  Box,
 } from 'lucide-react';
 import { CatalogProduct } from '@/data/products';
 import { ProductCatalogCard } from '@/components/cards/product-catalog-card';
 import { EnquiryModal } from '@/components/shared/enquiry-modal';
 import { useCart } from '@/providers';
 import { TVProduct } from '@/components/cards/product-card';
-import { productService } from '@/services/product.service';
+import { productService, normalizeProductImageUrl } from '@/services/product.service';
 
 interface ProductDetailsClientProps {
   product: CatalogProduct;
@@ -56,14 +58,14 @@ export function ProductDetailsClient({
   const galleryImages: Array<{ src: string; label: string }> = useMemo(() => {
     if (Array.isArray(product.images) && product.images.length > 0) {
       return product.images.map((src: string, idx: number) => ({
-        src,
+        src: normalizeProductImageUrl(src),
         label: idx === 0 ? 'Front Display' : `View ${idx + 1}`,
       }));
     }
-    return [{ src: product.image, label: 'Front Display' }];
+    return [{ src: normalizeProductImageUrl(product.image), label: 'Front Display' }];
   }, [product.image, product.images]);
 
-  const [activeImage, setActiveImage] = useState(product.image);
+  const [activeImage, setActiveImage] = useState(() => normalizeProductImageUrl(product.image));
 
   useEffect(() => {
     if (galleryImages.length > 0) {
@@ -235,7 +237,6 @@ export function ProductDetailsClient({
     }
     setAddedToast(true);
     setTimeout(() => setAddedToast(false), 3000);
-    openCart();
   };
 
   const handleShare = () => {
@@ -352,9 +353,14 @@ export function ProductDetailsClient({
                   alt={product.name}
                   fill
                   priority
+                  loading="eager"
                   className="object-contain transition-all duration-500 group-hover:scale-105"
                   sizes="(max-width: 1024px) 100vw, 55vw"
                   unoptimized={true}
+                  onError={(e) => {
+                    const target = e.currentTarget as HTMLImageElement;
+                    if (target) target.src = '/menu_tv_43.jpg';
+                  }}
                 />
               </div>
             </div>
@@ -416,8 +422,8 @@ export function ProductDetailsClient({
             </div>
           </div>
 
-          {/* Right Column: Pricing, Specs & Purchase Actions (5 cols) */}
-          <div className="lg:col-span-5 bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-8 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] space-y-6">
+          {/* Right Column: Pricing, Specs & Purchase Actions (5 cols, Sticky) */}
+          <div className="lg:col-span-5 lg:sticky lg:top-24 bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-8 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] space-y-6">
             
             {/* Header Titles */}
             <div>
@@ -632,8 +638,139 @@ export function ProductDetailsClient({
         </div>
       </section>
 
+      {/* 2. Key Highlights & In-The-Box Showcase (2 Balanced Cards) */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+          {/* Key Visual & Smart Capabilities */}
+          <div className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-7 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] flex flex-col justify-between space-y-5">
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b border-zinc-100 mb-4">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-[#E50914]" />
+                  <h3 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-zinc-900">
+                    Engineered Highlights & Performance
+                  </h3>
+                </div>
+                <span className="text-[11px] font-bold text-zinc-400">Butterfly Living Tech</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div className="p-3.5 rounded-2xl bg-zinc-50/80 border border-zinc-100 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Tv className="w-4 h-4 text-[#E50914]" />
+                    <span className="text-xs font-bold text-zinc-900">{product.resolution} Vivid Engine</span>
+                  </div>
+                  <p className="text-[11px] text-zinc-500 leading-relaxed">
+                    Over a billion rich colors with dynamic contrast enhancement & 178° wide viewing angles.
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-zinc-50/80 border border-zinc-100 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Volume2 className="w-4 h-4 text-[#E50914]" />
+                    <span className="text-xs font-bold text-zinc-900">Acoustic Cinema Audio</span>
+                  </div>
+                  <p className="text-[11px] text-zinc-500 leading-relaxed">
+                    {product.sound} with high-definition digital sound processing & deep bass resonance.
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-zinc-50/80 border border-zinc-100 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Cpu className="w-4 h-4 text-[#E50914]" />
+                    <span className="text-xs font-bold text-zinc-900">{product.os} Smart Platform</span>
+                  </div>
+                  <p className="text-[11px] text-zinc-500 leading-relaxed">
+                    Instant access to 10,000+ apps, voice assistant remote, and seamless smartphone casting.
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-zinc-50/80 border border-zinc-100 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Wifi className="w-4 h-4 text-[#E50914]" />
+                    <span className="text-xs font-bold text-zinc-900">Dual Wi-Fi & Bluetooth</span>
+                  </div>
+                  <p className="text-[11px] text-zinc-500 leading-relaxed">
+                    Lag-free 5GHz Wi-Fi streaming plus Bluetooth 5.0 for wireless soundbars and headphones.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {product.keyFeatures && product.keyFeatures.length > 0 && (
+              <div className="pt-3 border-t border-zinc-100">
+                <span className="text-[11px] font-bold text-zinc-700 block mb-2">Key Model Features:</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {product.keyFeatures.slice(0, 4).map((feat, idx) => (
+                    <div key={idx} className="flex items-start gap-2 text-xs text-zinc-600">
+                      <Check className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                      <span className="line-clamp-2">{feat}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* In-the-Box & Official Inclusions Card */}
+          <div className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-7 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] flex flex-col justify-between space-y-5">
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b border-zinc-100 mb-4">
+                <div className="flex items-center gap-2">
+                  <Box className="w-4 h-4 text-[#E50914]" />
+                  <h3 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-zinc-900">
+                    What&apos;s Included In The Box
+                  </h3>
+                </div>
+                <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
+                  All-Inclusive Kit
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                <div className="p-3 rounded-2xl bg-zinc-50 border border-zinc-100 text-zinc-800 font-semibold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{product.size} Smart TV</span>
+                </div>
+                <div className="p-3 rounded-2xl bg-zinc-50 border border-zinc-100 text-zinc-800 font-semibold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Voice Remote + AAA</span>
+                </div>
+                <div className="p-3 rounded-2xl bg-zinc-50 border border-zinc-100 text-zinc-800 font-semibold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Wall Mount Bracket</span>
+                </div>
+                <div className="p-3 rounded-2xl bg-zinc-50 border border-zinc-100 text-zinc-800 font-semibold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Table Top Stands</span>
+                </div>
+                <div className="p-3 rounded-2xl bg-zinc-50 border border-zinc-100 text-zinc-800 font-semibold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Power Cable & Adapter</span>
+                </div>
+                <div className="p-3 rounded-2xl bg-zinc-50 border border-zinc-100 text-zinc-800 font-semibold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Warranty Card & Guide</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Official Support & Installation Note */}
+            <div className="p-4 rounded-2xl bg-red-50/60 border border-red-100 flex items-center gap-3 text-xs text-zinc-800">
+              <div className="w-8 h-8 rounded-xl bg-[#E50914] text-white flex items-center justify-center shrink-0">
+                <Wrench className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="font-bold text-zinc-900">Standard On-Site Installation Included</p>
+                <p className="text-[11px] text-zinc-500">Official Butterfly technician will coordinate delivery & mounting demo.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Deep-Dive Detailed Tabs Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-10">
         <div className="bg-white rounded-3xl border border-zinc-200/90 shadow-sm overflow-hidden">
           {/* Tab Navigation Header */}
           <div className="flex border-b border-zinc-200 bg-zinc-50/70 overflow-x-auto scrollbar-none">

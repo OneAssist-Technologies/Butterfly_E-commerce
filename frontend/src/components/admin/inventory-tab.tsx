@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { CatalogProduct } from '@/data/products';
 import { settingsService } from '@/services/settings.service';
+import { normalizeProductImageUrl } from '@/services/product.service';
 
 interface InventoryTabProps {
   productsList: CatalogProduct[];
@@ -250,16 +251,22 @@ export function InventoryTab({
 
   const handleOpenEditModal = (tv: CatalogProduct) => {
     setEditingProduct(tv);
+    const rawPriceDigits = tv.price ? tv.price.replace(/[^0-9]/g, '') : '';
+    const parsedPriceNum = parseInt(rawPriceDigits, 10);
+    const formattedPrice = !isNaN(parsedPriceNum) && parsedPriceNum > 0
+      ? parsedPriceNum.toLocaleString('en-IN')
+      : '';
+
     setNewProduct({
       model: tv.model || '',
       name: tv.name || '',
       size: tv.size || '43"',
       resolution: tv.resolution || '4K UHD Resolution',
-      price: tv.price ? tv.price.replace(/[^0-9]/g, '') : '',
+      price: formattedPrice,
       sound: tv.sound || '',
       displayTech: tv.displayTech || 'Ultra Bright D-LED',
       smartOS: tv.smartOS || (tv as any).os || 'Google TV',
-      image: tv.image || '',
+      image: normalizeProductImageUrl(tv.image) || '',
       keyFeaturesText: Array.isArray(tv.keyFeatures || tv.features)
         ? (tv.keyFeatures || tv.features || []).join('\n')
         : '',
@@ -278,7 +285,7 @@ export function InventoryTab({
       tv.images.forEach((url, idx) => {
         imgs.push({
           id: `existing-${idx}-${Date.now()}`,
-          url,
+          url: normalizeProductImageUrl(url),
           name: `${tv.model || 'TV'}-shot-${idx + 1}.webp`,
           size: 'Catalog Asset',
           isPrimary: idx === 0,
@@ -287,7 +294,7 @@ export function InventoryTab({
     } else if (tv.image) {
       imgs.push({
         id: `existing-0-${Date.now()}`,
-        url: tv.image,
+        url: normalizeProductImageUrl(tv.image),
         name: `${tv.model || 'TV'}-primary.webp`,
         size: 'Catalog Asset',
         isPrimary: true,
@@ -389,6 +396,55 @@ export function InventoryTab({
     });
   }, [productsList, productSearch, selectedSizeFilter]);
 
+  // Retail Price Number Only & INR Formatting Handlers
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawDigits = e.target.value.replace(/[^0-9]/g, '');
+    if (!rawDigits) {
+      setNewProduct((prev) => ({ ...prev, price: '' }));
+      return;
+    }
+    const numeric = parseInt(rawDigits, 10);
+    const formattedInr = numeric.toLocaleString('en-IN');
+    setNewProduct((prev) => ({ ...prev, price: formattedInr }));
+  };
+
+  const handlePriceKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (
+      [
+        'Backspace',
+        'Delete',
+        'Tab',
+        'Escape',
+        'Enter',
+        'ArrowLeft',
+        'ArrowRight',
+        'ArrowUp',
+        'ArrowDown',
+        'Home',
+        'End',
+      ].includes(e.key) ||
+      e.ctrlKey ||
+      e.metaKey
+    ) {
+      return;
+    }
+    if (!/^[0-9]$/.test(e.key)) {
+      e.preventDefault();
+    }
+  };
+
+  const handlePricePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text');
+    const digitsOnly = pasted.replace(/[^0-9]/g, '');
+    if (!digitsOnly) return;
+    const currentDigits = newProduct.price.replace(/[^0-9]/g, '');
+    const combined = parseInt(currentDigits + digitsOnly, 10);
+    if (!isNaN(combined)) {
+      setNewProduct((prev) => ({ ...prev, price: combined.toLocaleString('en-IN') }));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (uploadedImages.length === 0 && !newProduct.image) {
@@ -396,7 +452,7 @@ export function InventoryTab({
       return;
     }
 
-    const priceNum = parseInt(newProduct.price.replace(/[^0-9]/g, '')) || 0;
+    const priceNum = parseInt(newProduct.price.replace(/[^0-9]/g, ''), 10) || 0;
     const modelClean = newProduct.model.trim();
     const newId = editingProduct
       ? editingProduct.id
@@ -438,7 +494,7 @@ export function InventoryTab({
         : newProduct.resolution.includes('4K')
         ? '4K UHD'
         : 'HD',
-      price: newProduct.price.startsWith('₹') ? newProduct.price : `₹ ${newProduct.price}`,
+      price: `₹ ${priceNum.toLocaleString('en-IN')}`,
       numericPrice: priceNum,
       priceNumber: priceNum,
       priceCategory:
@@ -706,12 +762,16 @@ export function InventoryTab({
 
                       <div className="relative w-full h-36 my-1">
                         <Image
-                          src={tv.image}
+                          src={normalizeProductImageUrl(tv.image)}
                           alt={tv.name}
                           fill
                           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 25vw"
                           className="object-contain group-hover:scale-105 transition-transform duration-300"
                           unoptimized={true}
+                          onError={(e) => {
+                            const target = e.currentTarget as HTMLImageElement;
+                            if (target) target.src = '/menu_tv_43.jpg';
+                          }}
                         />
                       </div>
 
@@ -791,12 +851,16 @@ export function InventoryTab({
                       <td className="py-3 px-4">
                         <div className="relative w-14 h-10 bg-slate-100 rounded-lg overflow-hidden border border-slate-200 p-0.5">
                           <Image
-                            src={tv.image}
+                            src={normalizeProductImageUrl(tv.image)}
                             alt={tv.name}
                             fill
                             sizes="56px"
                             className="object-contain"
                             unoptimized={true}
+                            onError={(e) => {
+                              const target = e.currentTarget as HTMLImageElement;
+                              if (target) target.src = '/menu_tv_43.jpg';
+                            }}
                           />
                         </div>
                       </td>
@@ -998,18 +1062,37 @@ export function InventoryTab({
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                        Retail Price (₹) <span className="text-[#E50914]">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        autoComplete="off"
-                        placeholder="e.g. 29,990"
-                        value={newProduct.price}
-                        onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-xs font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#E50914]/15 focus:border-[#E50914] transition-all"
-                      />
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                          Retail Price (₹) <span className="text-[#E50914]">*</span>
+                        </label>
+                        <span className="text-[10px] font-semibold text-slate-400">Numbers only</span>
+                      </div>
+                      <div className="relative">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 select-none pointer-events-none">
+                          ₹
+                        </span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          required
+                          autoComplete="off"
+                          placeholder="e.g. 29,990"
+                          value={newProduct.price}
+                          onChange={handlePriceChange}
+                          onKeyDown={handlePriceKeyDown}
+                          onPaste={handlePricePaste}
+                          className="w-full pl-8 pr-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-xs font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#E50914]/15 focus:border-[#E50914] transition-all"
+                        />
+                      </div>
+                      {newProduct.price && (
+                        <div className="flex items-center justify-between mt-1 px-1">
+                          <span className="text-[10px] text-slate-500 font-medium">INR Preview:</span>
+                          <span className="text-[11px] font-extrabold text-[#E50914] bg-red-50/80 px-2 py-0.5 rounded border border-red-100">
+                            ₹ {parseInt(newProduct.price.replace(/[^0-9]/g, '') || '0', 10).toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 

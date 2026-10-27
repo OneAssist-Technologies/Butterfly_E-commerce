@@ -54,7 +54,7 @@ export function AdminHeader({
       case 'offers':
         return 'Offers & Dynamic Promotions';
       case 'enquiries':
-        return 'Customer Inquiries & Quotes';
+        return 'CustomerEnquiries & Quotes';
       case 'orders':
         return 'Orders & Dispatch Management';
       case 'users':

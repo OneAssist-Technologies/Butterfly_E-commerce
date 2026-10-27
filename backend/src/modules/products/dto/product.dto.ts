@@ -140,19 +140,11 @@ export class UpdateProductDto {
 
   @IsString()
   @IsOptional()
-  price?: string;
+  screenSizeCategory?: string;
 
-  @IsNumber()
+  @IsString()
   @IsOptional()
-  numericPrice?: number;
-
-  @IsBoolean()
-  @IsOptional()
-  inStock?: boolean;
-
-  @IsBoolean()
-  @IsOptional()
-  isTopSelling?: boolean;
+  badge?: string;
 
   @IsString()
   @IsOptional()
@@ -164,6 +156,26 @@ export class UpdateProductDto {
 
   @IsString()
   @IsOptional()
+  resolution?: string;
+
+  @IsString()
+  @IsOptional()
+  resolutionCategory?: string;
+
+  @IsString()
+  @IsOptional()
+  os?: string;
+
+  @IsString()
+  @IsOptional()
+  smartOS?: string;
+
+  @IsString()
+  @IsOptional()
+  smartCategory?: string;
+
+  @IsString()
+  @IsOptional()
   sound?: string;
 
   @IsString()
@@ -172,7 +184,43 @@ export class UpdateProductDto {
 
   @IsString()
   @IsOptional()
-  smartOS?: string;
+  price?: string;
+
+  @IsNumber()
+  @IsOptional()
+  numericPrice?: number;
+
+  @IsString()
+  @IsOptional()
+  priceCategory?: string;
+
+  @IsString()
+  @IsOptional()
+  brand?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  isFilledButton?: boolean;
+
+  @IsString()
+  @IsOptional()
+  buttonLabel?: string;
+
+  @IsNumber()
+  @IsOptional()
+  featuredRank?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  isTopSelling?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  inStock?: boolean;
+
+  @IsArray()
+  @IsOptional()
+  features?: string[];
 
   @IsArray()
   @IsOptional()

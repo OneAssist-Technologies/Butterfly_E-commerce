@@ -48,10 +48,13 @@ export class ProductsController {
 
   @Get(':id/image')
   async getImage(@Param('id') id: string, @Res() res: Response) {
-    const { buffer, mimeType } = await this.productsService.getImageBuffer(id);
-    res.setHeader('Content-Type', mimeType);
+    const result = await this.productsService.getImageBuffer(id);
+    if ('redirectUrl' in result) {
+      return res.redirect(result.redirectUrl);
+    }
+    res.setHeader('Content-Type', result.mimeType);
     res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
-    res.send(buffer);
+    res.send(result.buffer);
   }
 
   @Get(':id/reviews')

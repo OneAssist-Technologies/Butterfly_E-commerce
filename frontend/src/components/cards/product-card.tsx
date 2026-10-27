@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
-import { ArrowRight, Tv, ShieldCheck, Volume2 } from 'lucide-react';
+import { Tv, ShieldCheck, Volume2, ShoppingBag, Check } from 'lucide-react';
+import { useCart } from '@/providers';
 
 export interface TVProduct {
   id: string;
@@ -29,12 +30,26 @@ interface ProductCardProps {
 export function ProductCard({
   product,
   onViewDetails,
+  onAddToCart,
 }: ProductCardProps) {
   const [imgSrc, setImgSrc] = React.useState(product.image || '/menu_tv_43.jpg');
+  const [isAdded, setIsAdded] = useState(false);
+  const { addToCart, openCart } = useCart();
 
   React.useEffect(() => {
     setImgSrc(product.image || '/menu_tv_43.jpg');
   }, [product.image]);
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onAddToCart) {
+      onAddToCart(product);
+    } else {
+      addToCart(product);
+    }
+    setIsAdded(true);
+    setTimeout(() => setIsAdded(false), 1500);
+  };
 
   return (
     <div
@@ -110,11 +125,24 @@ export function ProductCard({
 
         <button
           type="button"
-          onClick={() => onViewDetails(product)}
-          className="w-full py-2.5 px-4 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer bg-[#E50914] text-white hover:bg-[#c70811] shadow-xs hover:shadow-md"
+          onClick={handleAddToCart}
+          className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md active:scale-[0.98] ${
+            isAdded
+              ? 'bg-emerald-600 text-white'
+              : 'bg-[#E50914] text-white hover:bg-[#c70811]'
+          }`}
         >
-          View Details
-          <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+          {isAdded ? (
+            <>
+              <Check className="w-4 h-4 stroke-[2.5]" />
+              <span>Added to Cart</span>
+            </>
+          ) : (
+            <>
+              <ShoppingBag className="w-4 h-4" />
+              <span>Add to Cart</span>
+            </>
+          )}
         </button>
       </div>
     </div>
