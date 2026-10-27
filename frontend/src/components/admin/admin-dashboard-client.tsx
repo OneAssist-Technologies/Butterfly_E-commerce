@@ -380,12 +380,18 @@ export function AdminDashboardClient({ initialTab }: AdminDashboardClientProps) 
     } catch (err: any) {
       console.warn('Backend product create warning:', err?.response?.data || err?.message || err);
     }
-    const updated = [
+
+    setProductsList((current) => [
       savedProduct,
-      ...productsList.filter((p) => p.id !== savedProduct.id && p.model !== savedProduct.model),
-    ];
-    setProductsList(updated);
+      ...current.filter((p) => p.id !== savedProduct.id && p.model !== savedProduct.model),
+    ]);
+
     if (typeof window !== 'undefined') {
+      const current = JSON.parse(localStorage.getItem('butterfly_admin_products') || '[]');
+      const updated = [
+        savedProduct,
+        ...current.filter((p: CatalogProduct) => p.id !== savedProduct.id && p.model !== savedProduct.model),
+      ];
       localStorage.setItem('butterfly_admin_products', JSON.stringify(updated));
       window.dispatchEvent(new Event('butterfly_products_updated'));
     }

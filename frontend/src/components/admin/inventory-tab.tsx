@@ -529,14 +529,23 @@ export function InventoryTab({
         'Complimentary Doorstep Installation Process within 48 hours. 1 Year Comprehensive Brand Warranty + 1 Year Additional on Display Panel.',
     };
 
-    if (editingProduct) {
-      await onUpdateProduct(editingProduct.id, productPayload);
-    } else {
-      await onAddProduct(productPayload);
-    }
+    setImageError(null);
+    try {
+      if (editingProduct) {
+        await onUpdateProduct(editingProduct.id, productPayload);
+      } else {
+        await onAddProduct(productPayload);
+      }
 
-    setShowModal(false);
-    resetProductForm();
+      setShowModal(false);
+      resetProductForm();
+    } catch (err: any) {
+      const apiMessage = err?.response?.data?.message;
+      const message = Array.isArray(apiMessage)
+        ? apiMessage.join(', ')
+        : apiMessage || err?.message || 'Unable to save the product. Please try again.';
+      setImageError(String(message));
+    }
   };
 
   return (
