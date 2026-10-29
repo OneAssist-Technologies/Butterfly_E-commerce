@@ -1402,7 +1402,7 @@ function ProfileContent() {
                 {/* Select TV Model dynamically from DB */}
                 <div>
                   <label className="block text-xs font-bold text-zinc-700 mb-1.5">
-                    Select Product Model *
+                    Select Television *
                   </label>
                   <select
                     value={newEnquiryModel}
@@ -1411,8 +1411,8 @@ function ProfileContent() {
                   >
                     {availableProducts.length > 0 ? (
                       availableProducts.map((p) => (
-                        <option key={p.id} value={`${p.model} - ${p.name}`}>
-                          {p.model} — {p.name} {p.price ? `(${p.price})` : ''}
+                        <option key={p.id} value={p.name}>
+                          {p.name} {p.price ? `— ${p.price}` : ''}
                         </option>
                       ))
                     ) : (

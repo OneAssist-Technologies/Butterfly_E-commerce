@@ -677,7 +677,7 @@ export function InventoryTab({
 
     const priceNum = parseInt(newProduct.price.replace(/[^0-9]/g, ''), 10) || 0;
     const originalPriceNum = parseInt(newProduct.originalPrice.replace(/[^0-9]/g, ''), 10) || 0;
-    const modelClean = newProduct.model.trim();
+    const modelClean = editingProduct?.model || (newProduct.model?.trim() ? newProduct.model.trim() : ('BF' + (newProduct.size.replace(/[^0-9]/g, '') || 'TV') + '-' + Date.now().toString(36).toUpperCase()));
     const newId = editingProduct
       ? editingProduct.id
       : `tv-${modelClean.toLowerCase().replace(/[^a-z0-9]/g, '-') || Date.now()}`;
@@ -831,7 +831,7 @@ export function InventoryTab({
               type="text"
               value={productSearch}
               onChange={(e) => setProductSearch(e.target.value)}
-              placeholder="Search model code, size, resolution..."
+              placeholder="Search television name, size, resolution..."
               className="w-full pl-9 pr-4 py-2.5 bg-slate-50/80 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#E50914]/15 focus:border-[#E50914] transition-all"
             />
           </div>
@@ -1007,8 +1007,8 @@ export function InventoryTab({
                     <div className="p-4 bg-gradient-to-b from-slate-50/80 to-white relative flex flex-col">
                       <div className="flex items-center justify-between gap-1 mb-2">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold font-mono bg-slate-900 text-white tracking-wide">
-                            {tv.model}
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 tracking-wide">
+                            {tv.size} Display
                           </span>
                           {tv.isTopSelling && (
                             <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
@@ -1114,7 +1114,6 @@ export function InventoryTab({
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold">
                   <th className="py-3 px-4">Display</th>
-                  <th className="py-3 px-4">Model Code</th>
                   <th className="py-3 px-4">Name &amp; Size</th>
                   <th className="py-3 px-4">Resolution</th>
                   <th className="py-3 px-4">Audio Output</th>
@@ -1267,56 +1266,20 @@ export function InventoryTab({
                     <span className="text-[10px] font-bold text-slate-400 uppercase">Step 1 of 5</span>
                   </div>
 
-                  {/* Model Selection Type, Model Code & Screen Size */}
+                  {/* Television Title & Screen Size */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                          Model Name
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => handleAddNewModel()}
-                          className="text-[10px] font-bold text-[#E50914] hover:underline cursor-pointer"
-                        >
-                          + Add Model
-                        </button>
-                      </div>
-                      <select
-                        value={newProduct.modelSelectionType || (availableModels.includes(newProduct.model) ? newProduct.model : (newProduct.model ? 'CUSTOM' : ''))}
-                        onChange={(e) => handleSelectModelPreset(e.target.value)}
-                        className="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#E50914]/15 focus:border-[#E50914] transition-all cursor-pointer"
-                      >
-                        <option value="">Select Model Name...</option>
-                        <option value="__ADD_NEW__">+ Add New Model Name...</option>
-                        <option value="CUSTOM">Custom Model Code (Manual Typing)</option>
-                        {availableModels.length > 0 && (
-                          <optgroup label="Available TV Models">
-                            {availableModels.map((code) => {
-                              const existingProduct = productsList.find((p) => p.model === code);
-                              return (
-                                <option key={code} value={code}>
-                                  {code}{existingProduct?.name ? ` - ${existingProduct.name}` : ''}
-                                </option>
-                              );
-                            })}
-                          </optgroup>
-                        )}
-                      </select>
-                    </div>
-
-                    <div>
+                    <div className="sm:col-span-2">
                       <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                        Model Code <span className="text-[#E50914]">*</span>
+                        Television Title / Product Name <span className="text-[#E50914]">*</span>
                       </label>
                       <input
                         type="text"
                         required
                         autoComplete="off"
-                        placeholder="e.g. BF50U1"
-                        value={newProduct.model}
-                        onChange={(e) => setNewProduct({ ...newProduct, model: e.target.value, modelSelectionType: 'CUSTOM' })}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-xs font-mono font-bold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#E50914]/15 focus:border-[#E50914] transition-all"
+                        placeholder='e.g. 50" 4K UHD Smart Google TV'
+                        value={newProduct.name}
+                        onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-xs font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#E50914]/15 focus:border-[#E50914] transition-all"
                       />
                     </div>
 
@@ -1352,22 +1315,6 @@ export function InventoryTab({
                         )}
                       </select>
                     </div>
-                  </div>
-
-                  {/* Commercial Title */}
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                      Commercial Title <span className="text-[#E50914]">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      autoComplete="off"
-                      placeholder='e.g. 50" 4K UHD Smart Google TV'
-                      value={newProduct.name}
-                      onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-xs font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#E50914]/15 focus:border-[#E50914] transition-all"
-                    />
                   </div>
 
                   {/* Dual Price Inputs: Original Price (MRP / Slash Price) & Actual Selling Price */}
@@ -1532,13 +1479,13 @@ export function InventoryTab({
                                   key={p.id}
                                   className="inline-flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md border border-slate-200 font-mono text-[10px] text-slate-800 shadow-2xs"
                                 >
-                                  <span className="font-bold">{p.model}</span>
+                                  <span className="font-bold">{p.name}</span>
                                   <span className="text-slate-500">({p.size})</span>
                                   <button
                                     type="button"
                                     onClick={() => handleQuickDeselectTopSelling(p.id)}
                                     className="ml-1 text-[#E50914] hover:text-[#c70811] font-bold text-[10px] cursor-pointer hover:underline"
-                                    title={`Deselect ${p.model} from top selling`}
+                                    title={`Deselect ${p.name} from top selling`}
                                   >
                                     × Deselect
                                   </button>
@@ -2193,76 +2140,7 @@ export function InventoryTab({
           </div>
         </div>
       )}
-      {/* ================= MODAL: ADD NEW TV MODEL (UI POPUP) ================= */}
-      {isModelModalOpen && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-3xl p-6 sm:p-7 max-w-sm w-full border border-slate-200 shadow-2xl relative animate-in zoom-in-95">
-            <button
-              type="button"
-              onClick={() => {
-                setIsModelModalOpen(false);
-                setNewModelError('');
-              }}
-              className="absolute top-5 right-5 p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
 
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#E50914]" />
-              <h3 className="text-base font-extrabold text-slate-900">Add New TV Model</h3>
-            </div>
-            <p className="text-xs text-slate-500 mb-4">
-              Enter TV model code or series identifier (e.g. BTV002, BF55X1, or QLED-PRO).
-            </p>
-
-            {newModelError && (
-              <div className="mb-3.5 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-center gap-2 animate-in fade-in">
-                <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
-                <span>{newModelError}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleConfirmAddModel} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Model Code / Series Name *
-                </label>
-                <input
-                  type="text"
-                  autoFocus
-                  value={newModelInput}
-                  onChange={(e) => {
-                    setNewModelInput(e.target.value);
-                    if (newModelError) setNewModelError('');
-                  }}
-                  placeholder="e.g. BTV002 or BF65X1"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-900 font-bold uppercase focus:outline-none focus:ring-2 focus:ring-[#E50914]/20 focus:border-[#E50914] bg-white transition-all"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsModelModalOpen(false);
-                    setNewModelError('');
-                  }}
-                  className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-100 cursor-pointer transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-xl bg-[#E50914] hover:bg-[#c70811] text-xs font-bold text-white cursor-pointer shadow-xs transition-colors"
-                >
-                  Add Model
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* ================= MODAL: ADD NEW SCREEN SIZE (UI POPUP) ================= */}
       {isSizeModalOpen && (

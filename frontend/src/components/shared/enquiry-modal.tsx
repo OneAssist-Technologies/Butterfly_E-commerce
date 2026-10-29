@@ -105,7 +105,7 @@ export function EnquiryModal({ product, onClose }: EnquiryModalProps) {
             </div>
             <h3 className="text-xl font-bold text-zinc-900">Enquiry Received!</h3>
             <p className="text-sm text-zinc-600 max-w-xs mx-auto">
-              Our television expert will call you shortly with exclusive pricing and doorstep demonstration options for {product.model}.
+              Our television expert will call you shortly with exclusive pricing and doorstep demonstration options for {product.name}.
             </p>
           </div>
         ) : (
@@ -126,8 +126,8 @@ export function EnquiryModal({ product, onClose }: EnquiryModalProps) {
                 <span className="text-xs font-bold text-[#E50914] uppercase tracking-wider block">
                   Quick TV Enquiry
                 </span>
-                <h3 className="text-base font-bold text-zinc-900">{product.model}</h3>
-                <p className="text-xs text-zinc-500">{product.name} • <span className="font-bold text-zinc-900">{product.price}</span></p>
+                <h3 className="text-base font-bold text-zinc-900">{product.name}</h3>
+                <p className="text-xs text-zinc-500">{product.size} Display • <span className="font-bold text-zinc-900">{product.price}</span></p>
               </div>
             </div>
 

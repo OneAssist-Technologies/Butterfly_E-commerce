@@ -373,7 +373,7 @@ export function ProductDetailsClient({
             </Link>
             <ChevronRight className="w-3.5 h-3.5 text-zinc-400" />
             <span className="font-semibold text-zinc-900 truncate max-w-[220px] sm:max-w-xs">
-              {product.model} - {product.name}
+              {product.name}
             </span>
           </nav>
 
@@ -521,12 +521,14 @@ export function ProductDetailsClient({
             {/* Header Titles */}
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs font-black uppercase tracking-wider text-[#E50914] bg-red-50 border border-red-100 px-2.5 py-1 rounded-md">
-                  {product.model}
-                </span>
                 {product.resolution && (
-                  <span className="text-xs font-semibold text-zinc-500">
+                  <span className="text-xs font-bold text-zinc-600 bg-zinc-100 px-2.5 py-1 rounded-md">
                     {product.resolution}
+                  </span>
+                )}
+                {product.size && (
+                  <span className="text-xs font-semibold text-zinc-500">
+                    {product.size} Display
                   </span>
                 )}
               </div>
