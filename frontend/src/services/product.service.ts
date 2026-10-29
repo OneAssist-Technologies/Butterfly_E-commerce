@@ -55,6 +55,8 @@ function sanitizeProductPayload(product: any): any {
     'displayTech',
     'price',
     'numericPrice',
+    'originalPrice',
+    'originalNumericPrice',
     'priceCategory',
     'brand',
     'isFilledButton',

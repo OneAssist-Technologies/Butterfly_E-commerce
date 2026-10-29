@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Search, User, ShoppingBag, ChevronDown, Menu, X, ArrowRight } from 'lucide-react';
+import { Search, User, ShoppingBag, ChevronDown, Menu, X, ArrowRight, MessageSquare, Shield, LogOut } from 'lucide-react';
 import { useCart } from '@/providers';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
@@ -30,6 +30,34 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [authUser, setAuthUser] = useState<{ name: string; email: string; role?: string } | null>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const checkUser = () => {
+      const token =
+        localStorage.getItem('butterfly_user_token') ||
+        localStorage.getItem('butterfly_admin_token');
+      const raw =
+        localStorage.getItem('butterfly_user') ||
+        localStorage.getItem('butterfly_admin_user');
+      if (token && raw) {
+        try {
+          setAuthUser(JSON.parse(raw));
+        } catch {
+          setAuthUser(null);
+        }
+      } else {
+        setAuthUser(null);
+      }
+    };
+
+    checkUser();
+    window.addEventListener('storage', checkUser);
+    return () => window.removeEventListener('storage', checkUser);
+  }, [pathname]);
+
   const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   // Synchronize search term from URL query parameter 'q'
@@ -254,13 +282,16 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
             </div>
           </form>
 
-          {/* User Account Link */}
+          {/* User Profile Link - directly redirects to /profile */}
           <Link
-            href="/login"
-            aria-label="User Account"
-            className="p-2 rounded-full text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 transition-colors cursor-pointer"
+            href="/profile"
+            aria-label="User Profile"
+            className="p-2 rounded-full text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 transition-colors cursor-pointer relative"
           >
             <User className="w-5 h-5" />
+            {authUser && (
+              <span className="absolute bottom-1 right-1 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" />
+            )}
           </Link>
 
           {/* Cart Icon with badge linking to full-page cart */}
@@ -602,10 +633,10 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
               </div>
             </div>
 
-            {/* Separate User Account Section at Bottom */}
+            {/* Separate User Profile Section at Bottom */}
             <div className="p-4 sm:p-5 border-t border-zinc-100 bg-zinc-50/70 shrink-0">
               <Link
-                href="/login"
+                href="/profile"
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center justify-between p-3.5 rounded-xl bg-white border border-zinc-200/80 shadow-2xs hover:border-[#E50914]/40 hover:bg-red-50/20 transition-all group"
               >
@@ -615,10 +646,10 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
                   </div>
                   <div>
                     <span className="block text-xs font-bold text-zinc-900 group-hover:text-[#E50914] transition-colors">
-                      Account Login
+                      {authUser ? (authUser.name || 'My Profile') : 'User Profile'}
                     </span>
                     <span className="block text-[11px] text-zinc-500 font-medium">
-                      Manage orders &amp; profile
+                      {authUser ? authUser.email : 'View orders & personal details'}
                     </span>
                   </div>
                 </div>

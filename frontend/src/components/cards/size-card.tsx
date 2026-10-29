@@ -42,6 +42,8 @@ export function SizeCard({ item, onSelect }: SizeCardProps) {
             src={imgSrc || '/menu_tv_32.jpg'}
             alt={`${item.size} Smart TV`}
             fill
+            loading="eager"
+            priority={true}
             unoptimized={isDataOrExternal}
             onError={() => {
               // fallback to working local TV photo if broken

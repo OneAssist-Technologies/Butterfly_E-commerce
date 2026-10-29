@@ -75,6 +75,14 @@ export class CreateProductDto {
 
   @IsString()
   @IsOptional()
+  originalPrice?: string;
+
+  @IsNumber()
+  @IsOptional()
+  originalNumericPrice?: number;
+
+  @IsString()
+  @IsOptional()
   priceCategory?: string;
 
   @IsString()
@@ -193,6 +201,14 @@ export class UpdateProductDto {
   @IsNumber()
   @IsOptional()
   numericPrice?: number;
+
+  @IsString()
+  @IsOptional()
+  originalPrice?: string;
+
+  @IsNumber()
+  @IsOptional()
+  originalNumericPrice?: number;
 
   @IsString()
   @IsOptional()

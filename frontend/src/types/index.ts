@@ -23,8 +23,22 @@ export interface User {
   email: string;
   role: 'CUSTOMER' | 'ADMIN' | 'SUPER_ADMIN' | 'OPERATOR' | 'CATALOG_MANAGER';
   department?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface UserProfileUpdatePayload {
+  name?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
 }
 
 export interface AuthResponse {
@@ -55,10 +69,12 @@ export interface Order {
   orderNumber: string;
   customerName: string;
   email: string;
+  phone?: string;
+  address?: string;
   amount: string;
   numericAmount: number;
   payment: string;
-  status: 'Processing' | 'Dispatched' | 'Delivered' | 'Cancelled';
+  status: 'Pending Verification' | 'PendingVerification' | 'Processing' | 'Dispatched' | 'Delivered' | 'Cancelled';
   date: string;
   createdAt?: string;
   updatedAt?: string;

@@ -33,6 +33,14 @@ export class CreateOrderDto {
   email!: string;
 
   @IsString()
+  @IsNotEmpty()
+  phone!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  address!: string;
+
+  @IsString()
   @IsOptional()
   model?: string;
 
@@ -54,5 +62,5 @@ export class CreateOrderDto {
 export class UpdateOrderStatusDto {
   @IsString()
   @IsNotEmpty()
-  status!: 'Processing' | 'Dispatched' | 'Delivered' | 'Cancelled';
+  status!: 'Pending Verification' | 'Processing' | 'Dispatched' | 'Delivered' | 'Cancelled';
 }
