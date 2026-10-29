@@ -242,16 +242,20 @@ export function AdminDashboardClient({ initialTab }: AdminDashboardClientProps) 
       if (liveOrders.status === 'fulfilled' && Array.isArray(liveOrders.value)) {
         const mappedOrders: OrderRecord[] = liveOrders.value.map((o: any) => ({
           id: o.orderNumber || o.id,
+          orderNumber: o.orderNumber,
           customerName: o.customerName,
           email: o.email,
+          phone: o.phone || '',
+          address: o.address || '',
           model: o.items?.[0]
             ? `${o.items[0].productModel} (${o.items[0].productName})`
-            : 'Smart TV',
+            : (o.model || 'Smart TV'),
           amount: o.amount,
           numericAmount: o.numericAmount,
           payment: o.payment,
           status: o.status,
           date: o.date,
+          items: o.items,
         }));
         setOrders(mappedOrders);
       }
@@ -486,6 +490,8 @@ export function AdminDashboardClient({ initialTab }: AdminDashboardClientProps) 
       createdOrder = await orderService.create({
         customerName: orderData.customerName,
         email: orderData.email,
+        phone: (orderData as any).phone || '+91 98765 43210',
+        address: (orderData as any).address || 'Store Direct Pickup',
         model: orderData.model,
         amount: orderData.amount,
         payment: orderData.payment,

@@ -6,6 +6,7 @@ import {
   Delete,
   Param,
   Body,
+  Req,
   Query,
   HttpCode,
   HttpStatus,
@@ -29,6 +30,14 @@ export class EnquiriesController {
     @Query('search') search?: string,
   ) {
     return this.enquiriesService.findAll({ status, search });
+  }
+
+  @Get('my-enquiries')
+  @UseGuards(JwtAuthGuard)
+  async getMyEnquiries(@Req() req: any) {
+    const userId = req.user.sub || req.user.id;
+    const email = req.user.email;
+    return this.enquiriesService.findUserEnquiries(userId, email);
   }
 
   @Get(':id')

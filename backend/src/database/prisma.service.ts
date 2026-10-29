@@ -5,6 +5,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name);
+  declare passwordReset: any;
 
   constructor() {
     const connectionString =
@@ -62,6 +63,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       await this.$executeRawUnsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "keyFeatures" TEXT[] DEFAULT ARRAY[]::TEXT[];`);
       await this.$executeRawUnsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "technicalSpecs" JSONB;`);
       await this.$executeRawUnsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "warrantyInstallation" TEXT;`);
+      await this.$executeRawUnsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "originalPrice" TEXT;`);
+      await this.$executeRawUnsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "originalNumericPrice" INTEGER;`);
 
       // 3. Ensure DiscountType enum and offers table
       await this.$executeRawUnsafe(`
@@ -124,6 +127,37 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
           CONSTRAINT "reviews_pkey" PRIMARY KEY ("id")
         );
       `);
+
+      // 5. Ensure users, orders, and enquiries profile columns
+      await this.$executeRawUnsafe(`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "phone" TEXT;`);
+      await this.$executeRawUnsafe(`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "address" TEXT;`);
+      await this.$executeRawUnsafe(`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "city" TEXT;`);
+      await this.$executeRawUnsafe(`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "state" TEXT;`);
+      await this.$executeRawUnsafe(`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "pincode" TEXT;`);
+
+      await this.$executeRawUnsafe(`ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "phone" TEXT;`);
+      await this.$executeRawUnsafe(`ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "address" TEXT;`);
+      await this.$executeRawUnsafe(`ALTER TYPE "OrderStatus" ADD VALUE IF NOT EXISTS 'Pending Verification';`);
+      await this.$executeRawUnsafe(`ALTER TYPE "OrderStatus" ADD VALUE IF NOT EXISTS 'PendingVerification';`);
+      await this.$executeRawUnsafe(`ALTER TABLE "orders" ALTER COLUMN "status" SET DEFAULT 'Pending Verification';`);
+
+      await this.$executeRawUnsafe(`ALTER TABLE "enquiries" ADD COLUMN IF NOT EXISTS "userId" TEXT;`);
+
+      // 6. Ensure password_resets table
+      await this.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "password_resets" (
+          "id" TEXT NOT NULL,
+          "email" TEXT NOT NULL,
+          "otp" TEXT NOT NULL,
+          "token" TEXT,
+          "expiresAt" TIMESTAMP(3) NOT NULL,
+          "used" BOOLEAN NOT NULL DEFAULT false,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "password_resets_pkey" PRIMARY KEY ("id")
+        );
+      `);
+      await this.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "password_resets_email_idx" ON "password_resets"("email");`);
+      await this.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "password_resets_token_key" ON "password_resets"("token");`);
 
       this.logger.log('Database schema integrity verified and synchronized with latest models.');
     } catch (err) {

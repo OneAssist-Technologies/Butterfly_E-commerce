@@ -3,6 +3,7 @@ import {
   Post,
   Get,
   Delete,
+  Patch,
   Param,
   Body,
   Req,
@@ -16,6 +17,10 @@ import {
   CustomerLoginDto,
   CustomerRegisterDto,
   CreateAdminUserDto,
+  UpdateProfileDto,
+  ForgotPasswordDto,
+  VerifyOtpDto,
+  ResetPasswordDto,
 } from './auth.service.js';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../common/guards/roles.guard.js';
@@ -46,6 +51,38 @@ export class AuthController {
   @HttpCode(HttpStatus.CREATED)
   async customerRegister(@Body() dto: CustomerRegisterDto) {
     return this.authService.customerRegister(dto);
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto);
+  }
+
+  @Post('verify-otp')
+  @HttpCode(HttpStatus.OK)
+  async verifyOtp(@Body() dto: VerifyOtpDto) {
+    return this.authService.verifyOtp(dto);
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
+  }
+
+  @Get('profile')
+  @UseGuards(JwtAuthGuard)
+  async getProfileDetails(@Req() req: any) {
+    const userIdOrEmail = req.user.sub || req.user.id || req.user.email;
+    return this.authService.getUserProfile(userIdOrEmail);
+  }
+
+  @Patch('profile')
+  @UseGuards(JwtAuthGuard)
+  async updateProfileDetails(@Req() req: any, @Body() dto: UpdateProfileDto) {
+    const userIdOrEmail = req.user.sub || req.user.id || req.user.email;
+    return this.authService.updateUserProfile(userIdOrEmail, dto);
   }
 
   @Get('me')

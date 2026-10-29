@@ -174,7 +174,7 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Remember Me and Admin Info */}
+            {/* Remember Me and Forgot Password */}
             <div className="flex items-center justify-between text-xs pt-1">
               <label className="flex items-center gap-2 cursor-pointer text-zinc-600 hover:text-zinc-900">
                 <input
@@ -186,13 +186,12 @@ export default function LoginPage() {
                 <span>Remember me</span>
               </label>
 
-              <button
-                type="button"
-                onClick={() => alert('Password reset instructions will be sent to your registered email.')}
+              <Link
+                href="/forgot-password"
                 className="font-semibold text-[#E50914] hover:underline"
               >
                 Forgot password?
-              </button>
+              </Link>
             </div>
 
             {/* Submit Button */}

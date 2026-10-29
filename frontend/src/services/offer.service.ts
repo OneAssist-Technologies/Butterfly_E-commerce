@@ -41,6 +41,117 @@ export interface OfferValidationResult {
   discountPercent?: number;
 }
 
+export interface ProductPricingCalculation {
+  actualPrice: number; // Base selling price set in admin
+  originalPrice: number; // Strikethrough slash price (MRP) set in admin
+  finalPrice: number; // Final selling price after applicable offer on actualPrice
+  offerDiscount: number; // Amount saved from active offer
+  totalSavings: number; // Total savings compared to original MRP
+  discountPercent: number; // Total discount % off MRP
+  appliedOffer?: Offer;
+  isOfferApplied: boolean;
+}
+
+/**
+ * Calculates accurate pricing without hardcoding.
+ * The offer discount is strictly applied on actual selling price (not original MRP).
+ */
+export function calculateProductPricing(
+  product: {
+    price?: string;
+    numericPrice?: number;
+    originalPrice?: string;
+    originalNumericPrice?: number;
+    size?: string;
+    screenSizeCategory?: string;
+    model?: string;
+    name?: string;
+  },
+  availableOffers: Offer[] = []
+): ProductPricingCalculation {
+  // 1. Actual Base Selling Price
+  const actualPrice =
+    typeof product.numericPrice === 'number' && !isNaN(product.numericPrice) && product.numericPrice > 0
+      ? product.numericPrice
+      : parseInt(String(product.price || '').replace(/[^0-9]/g, ''), 10) || 0;
+
+  // 2. Original MRP / Slash Price (Admin defined, no hardcoded multipliers)
+  let originalPrice =
+    typeof product.originalNumericPrice === 'number' && !isNaN(product.originalNumericPrice) && product.originalNumericPrice > 0
+      ? product.originalNumericPrice
+      : parseInt(String(product.originalPrice || '').replace(/[^0-9]/g, ''), 10) || 0;
+
+  // Fallback to actual price if no MRP was provided (ensures no arbitrary markup)
+  if (originalPrice <= 0) {
+    originalPrice = actualPrice;
+  }
+
+  // 3. Match eligible active offers
+  const now = new Date();
+  const eligibleOffers = availableOffers.filter((o) => {
+    if (!o.isActive) return false;
+    if (o.startDate && new Date(o.startDate) > now) return false;
+    if (o.endDate && new Date(o.endDate) < now) return false;
+
+    // Check specific TV model match
+    if (o.targetProducts && o.targetProducts.trim()) {
+      const target = o.targetProducts.trim().toLowerCase();
+      const model = (product.model || '').toLowerCase();
+      const name = (product.name || '').toLowerCase();
+      return model === target || model.includes(target) || name.includes(target);
+    }
+
+    // Check screen size match
+    if (o.applicableSize && o.applicableSize !== 'ALL') {
+      const targetSize = o.applicableSize.replace(/[^0-9]/g, '');
+      const productSize = (product.size || product.screenSizeCategory || '').replace(/[^0-9]/g, '');
+      return targetSize === productSize;
+    }
+
+    // Storewide automatic offer
+    return Boolean(o.applyAutomatically) && actualPrice >= (o.minOrderAmount || 0);
+  });
+
+  let bestOffer: Offer | undefined;
+  let maxDiscount = 0;
+
+  for (const offer of eligibleOffers) {
+    let discount = 0;
+    if (offer.discountType === 'PERCENTAGE') {
+      // CRITICAL: Offer applies on the actual selling price, NOT the original MRP
+      discount = Math.round((actualPrice * offer.discountValue) / 100);
+      if (offer.maxDiscountAmount && discount > offer.maxDiscountAmount) {
+        discount = offer.maxDiscountAmount;
+      }
+    } else {
+      discount = Math.min(offer.discountValue, actualPrice);
+    }
+
+    if (discount > maxDiscount) {
+      maxDiscount = discount;
+      bestOffer = offer;
+    }
+  }
+
+  const finalPrice = Math.max(0, actualPrice - maxDiscount);
+  const totalSavings = Math.max(0, originalPrice - finalPrice);
+  const discountPercent =
+    originalPrice > 0 && totalSavings > 0
+      ? Math.round((totalSavings / originalPrice) * 100)
+      : 0;
+
+  return {
+    actualPrice,
+    originalPrice,
+    finalPrice,
+    offerDiscount: maxDiscount,
+    totalSavings,
+    discountPercent,
+    appliedOffer: bestOffer,
+    isOfferApplied: maxDiscount > 0,
+  };
+}
+
 export interface CreateOfferPayload {
   title: string;
   code: string;

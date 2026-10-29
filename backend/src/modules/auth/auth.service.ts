@@ -10,6 +10,8 @@ import { IsString, IsNotEmpty, IsOptional, IsEmail } from 'class-validator';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { PrismaService } from '../../database/prisma.service.js';
+import { MailService } from '../mail/mail.service.js';
+import crypto from 'crypto';
 
 // Pre-computed dummy bcrypt hash for timing attack mitigation on missing accounts
 const DUMMY_BCRYPT_HASH = '$2a$10$e8m4wW1b2eJ6v6W8a6Z7yOzXk7U4L9a9b2eJ6v6W8a6Z7yOzXk7U4';
@@ -50,6 +52,58 @@ export class CustomerRegisterDto {
   name!: string;
 }
 
+export class UpdateProfileDto {
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @IsString()
+  @IsOptional()
+  phone?: string;
+
+  @IsString()
+  @IsOptional()
+  address?: string;
+
+  @IsString()
+  @IsOptional()
+  city?: string;
+
+  @IsString()
+  @IsOptional()
+  state?: string;
+
+  @IsString()
+  @IsOptional()
+  pincode?: string;
+}
+
+export class ForgotPasswordDto {
+  @IsEmail({}, { message: 'A valid email address is required' })
+  @IsNotEmpty({ message: 'Email is required' })
+  email!: string;
+}
+
+export class VerifyOtpDto {
+  @IsEmail({}, { message: 'A valid email address is required' })
+  @IsNotEmpty({ message: 'Email is required' })
+  email!: string;
+
+  @IsString({ message: 'Verification code must be a string' })
+  @IsNotEmpty({ message: 'Verification code is required' })
+  otp!: string;
+}
+
+export class ResetPasswordDto {
+  @IsString({ message: 'Reset token is required' })
+  @IsNotEmpty({ message: 'Reset token is required' })
+  resetToken!: string;
+
+  @IsString({ message: 'New password must be a string' })
+  @IsNotEmpty({ message: 'New password is required' })
+  newPassword!: string;
+}
+
 export class CreateAdminUserDto {
   @IsString({ message: 'Name must be a string' })
   @IsNotEmpty({ message: 'Name is required' })
@@ -79,6 +133,7 @@ export class AuthService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    private readonly mailService: MailService,
   ) {}
 
   private getAdminCredentials() {
@@ -489,5 +544,254 @@ export class AuthService implements OnModuleInit {
     return this.prisma.user.delete({
       where: { id },
     });
+  }
+  async getUserProfile(userIdOrEmail: string) {
+    const user = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { id: userIdOrEmail },
+          { email: { equals: userIdOrEmail, mode: 'insensitive' } },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        department: true,
+        phone: true,
+        address: true,
+        city: true,
+        state: true,
+        pincode: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new BadRequestException('User profile not found in database');
+    }
+
+    return user;
+  }
+
+  async updateUserProfile(userIdOrEmail: string, dto: UpdateProfileDto) {
+    const existing = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { id: userIdOrEmail },
+          { email: { equals: userIdOrEmail, mode: 'insensitive' } },
+        ],
+      },
+    });
+
+    if (!existing) {
+      throw new BadRequestException('User not found');
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id: existing.id },
+      data: {
+        ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
+        ...(dto.phone !== undefined ? { phone: dto.phone.trim() } : {}),
+        ...(dto.address !== undefined ? { address: dto.address.trim() } : {}),
+        ...(dto.city !== undefined ? { city: dto.city.trim() } : {}),
+        ...(dto.state !== undefined ? { state: dto.state.trim() } : {}),
+        ...(dto.pincode !== undefined ? { pincode: dto.pincode.trim() } : {}),
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        department: true,
+        phone: true,
+        address: true,
+        city: true,
+        state: true,
+        pincode: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    const token = jwt.sign(
+      {
+        sub: updated.id,
+        email: updated.email,
+        role: updated.role,
+        name: updated.name,
+      },
+      this.getJwtSecret(),
+      { expiresIn: '7d' },
+    );
+
+    return {
+      success: true,
+      message: 'Profile updated successfully',
+      user: updated,
+      token,
+    };
+  }
+
+  private get passwordResetRepo(): any {
+    return (this.prisma as any).passwordReset;
+  }
+
+  /**
+   * Generates a 6-digit numeric OTP and sends it to the user's email via SMTP
+   */
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const email = dto.email.trim().toLowerCase();
+
+    // 1. Look up user by email
+    const user = await this.prisma.user.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
+    });
+
+    if (!user) {
+      throw new BadRequestException('No account found with this email address. Please check your email or create an account.');
+    }
+
+    // 2. Invalidate / mark old unused reset records for this email
+    try {
+      await this.passwordResetRepo.updateMany({
+        where: {
+          email: { equals: email, mode: 'insensitive' },
+          used: false,
+        },
+        data: { used: true },
+      });
+    } catch (err) {
+      this.logger.warn(`Failed to clean up old reset tokens: ${err}`);
+    }
+
+    // 3. Generate secure 6-digit numeric OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // 4. Save to database
+    await this.passwordResetRepo.create({
+      data: {
+        email,
+        otp,
+        expiresAt,
+        used: false,
+      },
+    });
+
+    // 5. Send email via MailService (configured with SMTP)
+    const mailResult = await this.mailService.sendPasswordResetOtp(email, otp, user.name);
+
+    return {
+      success: true,
+      message: mailResult.sent
+        ? 'A 6-digit verification code has been sent to your email.'
+        : 'Verification code generated. Please check your email or console.',
+      email,
+      expiresInMinutes: 10,
+      devOtp: mailResult.devMode ? otp : undefined,
+    };
+  }
+
+  /**
+   * Verifies the 6-digit OTP and issues a single-use password reset token
+   */
+  async verifyOtp(dto: VerifyOtpDto) {
+    const email = dto.email.trim().toLowerCase();
+    const otp = dto.otp.trim();
+
+    // Find the latest valid record for this email
+    const record = await this.passwordResetRepo.findFirst({
+      where: {
+        email: { equals: email, mode: 'insensitive' },
+        otp,
+        used: false,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!record) {
+      throw new BadRequestException('Invalid or expired verification code. Please check the code or request a new one.');
+    }
+
+    // Generate secure random reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const tokenExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes to set new password
+
+    // Attach token to record
+    await this.passwordResetRepo.update({
+      where: { id: record.id },
+      data: {
+        token: resetToken,
+        expiresAt: tokenExpiresAt,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'OTP verified successfully. You may now create your new password.',
+      resetToken,
+      email,
+    };
+  }
+
+  /**
+   * Resets the user's password using the verified reset token
+   */
+  async resetPassword(dto: ResetPasswordDto) {
+    const token = dto.resetToken.trim();
+    const newPassword = dto.newPassword;
+
+    if (!newPassword || newPassword.length < 6) {
+      throw new BadRequestException('Password must be at least 6 characters long.');
+    }
+
+    // Find record by reset token
+    const record = await this.passwordResetRepo.findFirst({
+      where: {
+        token,
+        used: false,
+        expiresAt: { gt: new Date() },
+      },
+    });
+
+    if (!record) {
+      throw new BadRequestException('This password reset session has expired or is invalid. Please request a new verification code.');
+    }
+
+    // Look up the user
+    const user = await this.prisma.user.findFirst({
+      where: { email: { equals: record.email, mode: 'insensitive' } },
+    });
+
+    if (!user) {
+      throw new BadRequestException('User account associated with this request could not be found.');
+    }
+
+    // Hash the new password with bcrypt
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update user password in DB
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashedPassword },
+    });
+
+    // Mark the reset record as used
+    await this.passwordResetRepo.update({
+      where: { id: record.id },
+      data: { used: true },
+    });
+
+    this.logger.log(`Password successfully updated for user: ${user.email}`);
+
+    return {
+      success: true,
+      message: 'Your password has been successfully updated. You can now sign in with your new password.',
+      email: user.email,
+    };
   }
 }

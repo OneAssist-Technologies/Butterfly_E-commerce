@@ -9,6 +9,7 @@ import { useCart } from '@/providers';
 export interface CatalogCardProps {
   product: TVProduct & {
     buttonLabel?: 'View Details →' | 'Enquire Now' | string;
+    technicalSpecs?: any;
   };
   onViewDetails: (product: TVProduct) => void;
   onEnquire?: (product: TVProduct) => void;
@@ -41,32 +42,41 @@ export function ProductCatalogCard({
     setTimeout(() => setIsAdded(false), 1500);
   };
 
+  const specs = product.technicalSpecs;
+  const memoryTag = specs?.ram && specs?.storageRom ? `${specs.ram} / ${specs.storageRom}` : null;
+
   return (
     <div
       onClick={() => onViewDetails(product)}
       className="group relative bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 cursor-pointer flex flex-col justify-between shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]"
     >
-      {/* Top Row: Badge on Left, Wishlist Heart on Right */}
-      <div className="flex items-center justify-between mb-2 min-h-[28px]">
-        {product.badge ? (
-          <span
-            className={`text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider ${
-              product.badge === 'Popular'
-                ? 'bg-zinc-900 text-white'
-                : 'bg-[#E50914] text-white'
-            }`}
-          >
-            {product.badge}
-          </span>
-        ) : (
-          <div className="h-6" />
-        )}
+      {/* Top Row: Badge on Left, Memory / Wishlist on Right */}
+      <div className="flex items-center justify-between mb-2 min-h-[28px] gap-2">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {product.badge ? (
+            <span
+              className={`text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider ${
+                product.badge === 'Popular'
+                  ? 'bg-zinc-900 text-white'
+                  : 'bg-[#E50914] text-white'
+              }`}
+            >
+              {product.badge}
+            </span>
+          ) : null}
+
+          {memoryTag && (
+            <span className="text-[10px] font-bold text-zinc-700 bg-zinc-100 px-2 py-0.5 rounded-md border border-zinc-200">
+              {memoryTag}
+            </span>
+          )}
+        </div>
 
         <button
           type="button"
           onClick={handleHeartClick}
           aria-label={isLiked ? 'Remove from Wishlist' : 'Add to Wishlist'}
-          className="p-1 rounded-full hover:bg-zinc-100 text-zinc-400 hover:text-zinc-700 transition-colors cursor-pointer"
+          className="p-1 rounded-full hover:bg-zinc-100 text-zinc-400 hover:text-zinc-700 transition-colors cursor-pointer shrink-0"
         >
           <Heart
             className={`w-4 h-4 transition-transform duration-200 ${
@@ -86,6 +96,7 @@ export function ProductCatalogCard({
             alt={product.name}
             fill
             loading="eager"
+            priority={true}
             className="object-contain"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             unoptimized={true}
@@ -107,7 +118,7 @@ export function ProductCatalogCard({
       <div className="my-3.5 space-y-1.5 text-xs text-zinc-600 border-t border-b border-zinc-100 py-2.5">
         <div className="flex items-center gap-2">
           <Tv className="w-3.5 h-3.5 text-zinc-400 flex-shrink-0" />
-          <span className="truncate">{product.resolution}</span>
+          <span className="truncate">{specs?.panelType || product.resolution}</span>
         </div>
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-3.5 h-3.5 text-zinc-400 flex-shrink-0" />
@@ -121,10 +132,15 @@ export function ProductCatalogCard({
 
       {/* Price & CTA Button */}
       <div className="pt-1">
-        <div className="mb-3">
+        <div className="mb-3 flex items-baseline gap-2 flex-wrap">
           <span className="text-base sm:text-lg font-bold text-zinc-900 tracking-tight">
             {product.price}
           </span>
+          {product.originalPrice && product.originalPrice !== product.price && (
+            <span className="text-xs text-zinc-400 line-through">
+              {product.originalPrice}
+            </span>
+          )}
         </div>
 
         <button

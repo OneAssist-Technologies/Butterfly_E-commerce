@@ -6,6 +6,7 @@ import {
   Delete,
   Param,
   Body,
+  Req,
   Query,
   HttpCode,
   HttpStatus,
@@ -29,6 +30,14 @@ export class OrdersController {
     @Query('search') search?: string,
   ) {
     return this.ordersService.findAll({ status, search });
+  }
+
+  @Get('my-orders')
+  @UseGuards(JwtAuthGuard)
+  async getMyOrders(@Req() req: any) {
+    const userId = req.user.sub || req.user.id;
+    const email = req.user.email;
+    return this.ordersService.findUserOrders(userId, email);
   }
 
   @Get(':id')

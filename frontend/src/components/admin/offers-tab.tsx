@@ -900,7 +900,7 @@ export function OffersTab({
                     <option value="">-- All TVs (Whole Catalog) --</option>
                     {productsList.map((prod) => (
                       <option key={prod.id} value={prod.model}>
-                        {prod.model} - {prod.name} ({prod.price})
+                        {prod.model} - {prod.name} (Selling: {prod.price}{prod.originalPrice ? ` | MRP: ${prod.originalPrice}` : ''})
                       </option>
                     ))}
                   </select>
@@ -974,6 +974,41 @@ export function OffersTab({
                   />
                 </div>
               </div>
+
+              {/* Dynamic Calculation Verification Box: Confirms offer discount is applied on Actual Price */}
+              {(() => {
+                const sampleProduct = formTargetProduct
+                  ? productsList.find((p) => p.model === formTargetProduct)
+                  : productsList[0];
+
+                if (!sampleProduct) return null;
+
+                const actualPrice = sampleProduct.numericPrice || parseInt(String(sampleProduct.price || '').replace(/[^0-9]/g, ''), 10) || 0;
+                const origPrice = sampleProduct.originalNumericPrice || (sampleProduct.originalPrice ? parseInt(sampleProduct.originalPrice.replace(/[^0-9]/g, ''), 10) : actualPrice);
+                let sampleDiscount = 0;
+                if (formDiscountType === 'PERCENTAGE') {
+                  sampleDiscount = Math.round((actualPrice * Number(formDiscountValue || 0)) / 100);
+                  const maxLimit = formMaxDiscountAmount ? Number(formMaxDiscountAmount) : Infinity;
+                  if (sampleDiscount > maxLimit) sampleDiscount = maxLimit;
+                } else {
+                  sampleDiscount = Math.min(Number(formDiscountValue || 0), actualPrice);
+                }
+                const sampleFinal = Math.max(0, actualPrice - sampleDiscount);
+
+                return (
+                  <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200 text-xs space-y-1">
+                    <div className="flex items-center gap-2 font-bold text-amber-900">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <span>Calculation Preview ({sampleProduct.model}):</span>
+                    </div>
+                    <p className="text-slate-700 text-[11px] leading-relaxed">
+                      Actual Selling Price: <strong>₹{actualPrice.toLocaleString('en-IN')}</strong> {origPrice > actualPrice && <span className="text-slate-400 line-through">(MRP: ₹{origPrice.toLocaleString('en-IN')})</span>}
+                      {' '}&bull; Offer Discount ({formDiscountType === 'PERCENTAGE' ? `${formDiscountValue}%` : `₹${formDiscountValue}`}) applied on Actual Price = <strong>-₹{sampleDiscount.toLocaleString('en-IN')}</strong>
+                      {' '}&bull; Final Customer Price = <strong className="text-[#E50914]">₹{sampleFinal.toLocaleString('en-IN')}</strong>
+                    </p>
+                  </div>
+                );
+              })()}
 
               {/* Minimum Order Spend & Usage Limit */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
