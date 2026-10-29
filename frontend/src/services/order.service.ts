@@ -4,6 +4,8 @@ import { Order } from '@/types';
 export interface CreateOrderPayload {
   customerName: string;
   email: string;
+  phone: string;
+  address: string;
   model?: string;
   amount?: string;
   payment?: string;
@@ -17,6 +19,11 @@ export interface CreateOrderPayload {
 }
 
 export const orderService = {
+  async getMyOrders(): Promise<Order[]> {
+    const response = await apiClient.get<Order[]>('/orders/my-orders');
+    return response.data;
+  },
+
   async getAll(params?: { status?: string; search?: string }): Promise<Order[]> {
     const response = await apiClient.get<Order[]>('/orders', { params });
     return response.data;

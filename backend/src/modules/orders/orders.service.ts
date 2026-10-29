@@ -12,7 +12,8 @@ export class OrdersService {
     const where: Record<string, unknown> = {};
 
     if (query?.status && query.status !== 'All') {
-      where.status = query.status;
+      const normalizedStatus = query.status === 'Pending Verification' ? 'PendingVerification' : query.status;
+      where.status = normalizedStatus;
     }
     if (query?.search) {
       where.OR = [
@@ -24,6 +25,25 @@ export class OrdersService {
 
     return this.prisma.order.findMany({
       where,
+      include: {
+        items: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
+  async findUserOrders(userId?: string, email?: string) {
+    const conditions: any[] = [];
+    if (userId) conditions.push({ userId });
+    if (email) conditions.push({ email: { equals: email, mode: 'insensitive' } });
+    if (conditions.length === 0) return [];
+
+    return this.prisma.order.findMany({
+      where: {
+        OR: conditions,
+      },
       include: {
         items: true,
       },
@@ -110,15 +130,28 @@ export class OrdersService {
         year: 'numeric',
       });
 
+      // Link to user if account exists
+      let userId: string | undefined;
+      const existingUser = await tx.user.findFirst({
+        where: { email: { equals: dto.email, mode: 'insensitive' } },
+        select: { id: true },
+      });
+      if (existingUser) {
+        userId = existingUser.id;
+      }
+
       const order = await tx.order.create({
         data: {
           orderNumber,
           customerName: dto.customerName,
           email: dto.email,
+          phone: dto.phone,
+          address: dto.address,
+          userId,
           amount: formattedAmount,
           numericAmount,
           payment: dto.payment || 'Prepaid (UPI)',
-          status: 'Processing',
+          status: 'PendingVerification',
           date: dateString,
           items: {
             create: orderItemsData,
@@ -129,16 +162,17 @@ export class OrdersService {
         },
       });
 
-      this.logger.log(`Created new order ${order.orderNumber} for ${order.email}`);
+      this.logger.log(`Created new order request ${order.orderNumber} for ${order.email} (Pending Verification)`);
       return order;
     });
   }
 
   async updateStatus(id: string, dto: UpdateOrderStatusDto) {
     const existing = await this.findOne(id);
+    const targetStatus = (dto.status === 'Pending Verification' ? 'PendingVerification' : dto.status) as any;
     return this.prisma.order.update({
       where: { id: existing.id },
-      data: { status: dto.status },
+      data: { status: targetStatus },
     });
   }
 

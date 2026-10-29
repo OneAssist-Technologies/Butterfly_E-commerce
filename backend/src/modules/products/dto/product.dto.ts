@@ -75,6 +75,14 @@ export class CreateProductDto {
 
   @IsString()
   @IsOptional()
+  originalPrice?: string;
+
+  @IsNumber()
+  @IsOptional()
+  originalNumericPrice?: number;
+
+  @IsString()
+  @IsOptional()
   priceCategory?: string;
 
   @IsString()
@@ -115,6 +123,10 @@ export class CreateProductDto {
   @IsString()
   @IsOptional()
   warrantyInstallation?: string;
+
+  @IsArray()
+  @IsOptional()
+  whatsIncluded?: string[];
 }
 
 export class UpdateProductDto {
@@ -192,6 +204,14 @@ export class UpdateProductDto {
 
   @IsString()
   @IsOptional()
+  originalPrice?: string;
+
+  @IsNumber()
+  @IsOptional()
+  originalNumericPrice?: number;
+
+  @IsString()
+  @IsOptional()
   priceCategory?: string;
 
   @IsString()
@@ -232,6 +252,10 @@ export class UpdateProductDto {
   @IsString()
   @IsOptional()
   warrantyInstallation?: string;
+
+  @IsArray()
+  @IsOptional()
+  whatsIncluded?: string[];
 }
 
 export class CreateReviewDto {

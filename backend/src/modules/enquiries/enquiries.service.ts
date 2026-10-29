@@ -32,6 +32,22 @@ export class EnquiriesService {
     });
   }
 
+  async findUserEnquiries(userId?: string, email?: string) {
+    const conditions: any[] = [];
+    if (userId) conditions.push({ userId });
+    if (email) conditions.push({ email: { equals: email, mode: 'insensitive' } });
+    if (conditions.length === 0) return [];
+
+    return this.prisma.enquiry.findMany({
+      where: {
+        OR: conditions,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
   async findOne(id: string) {
     const enquiry = await this.prisma.enquiry.findFirst({
       where: {

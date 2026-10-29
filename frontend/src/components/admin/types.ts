@@ -72,14 +72,26 @@ export interface CustomerEnquiry {
 
 export interface OrderRecord {
   id: string;
+  orderNumber?: string;
   customerName: string;
   email: string;
+  phone?: string;
+  address?: string;
   model: string;
   amount: string;
   numericAmount: number;
-  payment: 'Prepaid (UPI)' | 'No Cost EMI' | 'Credit Card' | 'Cash on Delivery';
-  status: 'Processing' | 'Dispatched' | 'Delivered';
+  payment: 'Prepaid (UPI)' | 'No Cost EMI' | 'Credit Card' | 'Cash on Delivery' | string;
+  status: 'Pending Verification' | 'PendingVerification' | 'Processing' | 'Dispatched' | 'Delivered' | 'Cancelled';
   date: string;
+  items?: {
+    id?: string;
+    productModel: string;
+    productName: string;
+    price: string;
+    numericPrice?: number;
+    quantity: number;
+    lineTotal?: number;
+  }[];
 }
 
 export interface AdminUserAccount {

@@ -13,7 +13,8 @@ import {
   ShieldCheck,
   Truck,
   RotateCcw,
-  CheckCircle2,
+  CheckCircle2, Clock,
+  AlertCircle,
   Tag,
   Sparkles,
   ArrowLeft,
@@ -47,6 +48,13 @@ export default function CartPage() {
   const [address, setAddress] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'UPI' | 'COD'>('UPI');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{
+    customerName?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    general?: string;
+  }>({});
   const [orderSuccess, setOrderSuccess] = useState<any>(null);
 
   // Close slide-over drawer when viewing the full cart page
@@ -120,17 +128,52 @@ export default function CartPage() {
 
         // Auto-apply best automatic offer if eligible and no coupon applied yet
         if (!appliedDiscount && subtotal > 0) {
-          const autoOffer = active.find((o) => o.applyAutomatically && subtotal >= o.minOrderAmount);
+          const autoOffer = active.find((o) => {
+            if (!o.applyAutomatically) return false;
+            if (subtotal < (o.minOrderAmount || 0)) return false;
+
+            if (o.targetProducts && o.targetProducts.trim()) {
+              const target = o.targetProducts.trim().toLowerCase();
+              return cartItems.some(
+                (ci) => ci.model?.toLowerCase() === target || ci.model?.toLowerCase().includes(target)
+              );
+            }
+
+            if (o.applicableSize && o.applicableSize !== 'ALL') {
+              const targetSize = o.applicableSize.replace(/[^0-9]/g, '');
+              return cartItems.some(
+                (ci) => (ci.size || (ci as any).screenSizeCategory || '').replace(/[^0-9]/g, '') === targetSize
+              );
+            }
+
+            return true;
+          });
+
           if (autoOffer) {
-            const calculatedSavings = autoOffer.discountType === 'PERCENTAGE'
-              ? Math.min(Math.round((subtotal * autoOffer.discountValue) / 100), autoOffer.maxDiscountAmount || Infinity)
-              : Math.min(autoOffer.discountValue, subtotal);
-            setAppliedDiscount({
-              code: autoOffer.code,
-              percent: autoOffer.discountType === 'PERCENTAGE' ? autoOffer.discountValue : 0,
-              amount: calculatedSavings,
-            });
-            setCouponCode(autoOffer.code);
+            let eligibleBaseAmount = subtotal;
+            if (autoOffer.targetProducts && autoOffer.targetProducts.trim()) {
+              const target = autoOffer.targetProducts.trim().toLowerCase();
+              eligibleBaseAmount = cartItems
+                .filter((ci) => ci.model?.toLowerCase() === target || ci.model?.toLowerCase().includes(target))
+                .reduce((sum, ci, idx) => sum + getItemPrice(ci) * (quantities[idx] || (ci as any).quantity || 1), 0);
+            } else if (autoOffer.applicableSize && autoOffer.applicableSize !== 'ALL') {
+              const targetSize = autoOffer.applicableSize.replace(/[^0-9]/g, '');
+              eligibleBaseAmount = cartItems
+                .filter((ci) => (ci.size || (ci as any).screenSizeCategory || '').replace(/[^0-9]/g, '') === targetSize)
+                .reduce((sum, ci, idx) => sum + getItemPrice(ci) * (quantities[idx] || (ci as any).quantity || 1), 0);
+            }
+
+            if (eligibleBaseAmount > 0) {
+              const calculatedSavings = autoOffer.discountType === 'PERCENTAGE'
+                ? Math.min(Math.round((eligibleBaseAmount * autoOffer.discountValue) / 100), autoOffer.maxDiscountAmount || Infinity)
+                : Math.min(autoOffer.discountValue, eligibleBaseAmount);
+              setAppliedDiscount({
+                code: autoOffer.code,
+                percent: autoOffer.discountType === 'PERCENTAGE' ? autoOffer.discountValue : 0,
+                amount: calculatedSavings,
+              });
+              setCouponCode(autoOffer.code);
+            }
           }
         }
       } catch (e) {
@@ -156,7 +199,7 @@ export default function CartPage() {
       window.removeEventListener('butterfly_offers_updated', handleUpdate);
       window.removeEventListener('butterfly_products_updated', handleUpdate);
     };
-  }, [subtotal, appliedDiscount]);
+  }, [subtotal, appliedDiscount, cartItems, quantities]);
 
   // Dynamic Coupon handling
   const handleApplyCoupon = async (e?: React.FormEvent, directCode?: string) => {
@@ -170,10 +213,43 @@ export default function CartPage() {
     try {
       const result = await offerService.validateCoupon(code, subtotal);
       if (result.valid && result.offer) {
+        let eligibleAmount = subtotal;
+        if (result.offer.targetProducts && result.offer.targetProducts.trim()) {
+          const target = result.offer.targetProducts.trim().toLowerCase();
+          const matchingItems = cartItems.filter(
+            (ci) => ci.model?.toLowerCase() === target || ci.model?.toLowerCase().includes(target)
+          );
+          if (matchingItems.length === 0) {
+            setCouponError(`This offer only applies to model '${result.offer.targetProducts}'.`);
+            return;
+          }
+          eligibleAmount = matchingItems.reduce(
+            (sum, ci, idx) => sum + getItemPrice(ci) * (quantities[idx] || (ci as any).quantity || 1),
+            0
+          );
+        } else if (result.offer.applicableSize && result.offer.applicableSize !== 'ALL') {
+          const targetSize = result.offer.applicableSize.replace(/[^0-9]/g, '');
+          const matchingItems = cartItems.filter(
+            (ci) => (ci.size || (ci as any).screenSizeCategory || '').replace(/[^0-9]/g, '') === targetSize
+          );
+          if (matchingItems.length === 0) {
+            setCouponError(`This offer only applies to ${result.offer.applicableSize} TVs.`);
+            return;
+          }
+          eligibleAmount = matchingItems.reduce(
+            (sum, ci, idx) => sum + getItemPrice(ci) * (quantities[idx] || (ci as any).quantity || 1),
+            0
+          );
+        }
+
+        const calculatedAmount = result.offer.discountType === 'PERCENTAGE'
+          ? Math.min(Math.round((eligibleAmount * result.offer.discountValue) / 100), result.offer.maxDiscountAmount || Infinity)
+          : Math.min(result.offer.discountValue, eligibleAmount);
+
         setAppliedDiscount({
           code: result.offer.code,
           percent: result.offer.discountType === 'PERCENTAGE' ? result.offer.discountValue : 0,
-          amount: result.discountAmount || 0,
+          amount: calculatedAmount,
         });
         setCouponCode(result.offer.code);
         setCouponError('');
@@ -198,11 +274,31 @@ export default function CartPage() {
     e.preventDefault();
     if (cartItems.length === 0) return;
 
-    if (!customerName.trim() || !email.trim()) {
-      alert('Please provide your name and email for order dispatch.');
+    const errors: { customerName?: string; email?: string; phone?: string; address?: string } = {};
+
+    if (!customerName.trim()) {
+      errors.customerName = 'Full Name is required.';
+    }
+    if (!email.trim()) {
+      errors.email = 'Email Address is required.';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      errors.email = 'Please enter a valid email address.';
+    }
+    if (!phone.trim()) {
+      errors.phone = 'Phone Number is mandatory for order verification.';
+    } else if (phone.trim().replace(/[^0-9]/g, '').length < 10) {
+      errors.phone = 'Please enter a valid 10-digit phone number.';
+    }
+    if (!address.trim()) {
+      errors.address = 'Delivery Address & PIN Code are mandatory.';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
 
+    setFieldErrors({});
     setIsPlacingOrder(true);
     try {
       const firstTv = cartItems[0];
@@ -217,6 +313,8 @@ export default function CartPage() {
       const createdOrder = await orderService.create({
         customerName: customerName.trim(),
         email: email.trim().toLowerCase(),
+        phone: phone.trim(),
+        address: address.trim(),
         model: firstTv ? `${firstTv.model} (${firstTv.name})` : 'Smart TV Order',
         amount: `₹ ${totalAmount.toLocaleString('en-IN')}`,
         payment: paymentMethod === 'UPI' ? 'Prepaid (UPI)' : 'Cash on Delivery (COD)',
@@ -234,7 +332,14 @@ export default function CartPage() {
       setOrderSuccess(createdOrder);
       clearCart();
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Failed to place order. Please check connection.');
+      const raw = err?.response?.data?.message;
+      let msg = 'Failed to submit order request. Please check connection.';
+      if (Array.isArray(raw)) {
+        msg = raw.join(', ');
+      } else if (typeof raw === 'string') {
+        msg = raw;
+      }
+      setFieldErrors({ general: msg });
     } finally {
       setIsPlacingOrder(false);
     }
@@ -251,37 +356,58 @@ export default function CartPage() {
     return (
       <main className="min-h-screen bg-[#F8FAFC] py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-2xl mx-auto bg-white rounded-3xl p-8 sm:p-12 shadow-sm border border-zinc-200/80 text-center animate-in fade-in zoom-in-95 duration-300">
-          <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-100">
-            <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+          <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-amber-200">
+            <Clock className="w-10 h-10 text-amber-600 animate-pulse" />
           </div>
 
-          <span className="text-xs font-bold text-emerald-600 uppercase tracking-widest bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-            Order Confirmed
+          <span className="text-xs font-bold text-amber-800 uppercase tracking-widest bg-amber-100/70 px-3.5 py-1.5 rounded-full border border-amber-300 inline-flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+            Order Request Submitted &bull; Pending Verification
           </span>
 
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-zinc-900 mt-4 tracking-tight">
-            Thank you for your order!
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-zinc-900 mt-4 tracking-tight">
+            Order Request Sent to Admin!
           </h1>
-          <p className="text-sm text-zinc-600 mt-2">
-            Your Butterfly Smart TV order has been successfully placed. Our logistics &amp; installation team will reach out to you shortly.
+          <p className="text-sm text-zinc-600 mt-2 max-w-lg mx-auto">
+            Your order request has been forwarded to the administration team for verification. Once approved and processed, fulfillment and dispatch will begin.
           </p>
 
+          {/* Verification Notice Card */}
+          <div className="mt-6 p-4 rounded-2xl bg-amber-50/70 border border-amber-200 text-left text-xs text-amber-900 flex items-start gap-3">
+            <ShieldCheck className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <p className="leading-relaxed">
+              <strong>Admin Verification in Progress:</strong> Our dispatch team is reviewing your contact, address, and requested items. You can view real-time status updates anytime in your customer profile.
+            </p>
+          </div>
+
           {/* Order Details Card */}
-          <div className="mt-8 p-6 bg-zinc-50 rounded-2xl border border-zinc-200/80 text-left space-y-3">
+          <div className="mt-6 p-6 bg-zinc-50 rounded-2xl border border-zinc-200/80 text-left space-y-3">
             <div className="flex justify-between items-center text-sm pb-3 border-b border-zinc-200">
-              <span className="text-zinc-500 font-medium">Order Number:</span>
-              <span className="font-extrabold text-zinc-900">#{orderSuccess.orderNumber}</span>
+              <span className="text-zinc-500 font-medium">Request Number:</span>
+              <span className="font-extrabold text-zinc-900">#{orderSuccess.orderNumber || orderSuccess.id}</span>
             </div>
             <div className="flex justify-between items-center text-sm pb-3 border-b border-zinc-200">
               <span className="text-zinc-500 font-medium">Customer:</span>
               <span className="font-semibold text-zinc-900">{customerName}</span>
             </div>
             <div className="flex justify-between items-center text-sm pb-3 border-b border-zinc-200">
+              <span className="text-zinc-500 font-medium">Contact Phone:</span>
+              <span className="font-semibold text-zinc-900">{phone}</span>
+            </div>
+            <div className="flex justify-between items-center text-sm pb-3 border-b border-zinc-200">
               <span className="text-zinc-500 font-medium">Confirmation Email:</span>
               <span className="font-semibold text-zinc-900">{email}</span>
             </div>
+            <div className="flex justify-between items-start text-sm pb-3 border-b border-zinc-200 gap-4">
+              <span className="text-zinc-500 font-medium shrink-0">Delivery Address:</span>
+              <span className="font-semibold text-zinc-900 text-right">{address}</span>
+            </div>
+            <div className="flex justify-between items-center text-sm pb-3 border-b border-zinc-200">
+              <span className="text-zinc-500 font-medium">Payment Mode:</span>
+              <span className="font-semibold text-zinc-900">{paymentMethod === 'UPI' ? 'Prepaid (UPI)' : 'Cash on Delivery (COD)'}</span>
+            </div>
             <div className="flex justify-between items-center text-sm">
-              <span className="text-zinc-500 font-medium">Total Paid / Payable:</span>
+              <span className="text-zinc-500 font-medium">Total Amount:</span>
               <span className="font-black text-lg text-[#E50914]">{orderSuccess.amount}</span>
             </div>
           </div>
@@ -289,17 +415,17 @@ export default function CartPage() {
           {/* Action buttons */}
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
             <Link
-              href="/products"
+              href="/profile"
               className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-[#E50914] hover:bg-[#c70811] text-white text-sm font-bold shadow-md hover:shadow-lg transition-all"
             >
-              <span>Continue Shopping</span>
+              <span>Track in My Profile</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
             <Link
-              href="/"
+              href="/products"
               className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl border border-zinc-300 bg-white hover:bg-zinc-50 text-zinc-800 text-sm font-bold transition-all"
             >
-              <span>Back to Home</span>
+              <span>Continue Shopping</span>
             </Link>
           </div>
         </div>
@@ -480,6 +606,11 @@ export default function CartPage() {
                           <span className="text-base sm:text-lg font-black text-zinc-900 block">
                             ₹ {itemTotal.toLocaleString('en-IN')}
                           </span>
+                          {item.originalNumericPrice && item.originalNumericPrice > (item.numericPrice || 0) && (
+                            <span className="text-[11px] text-zinc-400 line-through block">
+                              ₹ {(item.originalNumericPrice * qty).toLocaleString('en-IN')}
+                            </span>
+                          )}
                           {qty > 1 && (
                             <span className="text-[10px] text-zinc-400 block">
                               ₹ {item.numericPrice.toLocaleString('en-IN')} each
@@ -720,63 +851,117 @@ export default function CartPage() {
                 </div>
 
                 {/* Shipping & Customer Details Form */}
-                <form onSubmit={handlePlaceOrder} className="pt-4 border-t border-zinc-100 space-y-3">
+                <form noValidate onSubmit={handlePlaceOrder} className="pt-4 border-t border-zinc-100 space-y-3">
                   <h3 className="text-xs font-extrabold text-zinc-900 uppercase tracking-wider mb-2">
                     Shipping &amp; Contact Details
                   </h3>
 
                   <div>
                     <label className="block text-[11px] font-bold text-zinc-600 mb-1">
-                      Full Name *
+                      Full Name <span className="text-[#E50914] font-black">*</span>
                     </label>
                     <input
                       type="text"
-                      required
                       value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
+                      onChange={(e) => {
+                        setCustomerName(e.target.value);
+                        if (fieldErrors.customerName) setFieldErrors((prev) => ({ ...prev, customerName: undefined }));
+                        if (fieldErrors.general) setFieldErrors((prev) => ({ ...prev, general: undefined }));
+                      }}
                       placeholder="e.g. Rajesh Kumar"
-                      className="w-full px-3 py-2 border border-zinc-300 rounded-xl text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#E50914]/20 focus:border-[#E50914] bg-white"
+                      className={`w-full px-3 py-2 border rounded-xl text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none transition-all ${
+                        fieldErrors.customerName
+                          ? 'border-red-500 ring-2 ring-red-500/20 bg-red-50/20'
+                          : 'border-zinc-300 focus:ring-2 focus:ring-[#E50914]/20 focus:border-[#E50914] bg-white'
+                      }`}
                     />
+                    {fieldErrors.customerName && (
+                      <p className="text-[11px] text-red-600 font-bold mt-1 flex items-center gap-1 animate-in fade-in">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{fieldErrors.customerName}</span>
+                      </p>
+                    )}
                   </div>
 
                   <div>
                     <label className="block text-[11px] font-bold text-zinc-600 mb-1">
-                      Email Address *
+                      Email Address <span className="text-[#E50914] font-black">*</span>
                     </label>
                     <input
                       type="email"
-                      required
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                        if (fieldErrors.general) setFieldErrors((prev) => ({ ...prev, general: undefined }));
+                      }}
                       placeholder="e.g. rajesh@example.com"
-                      className="w-full px-3 py-2 border border-zinc-300 rounded-xl text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#E50914]/20 focus:border-[#E50914] bg-white"
+                      className={`w-full px-3 py-2 border rounded-xl text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none transition-all ${
+                        fieldErrors.email
+                          ? 'border-red-500 ring-2 ring-red-500/20 bg-red-50/20'
+                          : 'border-zinc-300 focus:ring-2 focus:ring-[#E50914]/20 focus:border-[#E50914] bg-white'
+                      }`}
                     />
+                    {fieldErrors.email && (
+                      <p className="text-[11px] text-red-600 font-bold mt-1 flex items-center gap-1 animate-in fade-in">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{fieldErrors.email}</span>
+                      </p>
+                    )}
                   </div>
 
                   <div>
                     <label className="block text-[11px] font-bold text-zinc-600 mb-1">
-                      Phone Number
+                      Phone Number <span className="text-[#E50914] font-black">*</span>
                     </label>
                     <input
                       type="tel"
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      onChange={(e) => {
+                        setPhone(e.target.value);
+                        if (fieldErrors.phone) setFieldErrors((prev) => ({ ...prev, phone: undefined }));
+                        if (fieldErrors.general) setFieldErrors((prev) => ({ ...prev, general: undefined }));
+                      }}
                       placeholder="+91 98765 43210"
-                      className="w-full px-3 py-2 border border-zinc-300 rounded-xl text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#E50914]/20 focus:border-[#E50914] bg-white"
+                      className={`w-full px-3 py-2 border rounded-xl text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none transition-all ${
+                        fieldErrors.phone
+                          ? 'border-red-500 ring-2 ring-red-500/20 bg-red-50/20'
+                          : 'border-zinc-300 focus:ring-2 focus:ring-[#E50914]/20 focus:border-[#E50914] bg-white'
+                      }`}
                     />
+                    {fieldErrors.phone && (
+                      <p className="text-[11px] text-red-600 font-bold mt-1 flex items-center gap-1 animate-in fade-in">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{fieldErrors.phone}</span>
+                      </p>
+                    )}
                   </div>
 
                   <div>
                     <label className="block text-[11px] font-bold text-zinc-600 mb-1">
-                      Delivery Address &amp; PIN Code
+                      Delivery Address &amp; PIN Code <span className="text-[#E50914] font-black">*</span>
                     </label>
                     <textarea
                       rows={2}
                       value={address}
-                      onChange={(e) => setAddress(e.target.value)}
+                      onChange={(e) => {
+                        setAddress(e.target.value);
+                        if (fieldErrors.address) setFieldErrors((prev) => ({ ...prev, address: undefined }));
+                        if (fieldErrors.general) setFieldErrors((prev) => ({ ...prev, general: undefined }));
+                      }}
                       placeholder="Door No, Street, Landmark, City & PIN code"
-                      className="w-full px-3 py-2 border border-zinc-300 rounded-xl text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#E50914]/20 focus:border-[#E50914] bg-white resize-none"
+                      className={`w-full px-3 py-2 border rounded-xl text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none resize-none transition-all ${
+                        fieldErrors.address
+                          ? 'border-red-500 ring-2 ring-red-500/20 bg-red-50/20'
+                          : 'border-zinc-300 focus:ring-2 focus:ring-[#E50914]/20 focus:border-[#E50914] bg-white'
+                      }`}
                     />
+                    {fieldErrors.address && (
+                      <p className="text-[11px] text-red-600 font-bold mt-1 flex items-center gap-1 animate-in fade-in">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{fieldErrors.address}</span>
+                      </p>
+                    )}
                   </div>
 
                   {/* Payment Method Selector */}
@@ -822,6 +1007,16 @@ export default function CartPage() {
                   </div>
 
                   {/* Submit Order Button */}
+                  {fieldErrors.general && (
+                    <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800 flex items-start gap-2.5 animate-in fade-in">
+                      <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <strong className="block font-bold">Please check your details:</strong>
+                        <span>{fieldErrors.general}</span>
+                      </div>
+                    </div>
+                  )}
+
                   <button
                     type="submit"
                     disabled={isPlacingOrder}
@@ -830,11 +1025,11 @@ export default function CartPage() {
                     {isPlacingOrder ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Processing Order...</span>
+                        <span>Submitting Order Request...</span>
                       </>
                     ) : (
                       <>
-                        <span>Place Order &bull; ₹ {totalAmount.toLocaleString('en-IN')}</span>
+                        <span>Submit Order Request &bull; ₹ {totalAmount.toLocaleString('en-IN')}</span>
                         <ArrowRight className="w-4 h-4" />
                       </>
                     )}

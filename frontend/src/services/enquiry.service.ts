@@ -12,6 +12,11 @@ export interface CreateEnquiryPayload {
 }
 
 export const enquiryService = {
+  async getMyEnquiries(): Promise<Enquiry[]> {
+    const response = await apiClient.get<Enquiry[]>('/enquiries/my-enquiries');
+    return response.data;
+  },
+
   async getAll(params?: { status?: string; search?: string }): Promise<Enquiry[]> {
     const response = await apiClient.get<Enquiry[]>('/enquiries', { params });
     return response.data;

@@ -277,19 +277,6 @@ export function EnquiriesTab({
                           </a>
                         )}
                       </div>
-                      {enq.message && (
-                        <button
-                          type="button"
-                          onClick={() => setReviewEnquiry(enq)}
-                          className="text-left text-[11px] text-zinc-600 italic mt-1.5 bg-zinc-50 hover:bg-red-50/80 hover:text-zinc-900 hover:border-red-200 p-2 rounded-lg border border-zinc-200/80 max-w-sm block transition-all group cursor-pointer"
-                          title="Click to review complete enquiry"
-                        >
-                          <span className="line-clamp-2">&ldquo;{enq.message}&rdquo;</span>
-                          <span className="flex items-center gap-1 text-[10px] font-sans not-italic font-bold text-[#E50914] mt-1 opacity-90 group-hover:opacity-100">
-                            <Eye className="w-3 h-3" /> Click to review enquiry completely &rarr;
-                          </span>
-                        </button>
-                      )}
                     </td>
                     <td className="py-3.5 px-4 font-semibold text-zinc-800">{enq.productModel}</td>
                     <td className="py-3.5 px-4 text-zinc-600">

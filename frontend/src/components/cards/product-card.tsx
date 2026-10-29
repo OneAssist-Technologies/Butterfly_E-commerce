@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { Tv, ShieldCheck, Volume2, ShoppingBag, Check } from 'lucide-react';
+import { Tv, ShieldCheck, Volume2, ShoppingBag, Check, Cpu } from 'lucide-react';
 import { useCart } from '@/providers';
 
 export interface TVProduct {
@@ -17,8 +17,11 @@ export interface TVProduct {
   sound: string;
   price: string;
   numericPrice: number;
+  originalPrice?: string;
+  originalNumericPrice?: number;
   isFilledButton?: boolean;
   isTopSelling?: boolean;
+  technicalSpecs?: any;
 }
 
 interface ProductCardProps {
@@ -51,13 +54,16 @@ export function ProductCard({
     setTimeout(() => setIsAdded(false), 1500);
   };
 
+  const specs = product.technicalSpecs;
+  const memoryTag = specs?.ram && specs?.storageRom ? `${specs.ram} / ${specs.storageRom}` : null;
+
   return (
     <div
       onClick={() => onViewDetails(product)}
       className="group relative bg-white border border-slate-200/90 rounded-3xl p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 cursor-pointer flex flex-col justify-between shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]"
     >
-      {/* Top row: Badge */}
-      <div className="flex items-center justify-start mb-3 min-h-[26px]">
+      {/* Top row: Badge and Inclusions */}
+      <div className="flex items-center justify-between mb-3 min-h-[26px] gap-2">
         {product.badge ? (
           <span
             className={`text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider ${
@@ -71,6 +77,12 @@ export function ProductCard({
         ) : (
           <div className="h-6" />
         )}
+
+        {memoryTag && (
+          <span className="text-[10px] font-bold text-zinc-600 bg-zinc-100 px-2 py-0.5 rounded-md border border-zinc-200">
+            {memoryTag}
+          </span>
+        )}
       </div>
 
       {/* TV Product Image Mockup */}
@@ -81,6 +93,7 @@ export function ProductCard({
             alt={product.name}
             fill
             loading="eager"
+            priority={true}
             className="object-contain"
             sizes="(max-width: 768px) 100vw, 25vw"
             unoptimized={true}
@@ -103,24 +116,29 @@ export function ProductCard({
       <div className="my-4 space-y-1.5 text-xs text-zinc-600 border-t border-b border-zinc-100 py-3">
         <div className="flex items-center gap-2">
           <Tv className="w-3.5 h-3.5 text-zinc-400" />
-          <span>{product.resolution}</span>
+          <span className="truncate">{specs?.panelType || product.resolution}</span>
         </div>
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-3.5 h-3.5 text-zinc-400" />
-          <span>{product.os}</span>
+          <span className="truncate">{product.os}</span>
         </div>
         <div className="flex items-center gap-2">
           <Volume2 className="w-3.5 h-3.5 text-zinc-400" />
-          <span>{product.sound}</span>
+          <span className="truncate">{product.sound}</span>
         </div>
       </div>
 
       {/* Price & CTA Button */}
       <div className="pt-1">
-        <div className="mb-3">
+        <div className="mb-3 flex items-baseline gap-2 flex-wrap">
           <span className="text-lg font-black text-zinc-900 tracking-tight">
             {product.price}
           </span>
+          {product.originalPrice && product.originalPrice !== product.price && (
+            <span className="text-xs text-zinc-400 line-through">
+              {product.originalPrice}
+            </span>
+          )}
         </div>
 
         <button

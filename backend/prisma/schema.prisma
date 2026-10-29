@@ -16,6 +16,7 @@ enum Role {
 }
 
 enum OrderStatus {
+  PendingVerification @map("Pending Verification")
   Processing
   Dispatched
   Delivered
@@ -34,15 +35,21 @@ enum DiscountType {
 }
 
 model User {
-  id         String   @id @default(uuid())
+  id         String    @id @default(uuid())
   name       String
-  email      String   @unique
+  email      String    @unique
   password   String?
-  role       Role     @default(CUSTOMER)
+  role       Role      @default(CUSTOMER)
   department String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  phone      String?
+  address    String?
+  city       String?
+  state      String?
+  pincode    String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
   orders     Order[]
+  enquiries  Enquiry[]
   reviews    Review[]
 
   @@map("users")
@@ -66,6 +73,8 @@ model Product {
   displayTech        String?
   price              String
   numericPrice       Int
+  originalPrice      String?
+  originalNumericPrice Int?
   priceCategory      String?
   brand              String      @default("Butterfly")
   isFilledButton     Boolean     @default(false)
@@ -77,6 +86,7 @@ model Product {
   keyFeatures        String[]    @default([])
   technicalSpecs     Json?
   warrantyInstallation String?
+  whatsIncluded      String[]    @default([])
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
   orderItems         OrderItem[]
@@ -107,12 +117,14 @@ model Order {
   orderNumber   String      @unique
   customerName  String
   email         String
+  phone         String?
+  address       String?
   user          User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
   userId        String?
   amount        String
   numericAmount Int
   payment       String      @default("Prepaid (UPI)")
-  status        OrderStatus @default(Processing)
+  status        OrderStatus @default(PendingVerification)
   date          String
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
@@ -151,6 +163,8 @@ model Enquiry {
   productPrice String?
   date         String
   status       EnquiryStatus @default(New)
+  userId       String?
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
@@ -214,3 +228,15 @@ model Offer {
 }
 
 
+model PasswordReset {
+  id        String   @id @default(uuid())
+  email     String
+  otp       String
+  token     String?  @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@map("password_resets")
+}

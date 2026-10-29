@@ -10,6 +10,8 @@ import {
   Sparkles,
   ArrowRight,
   Layers,
+  MousePointer,
+  Film,
 } from 'lucide-react';
 
 interface HeroSlide {
@@ -108,6 +110,43 @@ const HERO_SLIDES: HeroSlide[] = [
         icon: <Tv className="w-5 h-5 text-zinc-300" />,
         title: 'Google TV',
         sub: 'Hands-free Voice',
+      },
+    ],
+  },
+  {
+    id: 3,
+    tag: 'POWERED BY webOS',
+    titleNormal: 'A World of Entertainment.',
+    titleHighlight: 'At Your Fingertips.',
+    description:
+      'Seamlessly stream your favourite movies, live shows and trending apps with the intuitive Magic Remote and webOS smart hub.',
+    primaryCtaText: 'Explore webOS Series',
+    primaryCtaLink: '/products',
+    secondaryCtaText: 'Enquire Now',
+    secondaryCtaLink: '/products',
+    image: '/carousle 3.jpg',
+    badgeResolution: 'webOS 4K',
+    quote: 'A world of entertainment at your fingertips',
+    features: [
+      {
+        icon: <Tv className="w-5 h-5 text-white" />,
+        title: 'webOS Hub',
+        sub: 'Smart & Fluid OS',
+      },
+      {
+        icon: <MousePointer className="w-5 h-5 text-zinc-300" />,
+        title: 'Magic Remote',
+        sub: 'Point & Click Navigation',
+      },
+      {
+        icon: <Film className="w-5 h-5 text-zinc-300" />,
+        title: 'Top OTT Apps',
+        sub: 'Netflix, Prime & Hotstar',
+      },
+      {
+        icon: <Volume2 className="w-5 h-5 text-zinc-300" />,
+        title: 'Dolby Audio',
+        sub: 'Rich Soundscape',
       },
     ],
   },

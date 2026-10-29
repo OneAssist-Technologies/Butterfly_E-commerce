@@ -134,6 +134,48 @@ export default function SupportPage() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash.toLowerCase();
+      if (!hash) return;
+
+      if (hash === '#faq' || hash === '#faqs' || hash === '#faq-section') {
+        const el = document.getElementById('faq') || document.getElementById('faqs') || document.getElementById('faq-section');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      } else if (hash === '#warranty') {
+        const el = document.getElementById('warranty');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        setActiveModal('warranty');
+      } else if (
+        hash === '#quick-help' ||
+        hash === '#how-can-we-help' ||
+        hash === '#service-centers' ||
+        hash === '#service' ||
+        hash === '#service-options'
+      ) {
+        const el =
+          document.getElementById('quick-help') ||
+          document.getElementById('how-can-we-help') ||
+          document.getElementById('service-centers');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
+    };
+
+    const timer = setTimeout(handleHash, 200);
+    window.addEventListener('hashchange', handleHash);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('hashchange', handleHash);
+    };
+  }, []);
+
   const filteredFaqs = useMemo(() => {
     return FAQ_DATA.filter((item) => {
       const matchesSearch =
@@ -231,7 +273,11 @@ export default function SupportPage() {
       </section>
 
       {/* 2. QUICK HELP: "How Can We Help You?" */}
-      <section className="py-16 sm:py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section id="quick-help" className="scroll-mt-24 py-16 sm:py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <span id="how-can-we-help" className="sr-only" />
+        <span id="service-centers" className="sr-only" />
+        <span id="service-options" className="sr-only" />
+        <span id="service" className="sr-only" />
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
           <div>
             <span className="text-xs font-black tracking-widest text-[#E50914] uppercase block mb-1">
@@ -324,8 +370,9 @@ export default function SupportPage() {
 
           {/* Card 4: Warranty & Service */}
           <div
+            id="warranty"
             onClick={() => setActiveModal('warranty')}
-            className="group bg-white p-7 rounded-2xl border border-zinc-200 shadow-sm hover:shadow-xl hover:border-[#E50914]/40 hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between"
+            className="group bg-white p-7 rounded-2xl border border-zinc-200 shadow-sm hover:shadow-xl hover:border-[#E50914]/40 hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between scroll-mt-28"
           >
             <div>
               <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center text-[#E50914] mb-5 group-hover:bg-[#E50914] group-hover:text-white transition-colors">
@@ -455,10 +502,12 @@ export default function SupportPage() {
               </div>
             </div>
 
-            {/* 4. Service Centers */}
+            {/* 4. On-Site Support */}
             <div
-              id="service-centers"
-              onClick={() => setActiveModal('centers')}
+              onClick={() => {
+                const el = document.getElementById('quick-help');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
               className="group flex items-start gap-4 p-4 rounded-2xl hover:bg-zinc-50 transition-colors cursor-pointer"
             >
               <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center text-[#E50914] shrink-0 group-hover:scale-110 transition-transform">
@@ -466,13 +515,13 @@ export default function SupportPage() {
               </div>
               <div>
                 <h4 className="text-sm font-bold text-zinc-900 group-hover:text-[#E50914] transition-colors">
-                  Service Centers
+                  On-Site Service
                 </h4>
                 <p className="text-sm font-bold text-zinc-900 mt-0.5">
-                  Find nearby service centers
+                  Doorstep technician support
                 </p>
                 <p className="text-xs text-zinc-500 mt-1">
-                  Across India
+                  Available across 250+ cities
                 </p>
               </div>
             </div>
@@ -483,7 +532,9 @@ export default function SupportPage() {
       </section>
 
       {/* 4. POPULAR TOPICS: FREQUENTLY ASKED QUESTIONS */}
-      <section id="faq-section" className="py-16 sm:py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section id="faq" className="scroll-mt-24 py-16 sm:py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <span id="faqs" className="sr-only" />
+        <span id="faq-section" className="sr-only" />
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10 pb-4 border-b border-zinc-200">
           <div>
             <span className="text-xs font-black tracking-widest text-[#E50914] uppercase block mb-1">
@@ -728,7 +779,7 @@ export default function SupportPage() {
 
       {/* Modal 3: Warranty Checker */}
       {activeModal === 'warranty' && (
-        <div id="warranty" className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 relative shadow-2xl animate-in fade-in zoom-in-95">
             <button
               onClick={() => setActiveModal(null)}
@@ -748,7 +799,16 @@ export default function SupportPage() {
             <div className="space-y-3 text-xs text-zinc-700 bg-zinc-50 p-4 rounded-2xl border border-zinc-200">
               <p>• <strong>1-Year Comprehensive Warranty:</strong> Covers all electronic parts, motherboards, power supplies, and TV panels.</p>
               <p>• <strong>Pan-India On-Site Service:</strong> Authorized technician visit directly to your home within 24-48 business hours.</p>
-              <p>• <strong>Customer Care Toll-Free:</strong> +91 422 430 1234</p>
+              <p>
+                • <strong>Customer Care Toll-Free:</strong>{' '}
+                <a
+                  href={`tel:${(companySettings?.phone || '+91 422 430 120').replace(/\s+/g, '')}`}
+                  className="font-bold text-zinc-900 hover:text-[#E50914] transition-colors"
+                >
+                  {companySettings?.phone || '+91 422 430 120'}
+                </a>
+                {companySettings?.alternatePhone ? ` / ${companySettings.alternatePhone}` : ''}
+              </p>
             </div>
             <div className="mt-6 flex justify-end">
               <Link
@@ -757,45 +817,6 @@ export default function SupportPage() {
               >
                 Register Warranty / File Claim
               </Link>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal 4: Service Centers Across India */}
-      {activeModal === 'centers' && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 relative shadow-2xl animate-in fade-in zoom-in-95 max-h-[85vh] overflow-y-auto">
-            <button
-              onClick={() => setActiveModal(null)}
-              className="absolute top-5 right-5 text-zinc-400 hover:text-zinc-700"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <div className="w-12 h-12 rounded-xl bg-red-50 text-[#E50914] flex items-center justify-center mb-4">
-              <MapPin className="w-6 h-6" />
-            </div>
-            <h3 className="text-xl font-black text-zinc-900 mb-1">
-              Authorized Service Centers
-            </h3>
-            <p className="text-xs text-zinc-500 mb-6">
-              Primary hubs with certified Butterfly technical teams across India.
-            </p>
-            <div className="space-y-3">
-              {[
-                { city: 'Coimbatore (HQ)', address: 'Avinashi Road, Peelamedu, Coimbatore, TN - 641004', phone: '+91 422 430 1234' },
-                { city: 'Chennai Hub', address: 'Anna Salai, Guindy, Chennai, TN - 600032', phone: '+91 44 2250 8890' },
-                { city: 'Bengaluru Hub', address: 'Indiranagar 100ft Road, Bengaluru, KA - 560038', phone: '+91 80 4123 7766' },
-                { city: 'Hyderabad Hub', address: 'Hitec City, Madhapur, Hyderabad, TS - 500081', phone: '+91 40 6789 1234' },
-                { city: 'Kochi Hub', address: 'M.G. Road, Ernakulam, Kochi, KL - 682016', phone: '+91 484 2345 678' },
-                { city: 'Mumbai Hub', address: 'Andheri East, Mumbai, MH - 400069', phone: '+91 22 4567 8901' },
-              ].map((center, idx) => (
-                <div key={idx} className="p-3.5 rounded-xl bg-zinc-50 border border-zinc-200">
-                  <span className="text-xs font-bold text-[#E50914] uppercase tracking-wider">{center.city}</span>
-                  <p className="text-xs text-zinc-700 mt-1">{center.address}</p>
-                  <p className="text-xs font-semibold text-zinc-900 mt-1">Tel: {center.phone}</p>
-                </div>
-              ))}
             </div>
           </div>
         </div>

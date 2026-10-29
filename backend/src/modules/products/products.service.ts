@@ -209,6 +209,7 @@ export class ProductsService {
           keyFeatures: true,
           technicalSpecs: true,
           warrantyInstallation: true,
+          whatsIncluded: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -255,6 +256,7 @@ export class ProductsService {
       keyFeatures: p.keyFeatures ?? [],
       technicalSpecs: p.technicalSpecs ?? null,
       warrantyInstallation: p.warrantyInstallation ?? null,
+      whatsIncluded: p.whatsIncluded ?? [],
       image: `${baseUrl}/api/v1/products/${p.id}/image`,
       images: [`${baseUrl}/api/v1/products/${p.id}/image`],
     }));
@@ -295,6 +297,7 @@ export class ProductsService {
         keyFeatures: true,
         technicalSpecs: true,
         warrantyInstallation: true,
+        whatsIncluded: true,
         createdAt: true,
         updatedAt: true,
       },

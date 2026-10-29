@@ -55,6 +55,8 @@ function sanitizeProductPayload(product: any): any {
     'displayTech',
     'price',
     'numericPrice',
+    'originalPrice',
+    'originalNumericPrice',
     'priceCategory',
     'brand',
     'isFilledButton',
@@ -66,6 +68,7 @@ function sanitizeProductPayload(product: any): any {
     'keyFeatures',
     'technicalSpecs',
     'warrantyInstallation',
+    'whatsIncluded',
   ];
 
   const payload: any = {};
