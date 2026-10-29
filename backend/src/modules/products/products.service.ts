@@ -1,14 +1,26 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
 import { CreateProductDto, UpdateProductDto } from './dto/product.dto.js';
+import * as path from 'path';
+import * as fs from 'fs';
 
 @Injectable()
-export class ProductsService {
+export class ProductsService implements OnModuleInit {
   private readonly logger = new Logger(ProductsService.name);
 
   constructor(private readonly prisma: PrismaService) {}
 
-  private getBaseUrl(): string {
+  async onModuleInit() {
+    try {
+      await this.migrateLegacyBase64Images();
+    } catch (err) {
+      this.logger.warn(
+        `Legacy Base64 image migration skipped: ${err instanceof Error ? err.message : err}`,
+      );
+    }
+  }
+
+  public getBaseUrl(): string {
     const backendUrl = process.env.BACKEND_URL || process.env.BASE_URL;
     if (backendUrl && !backendUrl.includes('localhost') && !backendUrl.includes('127.0.0.1')) {
       return backendUrl.replace(/\/$/, '');
@@ -18,38 +30,106 @@ export class ProductsService {
     return '';
   }
 
-  private mapProductImageUrl(product: any) {
-    if (!product) return product;
-    const baseUrl = this.getBaseUrl();
-    const isDataUrl = typeof product.image === 'string' && product.image.startsWith('data:');
-    let imageUrl = isDataUrl
-      ? `${baseUrl}/api/v1/products/${product.id}/image`
-      : product.image;
-
-    if (typeof imageUrl === 'string' && (imageUrl.includes('localhost:') || imageUrl.includes('127.0.0.1:'))) {
-      imageUrl = imageUrl.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/, '');
+  /**
+   * Automatically extracts Base64 image data into physical files on disk
+   * and converts product records to clean relative URLs.
+   */
+  async saveBase64Image(dataUrl: string, prefix = 'tv'): Promise<string> {
+    if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) {
+      return dataUrl;
     }
 
-    let images = product.images;
-    if (Array.isArray(images) && images.length > 0) {
-      images = images.map((img: string) => {
-        if (typeof img === 'string' && img.startsWith('data:')) {
-          return `${baseUrl}/api/v1/products/${product.id}/image`;
-        }
-        if (typeof img === 'string' && (img.includes('localhost:') || img.includes('127.0.0.1:'))) {
-          return img.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/, '');
-        }
-        return img;
-      });
-    } else {
-      images = [imageUrl];
+    const commaIndex = dataUrl.indexOf(',');
+    if (commaIndex === -1) {
+      return dataUrl;
     }
 
-    return {
-      ...product,
-      image: imageUrl,
-      images,
+    const meta = dataUrl.substring(0, commaIndex);
+    const base64Data = dataUrl.substring(commaIndex + 1).replace(/\s/g, '');
+    const mimeMatch = meta.match(/data:([^;,]+)/);
+    const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    const extMap: Record<string, string> = {
+      'image/jpeg': '.jpg',
+      'image/jpg': '.jpg',
+      'image/png': '.png',
+      'image/webp': '.webp',
+      'image/svg+xml': '.svg',
+      'image/avif': '.avif',
     };
+    const ext = extMap[mimeType] || '.jpg';
+    const filename = `${prefix}-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+    const uploadsDir = path.join(process.cwd(), 'uploads', 'products');
+
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    const filePath = path.join(uploadsDir, filename);
+    await fs.promises.writeFile(filePath, Buffer.from(base64Data, 'base64'));
+
+    const baseUrl = this.getBaseUrl();
+    return `${baseUrl}/api/v1/products/images/${filename}`;
+  }
+
+  /**
+   * One-time non-destructive migration: scans database for products storing
+   * raw Base64 data and moves them onto disk in /uploads/products/.
+   */
+  async migrateLegacyBase64Images(): Promise<void> {
+    const productsWithBase64 = await this.prisma.product.findMany({
+      where: {
+        OR: [
+          { image: { startsWith: 'data:' } },
+          { images: { isEmpty: false } },
+        ],
+      },
+      select: {
+        id: true,
+        model: true,
+        image: true,
+        images: true,
+      },
+    });
+
+    for (const prod of productsWithBase64) {
+      let needsUpdate = false;
+      let newImage = prod.image;
+      let newImages = Array.isArray(prod.images) ? [...prod.images] : [];
+
+      if (typeof prod.image === 'string' && prod.image.startsWith('data:')) {
+        newImage = await this.saveBase64Image(prod.image, `migrated-${prod.id}-primary`);
+        needsUpdate = true;
+      }
+
+      if (Array.isArray(prod.images) && prod.images.length > 0) {
+        const migratedList: string[] = [];
+        for (let idx = 0; idx < prod.images.length; idx++) {
+          const img = prod.images[idx];
+          if (typeof img === 'string' && img.startsWith('data:')) {
+            const migratedUrl = await this.saveBase64Image(img, `migrated-${prod.id}-${idx}`);
+            migratedList.push(migratedUrl);
+            needsUpdate = true;
+          } else {
+            migratedList.push(img);
+          }
+        }
+        newImages = migratedList;
+      } else if (newImage) {
+        newImages = [newImage];
+        needsUpdate = true;
+      }
+
+      if (needsUpdate) {
+        await this.prisma.product.update({
+          where: { id: prod.id },
+          data: {
+            image: newImage,
+            images: newImages,
+          },
+        });
+        this.logger.log(`Migrated Base64 images to disk for TV model ${prod.model} (${prod.id}).`);
+      }
+    }
   }
 
   async findAll(query?: {
@@ -189,6 +269,8 @@ export class ProductsService {
           size: true,
           screenSizeCategory: true,
           badge: true,
+          image: true,
+          images: true,
           resolution: true,
           resolutionCategory: true,
           os: true,
@@ -198,6 +280,8 @@ export class ProductsService {
           displayTech: true,
           price: true,
           numericPrice: true,
+          originalPrice: true,
+          originalNumericPrice: true,
           priceCategory: true,
           brand: true,
           isFilledButton: true,
@@ -216,7 +300,7 @@ export class ProductsService {
         orderBy,
       });
     } catch (queryErr) {
-      this.logger.warn(`Primary products findMany query failed, falling back to safe columns: ${queryErr instanceof Error ? queryErr.message : queryErr}`);
+      this.logger.warn(`Primary products findMany query failed, falling back: ${queryErr instanceof Error ? queryErr.message : queryErr}`);
       products = await this.prisma.product.findMany({
         where,
         select: {
@@ -226,6 +310,8 @@ export class ProductsService {
           size: true,
           screenSizeCategory: true,
           badge: true,
+          image: true,
+          images: true,
           resolution: true,
           resolutionCategory: true,
           os: true,
@@ -235,11 +321,14 @@ export class ProductsService {
           displayTech: true,
           price: true,
           numericPrice: true,
+          originalPrice: true,
+          originalNumericPrice: true,
           priceCategory: true,
           brand: true,
           isFilledButton: true,
           buttonLabel: true,
           featuredRank: true,
+          isTopSelling: true,
           inStock: true,
           features: true,
           createdAt: true,
@@ -250,16 +339,35 @@ export class ProductsService {
     }
 
     const baseUrl = this.getBaseUrl();
-    return products.map((p) => ({
-      ...p,
-      isTopSelling: p.isTopSelling ?? false,
-      keyFeatures: p.keyFeatures ?? [],
-      technicalSpecs: p.technicalSpecs ?? null,
-      warrantyInstallation: p.warrantyInstallation ?? null,
-      whatsIncluded: p.whatsIncluded ?? [],
-      image: `${baseUrl}/api/v1/products/${p.id}/image`,
-      images: [`${baseUrl}/api/v1/products/${p.id}/image`],
-    }));
+    return products.map((p) => {
+      let imageUrl = p.image;
+      if (typeof imageUrl === 'string' && imageUrl.startsWith('data:')) {
+        imageUrl = `${baseUrl}/api/v1/products/${p.id}/image`;
+      }
+
+      let images: string[] = [];
+      if (Array.isArray(p.images) && p.images.length > 0) {
+        images = p.images.map((img: string, idx: number) => {
+          if (typeof img === 'string' && img.startsWith('data:')) {
+            return `${baseUrl}/api/v1/products/${p.id}/images/${idx}`;
+          }
+          return img;
+        });
+      } else if (imageUrl) {
+        images = [imageUrl];
+      }
+
+      return {
+        ...p,
+        isTopSelling: p.isTopSelling ?? false,
+        keyFeatures: p.keyFeatures ?? [],
+        technicalSpecs: p.technicalSpecs ?? null,
+        warrantyInstallation: p.warrantyInstallation ?? null,
+        whatsIncluded: p.whatsIncluded ?? [],
+        image: imageUrl || (images[0] ?? ''),
+        images,
+      };
+    });
   }
 
   async findOne(idOrModel: string) {
@@ -277,6 +385,8 @@ export class ProductsService {
         size: true,
         screenSizeCategory: true,
         badge: true,
+        image: true,
+        images: true,
         resolution: true,
         resolutionCategory: true,
         os: true,
@@ -286,6 +396,8 @@ export class ProductsService {
         displayTech: true,
         price: true,
         numericPrice: true,
+        originalPrice: true,
+        originalNumericPrice: true,
         priceCategory: true,
         brand: true,
         isFilledButton: true,
@@ -308,10 +420,27 @@ export class ProductsService {
     }
 
     const baseUrl = this.getBaseUrl();
+    let imageUrl = product.image;
+    if (typeof imageUrl === 'string' && imageUrl.startsWith('data:')) {
+      imageUrl = `${baseUrl}/api/v1/products/${product.id}/image`;
+    }
+
+    let images: string[] = [];
+    if (Array.isArray(product.images) && product.images.length > 0) {
+      images = product.images.map((img: string, idx: number) => {
+        if (typeof img === 'string' && img.startsWith('data:')) {
+          return `${baseUrl}/api/v1/products/${product.id}/images/${idx}`;
+        }
+        return img;
+      });
+    } else if (imageUrl) {
+      images = [imageUrl];
+    }
+
     return {
       ...product,
-      image: `${baseUrl}/api/v1/products/${product.id}/image`,
-      images: [`${baseUrl}/api/v1/products/${product.id}/image`],
+      image: imageUrl || (images[0] ?? ''),
+      images,
     };
   }
 
@@ -359,6 +488,7 @@ export class ProductsService {
 
   async getImageBuffer(
     idOrModel: string,
+    index?: number,
   ): Promise<{ buffer: Buffer; mimeType: string } | { redirectUrl: string }> {
     const product = await this.prisma.product.findFirst({
       where: {
@@ -368,19 +498,31 @@ export class ProductsService {
         ],
       },
       select: {
+        id: true,
         image: true,
+        images: true,
       },
     });
 
-    if (!product || !product.image) {
+    if (!product) {
       throw new NotFoundException(`Product image for '${idOrModel}' not found.`);
     }
 
-    if (product.image.startsWith('data:')) {
-      const commaIndex = product.image.indexOf(',');
+    let targetImage = product.image;
+    if (typeof index === 'number' && Array.isArray(product.images) && product.images[index]) {
+      targetImage = product.images[index];
+    }
+
+    if (!targetImage) {
+      throw new NotFoundException(`Product image for '${idOrModel}' not found.`);
+    }
+
+    // If it's a Base64 data URL
+    if (targetImage.startsWith('data:')) {
+      const commaIndex = targetImage.indexOf(',');
       if (commaIndex !== -1) {
-        const meta = product.image.substring(0, commaIndex);
-        const base64Data = product.image.substring(commaIndex + 1).replace(/\s/g, '');
+        const meta = targetImage.substring(0, commaIndex);
+        const base64Data = targetImage.substring(commaIndex + 1).replace(/\s/g, '');
         const mimeMatch = meta.match(/data:([^;,]+)/);
         const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
         return {
@@ -390,28 +532,107 @@ export class ProductsService {
       }
     }
 
+    // If it's an uploaded image stored in /uploads/products/
+    const uploadMatch = targetImage.match(/\/api\/v1\/products\/images\/([^?#]+)/);
+    if (uploadMatch) {
+      const filename = path.basename(uploadMatch[1]);
+      const filePath = path.join(process.cwd(), 'uploads', 'products', filename);
+      if (fs.existsSync(filePath)) {
+        const ext = path.extname(filename).toLowerCase();
+        const mimeMap: Record<string, string> = {
+          '.jpg': 'image/jpeg',
+          '.jpeg': 'image/jpeg',
+          '.png': 'image/png',
+          '.webp': 'image/webp',
+          '.svg': 'image/svg+xml',
+          '.avif': 'image/avif',
+        };
+        const mimeType = mimeMap[ext] || 'image/jpeg';
+        const buffer = await fs.promises.readFile(filePath);
+        return {
+          mimeType,
+          buffer,
+        };
+      }
+    }
+
     // For static assets or remote URLs, redirect
     return {
-      redirectUrl: product.image,
+      redirectUrl: targetImage,
     };
   }
 
   async create(dto: CreateProductDto) {
     const { id: _id, priceNumber: _priceNumber, ...data } = dto as any;
-    return this.prisma.product.create({
-      data: {
-        ...data,
-      },
-    });
+
+    // Convert any Base64 image payload to physical files on disk before PostgreSQL insert
+    if (typeof data.image === 'string' && data.image.startsWith('data:')) {
+      data.image = await this.saveBase64Image(data.image, 'tv-primary');
+    }
+
+    if (Array.isArray(data.images) && data.images.length > 0) {
+      data.images = await Promise.all(
+        data.images.map((img: string, idx: number) => {
+          if (typeof img === 'string' && img.startsWith('data:')) {
+            return this.saveBase64Image(img, `tv-gallery-${idx}`);
+          }
+          return img;
+        }),
+      );
+    } else if (data.image) {
+      data.images = [data.image];
+    }
+
+    try {
+      return await this.prisma.product.create({
+        data,
+      });
+    } catch (err: any) {
+      if (err?.code === 'P2002') {
+        throw new ConflictException(
+          `A TV model with Model Name '${data.model}' already exists. Please choose a unique Model Name.`,
+        );
+      }
+      this.logger.error(`Product create error: ${err?.message || err}`, err?.stack);
+      throw err;
+    }
   }
 
   async update(id: string, dto: UpdateProductDto) {
     const existing = await this.findOne(id);
     const { id: _id, priceNumber: _priceNumber, ...data } = dto as any;
-    return this.prisma.product.update({
-      where: { id: existing.id },
-      data,
-    });
+
+    if (typeof data.image === 'string' && data.image.startsWith('data:')) {
+      data.image = await this.saveBase64Image(data.image, 'tv-primary');
+    }
+
+    if (Array.isArray(data.images) && data.images.length > 0) {
+      data.images = await Promise.all(
+        data.images.map((img: string, idx: number) => {
+          if (typeof img === 'string' && img.startsWith('data:')) {
+            return this.saveBase64Image(img, `tv-gallery-${idx}`);
+          }
+          return img;
+        }),
+      );
+    } else if (data.image) {
+      data.images = [data.image];
+    }
+
+    try {
+      return await this.prisma.product.update({
+        where: { id: existing.id },
+        data,
+      });
+    } catch (err: any) {
+      if (err?.code === 'P2002') {
+        throw new ConflictException(
+          `A TV model with Model Name '${data.model}' already exists. Please choose a unique Model Name.`,
+        );
+      }
+      this.logger.error(`Product update error for ${id}: ${err?.message || err}`, err?.stack);
+      throw err;
+    }
   }
 
   async toggleStock(id: string) {
