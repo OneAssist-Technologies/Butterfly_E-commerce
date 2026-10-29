@@ -120,6 +120,30 @@ export const productService = {
     return data;
   },
 
+  async uploadImages(files: File[]): Promise<string[]> {
+    if (!files || files.length === 0) return [];
+    const formData = new FormData();
+    for (const file of files) {
+      formData.append('files', file);
+    }
+    const token =
+      typeof window !== 'undefined'
+        ? localStorage.getItem('butterfly_admin_token') || localStorage.getItem('butterfly_user_token')
+        : null;
+
+    const response = await apiClient.post<{ urls: string[] }>('/products/upload-images', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+
+    if (response.data && Array.isArray(response.data.urls)) {
+      return response.data.urls.map(normalizeProductImageUrl);
+    }
+    return [];
+  },
+
   async create(product: Partial<CatalogProduct>): Promise<CatalogProduct> {
     const payload = sanitizeProductPayload(product);
     const response = await apiClient.post<CatalogProduct>('/products', payload);

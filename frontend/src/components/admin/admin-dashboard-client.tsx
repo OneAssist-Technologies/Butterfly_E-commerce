@@ -231,7 +231,16 @@ export function AdminDashboardClient({ initialTab }: AdminDashboardClientProps) 
       if (liveProducts.status === 'fulfilled' && Array.isArray(liveProducts.value)) {
         setProductsList(liveProducts.value);
         if (typeof window !== 'undefined') {
-          localStorage.setItem('butterfly_admin_products', JSON.stringify(liveProducts.value));
+          try {
+            const sanitized = liveProducts.value.map((p: CatalogProduct) => ({
+              ...p,
+              image: p.image?.startsWith('data:') ? '' : p.image,
+              images: Array.isArray(p.images) ? p.images.filter((img) => !img?.startsWith('data:')) : [],
+            }));
+            localStorage.setItem('butterfly_admin_products', JSON.stringify(sanitized));
+          } catch (storageErr) {
+            console.warn('LocalStorage products cache sync skipped:', storageErr);
+          }
         }
       }
 
@@ -342,8 +351,8 @@ export function AdminDashboardClient({ initialTab }: AdminDashboardClientProps) 
       p.id === id ? { ...p, inStock: p.inStock === false ? true : false } : p,
     );
     setProductsList(updated);
-    localStorage.setItem('butterfly_admin_products', JSON.stringify(updated));
     if (typeof window !== 'undefined') {
+      try { localStorage.setItem('butterfly_admin_products', JSON.stringify(updated)); } catch {}
       window.dispatchEvent(new Event('butterfly_products_updated'));
     }
     try {
@@ -357,8 +366,8 @@ export function AdminDashboardClient({ initialTab }: AdminDashboardClientProps) 
     if (confirm('Are you sure you want to delete this TV model from the catalog?')) {
       const updated = productsList.filter((p) => p.id !== id);
       setProductsList(updated);
-      localStorage.setItem('butterfly_admin_products', JSON.stringify(updated));
       if (typeof window !== 'undefined') {
+        try { localStorage.setItem('butterfly_admin_products', JSON.stringify(updated)); } catch {}
         window.dispatchEvent(new Event('butterfly_products_updated'));
       }
       try {
@@ -369,54 +378,75 @@ export function AdminDashboardClient({ initialTab }: AdminDashboardClientProps) 
     }
   };
 
-  const handleAddProduct = async (product: CatalogProduct) => {
-    let savedProduct = product;
-    try {
-      const created = await productService.create(product);
-      if (created && created.id) {
-        savedProduct = {
-          ...product,
-          ...created,
-          image: created.image || product.image,
-          images: Array.isArray(created.images) && created.images.length > 0 ? created.images : product.images,
-        };
-      }
-    } catch (err: any) {
-      console.warn('Backend product create warning:', err?.response?.data || err?.message || err);
+  const handleAddProduct = async (product: CatalogProduct): Promise<CatalogProduct> => {
+    // 1. MUST persist to PostgreSQL via backend API first
+    const created = await productService.create(product);
+    if (!created || !created.id) {
+      throw new Error('Database product creation failed.');
     }
 
-    setProductsList((current) => [
+    const savedProduct: CatalogProduct = {
+      ...product,
+      ...created,
+      image: created.image || product.image,
+      images: Array.isArray(created.images) && created.images.length > 0 ? created.images : product.images,
+    };
+
+    const updated = [
       savedProduct,
-      ...current.filter((p) => p.id !== savedProduct.id && p.model !== savedProduct.model),
-    ]);
+      ...productsList.filter((p) => p.id !== savedProduct.id && p.model !== savedProduct.model),
+    ];
+    setProductsList(updated);
 
     if (typeof window !== 'undefined') {
-      const current = JSON.parse(localStorage.getItem('butterfly_admin_products') || '[]');
-      const updated = [
-        savedProduct,
-        ...current.filter((p: CatalogProduct) => p.id !== savedProduct.id && p.model !== savedProduct.model),
-      ];
-      localStorage.setItem('butterfly_admin_products', JSON.stringify(updated));
-      window.dispatchEvent(new Event('butterfly_products_updated'));
+      try {
+        const sanitized = updated.map((p: CatalogProduct) => ({
+          ...p,
+          image: p.image?.startsWith('data:') ? '' : p.image,
+          images: Array.isArray(p.images) ? p.images.filter((img) => !img?.startsWith('data:')) : [],
+        }));
+        localStorage.setItem('butterfly_admin_products', JSON.stringify(sanitized));
+        window.dispatchEvent(new Event('butterfly_products_updated'));
+      } catch (storageErr) {
+        console.warn('LocalStorage products cache update skipped:', storageErr);
+      }
     }
+
+    return savedProduct;
   };
 
-  const handleUpdateProduct = async (id: string, product: CatalogProduct) => {
-    const updated = productsList.map((p) => (p.id === id ? product : p));
+  const handleUpdateProduct = async (id: string, product: CatalogProduct): Promise<CatalogProduct> => {
+    // 1. MUST persist to PostgreSQL via backend API first
+    const updatedRecord = await productService.update(id, product);
+    const savedProduct: CatalogProduct = {
+      ...product,
+      ...updatedRecord,
+      image: updatedRecord?.image || product.image,
+      images: Array.isArray(updatedRecord?.images) && updatedRecord.images.length > 0 ? updatedRecord.images : product.images,
+    };
+
+    const updated = productsList.map((p) => (p.id === id ? savedProduct : p));
     setProductsList(updated);
-    localStorage.setItem('butterfly_admin_products', JSON.stringify(updated));
+
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new Event('butterfly_products_updated'));
+      try {
+        const sanitized = updated.map((p: CatalogProduct) => ({
+          ...p,
+          image: p.image?.startsWith('data:') ? '' : p.image,
+          images: Array.isArray(p.images) ? p.images.filter((img) => !img?.startsWith('data:')) : [],
+        }));
+        localStorage.setItem('butterfly_admin_products', JSON.stringify(sanitized));
+        window.dispatchEvent(new Event('butterfly_products_updated'));
+      } catch (storageErr) {
+        console.warn('LocalStorage products cache update skipped:', storageErr);
+      }
     }
-    try {
-      await productService.update(id, product);
-    } catch (err: any) {
-      console.warn('Backend product update warning:', err?.response?.data || err?.message || err);
-    }
+
+    return savedProduct;
   };
 
   // Enquiry Handlers
-  const handleAddEnquiry = async (enquiryData: Omit<CustomerEnquiry, 'id' | 'date'>) => {
+    const handleAddEnquiry = async (enquiryData: Omit<CustomerEnquiry, 'id' | 'date'>) => {
     let createdEnquiry: any = null;
     try {
       createdEnquiry = await enquiryService.create({

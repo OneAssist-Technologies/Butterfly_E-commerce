@@ -35,7 +35,14 @@ export function useDynamicProducts() {
       if (Array.isArray(live)) {
         setProducts(live);
         if (typeof window !== 'undefined') {
-          localStorage.setItem('butterfly_admin_products', JSON.stringify(live));
+          try {
+            const sanitized = live.map((p) => ({
+              ...p,
+              image: p.image?.startsWith('data:') ? '' : p.image,
+              images: Array.isArray(p.images) ? p.images.filter((img) => !img?.startsWith('data:')) : [],
+            }));
+            localStorage.setItem('butterfly_admin_products', JSON.stringify(sanitized));
+          } catch {}
         }
         setIsLoaded(true);
         return;

@@ -489,7 +489,14 @@ function ProductsCatalogContent() {
         if (isMounted && Array.isArray(liveData)) {
           setProductsList(liveData);
           if (typeof window !== 'undefined') {
-            localStorage.setItem('butterfly_admin_products', JSON.stringify(liveData));
+            try {
+              const sanitized = liveData.map((p) => ({
+                ...p,
+                image: p.image?.startsWith('data:') ? '' : p.image,
+                images: Array.isArray(p.images) ? p.images.filter((img) => !img?.startsWith('data:')) : [],
+              }));
+              localStorage.setItem('butterfly_admin_products', JSON.stringify(sanitized));
+            } catch {}
           }
           setIsLoadingProducts(false);
           return;

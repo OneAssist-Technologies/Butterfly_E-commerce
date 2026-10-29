@@ -13,8 +13,16 @@ import {
   Res,
   Req,
   UseGuards,
+  UseInterceptors,
+  UploadedFiles,
+  BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import { AnyFilesInterceptor } from '@nestjs/platform-express';
+import multer from 'multer';
+import * as path from 'path';
+import * as fs from 'fs';
 import { ProductsService } from './products.service.js';
 import { CreateProductDto, CreateReviewDto, UpdateProductDto } from './dto/product.dto.js';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
@@ -46,9 +54,179 @@ export class ProductsController {
     });
   }
 
+  /**
+   * Dedicated multi-image upload endpoint.
+   * Accepts multipart/form-data with up to 10 files (field name 'files' or any field).
+   * Validates file format and enforces a strict 10MB limit per image.
+   */
+  @Post('upload-images')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN', 'CATALOG_MANAGER')
+  @UseInterceptors(
+    AnyFilesInterceptor({
+      storage: multer.diskStorage({
+        destination: (_req: any, _file: any, cb: any) => {
+          const uploadPath = path.join(process.cwd(), 'uploads', 'products');
+          if (!fs.existsSync(uploadPath)) {
+            fs.mkdirSync(uploadPath, { recursive: true });
+          }
+          cb(null, uploadPath);
+        },
+        filename: (_req: any, file: any, cb: any) => {
+          const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+          const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+          cb(null, `tv-${uniqueSuffix}${ext}`);
+        },
+      }),
+      limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB limit per image
+        files: 10,
+      },
+      fileFilter: (_req: any, file: any, cb: any) => {
+        const allowedMime = [
+          'image/jpeg',
+          'image/jpg',
+          'image/png',
+          'image/webp',
+          'image/svg+xml',
+          'image/avif',
+        ];
+        if (!allowedMime.includes(file.mimetype.toLowerCase())) {
+          return cb(
+            new BadRequestException(
+              `Unsupported file format '${file.mimetype}'. Only JPEG, PNG, WebP, SVG, and AVIF are allowed.`,
+            ),
+            false,
+          );
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  async uploadImages(@UploadedFiles() files: any[]) {
+    if (!files || files.length === 0) {
+      throw new BadRequestException('No image files were provided for upload.');
+    }
+    const baseUrl = this.productsService.getBaseUrl();
+    const uploaded = files.map((f: any) => ({
+      url: `${baseUrl}/api/v1/products/images/${f.filename}`,
+      filename: f.filename,
+      originalName: f.originalname,
+      size: f.size,
+    }));
+    return {
+      urls: uploaded.map((u: any) => u.url),
+      files: uploaded,
+    };
+  }
+
+  /**
+   * Dedicated single-image upload endpoint.
+   */
+  @Post('upload-image')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN', 'CATALOG_MANAGER')
+  @UseInterceptors(
+    AnyFilesInterceptor({
+      storage: multer.diskStorage({
+        destination: (_req: any, _file: any, cb: any) => {
+          const uploadPath = path.join(process.cwd(), 'uploads', 'products');
+          if (!fs.existsSync(uploadPath)) {
+            fs.mkdirSync(uploadPath, { recursive: true });
+          }
+          cb(null, uploadPath);
+        },
+        filename: (_req: any, file: any, cb: any) => {
+          const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+          const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+          cb(null, `tv-${uniqueSuffix}${ext}`);
+        },
+      }),
+      limits: {
+        fileSize: 10 * 1024 * 1024,
+        files: 1,
+      },
+      fileFilter: (_req: any, file: any, cb: any) => {
+        const allowedMime = [
+          'image/jpeg',
+          'image/jpg',
+          'image/png',
+          'image/webp',
+          'image/svg+xml',
+          'image/avif',
+        ];
+        if (!allowedMime.includes(file.mimetype.toLowerCase())) {
+          return cb(
+            new BadRequestException(
+              `Unsupported file format '${file.mimetype}'. Only JPEG, PNG, WebP, SVG, and AVIF are allowed.`,
+            ),
+            false,
+          );
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  async uploadSingleImage(@UploadedFiles() files: any[]) {
+    if (!files || files.length === 0) {
+      throw new BadRequestException('No image file was provided for upload.');
+    }
+    const baseUrl = this.productsService.getBaseUrl();
+    const f = files[0];
+    const url = `${baseUrl}/api/v1/products/images/${f.filename}`;
+    return {
+      url,
+      filename: f.filename,
+      originalName: f.originalname,
+      size: f.size,
+    };
+  }
+
+  /**
+   * Static image streaming for uploaded product images in /uploads/products/.
+   */
+  @Get('images/:filename')
+  async getUploadedImage(@Param('filename') filename: string, @Res() res: Response) {
+    const safeFilename = path.basename(filename);
+    const filePath = path.join(process.cwd(), 'uploads', 'products', safeFilename);
+    if (!fs.existsSync(filePath)) {
+      throw new NotFoundException(`Product image '${safeFilename}' not found.`);
+    }
+    const ext = path.extname(safeFilename).toLowerCase();
+    const mimeMap: Record<string, string> = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.webp': 'image/webp',
+      '.svg': 'image/svg+xml',
+      '.avif': 'image/avif',
+    };
+    const mimeType = mimeMap[ext] || 'application/octet-stream';
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    const stream = fs.createReadStream(filePath);
+    stream.pipe(res);
+  }
+
   @Get(':id/image')
   async getImage(@Param('id') id: string, @Res() res: Response) {
     const result = await this.productsService.getImageBuffer(id);
+    if ('redirectUrl' in result) {
+      return res.redirect(result.redirectUrl);
+    }
+    res.setHeader('Content-Type', result.mimeType);
+    res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
+    res.send(result.buffer);
+  }
+
+  @Get(':id/images/:index')
+  async getImageByIndex(
+    @Param('id') id: string,
+    @Param('index') indexStr: string,
+    @Res() res: Response,
+  ) {
+    const index = parseInt(indexStr, 10) || 0;
+    const result = await this.productsService.getImageBuffer(id, index);
     if ('redirectUrl' in result) {
       return res.redirect(result.redirectUrl);
     }

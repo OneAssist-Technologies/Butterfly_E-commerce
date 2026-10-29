@@ -14,15 +14,16 @@ import {
   X,
   Star,
   AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import { CatalogProduct } from '@/data/products';
 import { settingsService } from '@/services/settings.service';
-import { normalizeProductImageUrl } from '@/services/product.service';
+import { productService, normalizeProductImageUrl } from '@/services/product.service';
 
 interface InventoryTabProps {
   productsList: CatalogProduct[];
-  onAddProduct: (product: CatalogProduct) => Promise<void>;
-  onUpdateProduct: (id: string, product: CatalogProduct) => Promise<void>;
+  onAddProduct: (product: CatalogProduct) => Promise<any>;
+  onUpdateProduct: (id: string, product: CatalogProduct) => Promise<any>;
   onDeleteProduct: (id: string) => Promise<void>;
   onToggleStock: (id: string) => Promise<void>;
   externalOpenModal?: boolean;
@@ -35,6 +36,7 @@ interface UploadedImg {
   name: string;
   size: string;
   isPrimary: boolean;
+  file?: File;
 }
 
 const DEFAULT_SIZES = ['32"', '43"', '50"', '55"', '65"', '75"', '85"'];
@@ -142,7 +144,7 @@ export function InventoryTab({
     if (e) e.preventDefault();
     const code = newModelInput.trim().toUpperCase();
     if (!code) {
-      setNewModelError('Please enter a TV Model Code or Series Name.');
+      setNewModelError('Please enter a TV Model Name or Series Name.');
       return;
     }
     if (availableModels.includes(code)) {
@@ -339,6 +341,7 @@ export function InventoryTab({
   const [imageDragActive, setImageDragActive] = useState(false);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
+  const [isSubmittingProduct, setIsSubmittingProduct] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const dragCounterRef = useRef(0);
 
@@ -449,26 +452,40 @@ export function InventoryTab({
   // Image helpers
   const handleImageFiles = useCallback(async (files: File[]) => {
     setImageError(null);
-    const validFiles = files.filter((f) => f.type.startsWith('image/'));
-    if (validFiles.length === 0) {
-      setImageError('Please select valid image files (PNG, JPG, WEBP, SVG).');
+    const allowedTypes = [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/webp',
+      'image/svg+xml',
+      'image/avif',
+    ];
+    const maxSizeBytes = 10 * 1024 * 1024; // 10MB per image
+
+    const invalidType = files.find((f) => !allowedTypes.includes(f.type.toLowerCase()));
+    if (invalidType) {
+      setImageError(
+        `Unsupported file type for "${invalidType.name}". Only JPEG, PNG, WebP, SVG, and AVIF are allowed.`
+      );
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    const oversized = files.find((f) => f.size > maxSizeBytes);
+    if (oversized) {
+      const mb = (oversized.size / (1024 * 1024)).toFixed(1);
+      setImageError(
+        `Image "${oversized.name}" is too large (${mb} MB). Maximum allowed size is 10 MB per image.`
+      );
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
 
     setIsProcessingImage(true);
     try {
-      const readAsDataUrl = (file: File): Promise<string> => {
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-      };
-
       const newImgs: UploadedImg[] = [];
-      for (const file of validFiles) {
-        const dataUrl = await readAsDataUrl(file);
+      for (const file of files) {
+        const previewUrl = URL.createObjectURL(file);
         const sizeFormatted =
           file.size > 1024 * 1024
             ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
@@ -476,10 +493,11 @@ export function InventoryTab({
 
         newImgs.push({
           id: `img-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-          url: dataUrl,
+          url: previewUrl,
           name: file.name,
           size: sizeFormatted,
           isPrimary: false,
+          file,
         });
       }
 
@@ -492,7 +510,7 @@ export function InventoryTab({
         return combined;
       });
     } catch {
-      setImageError('Failed to upload image(s). Please try again.');
+      setImageError('Failed to process image(s). Please try again.');
     } finally {
       setIsProcessingImage(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -650,8 +668,8 @@ export function InventoryTab({
     if (existing) {
       setNewProduct((prev) => ({
         ...prev,
-        modelSelectionType: existing.model,
-        model: existing.model,
+        modelSelectionType: editingProduct ? existing.model : 'CUSTOM',
+        model: editingProduct ? existing.model : `${existing.model}-NEW`,
         name: prev.name ? prev.name : existing.name,
         size: existing.size,
         resolution: existing.resolution,
@@ -678,6 +696,17 @@ export function InventoryTab({
     const priceNum = parseInt(newProduct.price.replace(/[^0-9]/g, ''), 10) || 0;
     const originalPriceNum = parseInt(newProduct.originalPrice.replace(/[^0-9]/g, ''), 10) || 0;
     const modelClean = editingProduct?.model || (newProduct.model?.trim() ? newProduct.model.trim() : ('BF' + (newProduct.size.replace(/[^0-9]/g, '') || 'TV') + '-' + Date.now().toString(36).toUpperCase()));
+    if (!editingProduct) {
+      const isDuplicate = productsList.some(
+        (p) => p.model?.trim().toLowerCase() === modelClean.toLowerCase(),
+      );
+      if (isDuplicate) {
+        setImageError(
+          `Model Name "${modelClean}" already exists in the catalog. Please enter a unique Model Name (e.g. ${modelClean}-V2 or click + Add Model).`
+        );
+        return;
+      }
+    }
     const newId = editingProduct
       ? editingProduct.id
       : `tv-${modelClean.toLowerCase().replace(/[^a-z0-9]/g, '-') || Date.now()}`;
@@ -706,74 +735,99 @@ export function InventoryTab({
       withoutOfferPrice: newProduct.withoutOfferPrice.trim() || undefined,
       exchangeOfferAvailable: Boolean(newProduct.exchangeOfferAvailable),
       ottSupport: newProduct.ottSupport.trim() || undefined,
-      
     };
 
-    const primaryImg =
-      uploadedImages.find((img) => img.isPrimary)?.url ||
-      uploadedImages[0]?.url ||
-      newProduct.image ||
-      '';
-    const allImages =
-      uploadedImages.length > 0
-        ? uploadedImages.map((img) => img.url)
-        : newProduct.image
-        ? [newProduct.image]
-        : [primaryImg];
-
-    const productPayload: CatalogProduct = {
-      ...(editingProduct || {}),
-      id: newId,
-      model: modelClean || `BF${newProduct.size.replace(/[^0-9]/g, '')}X1`,
-      name: newProduct.name.trim() || `${newProduct.size} Smart TV`,
-      size: newProduct.size,
-      screenSizeCategory: newProduct.size,
-      resolution: newProduct.resolution,
-      resolutionCategory: newProduct.resolution.includes('Full')
-        ? 'Full HD'
-        : newProduct.resolution.includes('4K')
-        ? '4K UHD'
-        : 'HD',
-      price: `₹ ${priceNum.toLocaleString('en-IN')}`,
-      numericPrice: priceNum,
-      priceNumber: priceNum,
-      originalPrice: originalPriceNum > 0 ? `₹ ${originalPriceNum.toLocaleString('en-IN')}` : undefined,
-      originalNumericPrice: originalPriceNum > 0 ? originalPriceNum : undefined,
-      priceCategory:
-        priceNum < 20000
-          ? 'Under ₹20,000'
-          : priceNum <= 40000
-          ? '₹20,000 – ₹40,000'
-          : priceNum <= 60000
-          ? '₹40,000 – ₹60,000'
-          : 'Above ₹60,000',
-      brand: 'Butterfly',
-      sound: newProduct.sound.trim() || '2 x 10W Stereo Speakers',
-      displayTech: newProduct.displayTech,
-      smartOS: newProduct.smartOS.trim() || 'Google TV',
-      os: newProduct.smartOS.trim() || 'Google TV',
-      smartCategory: newProduct.smartOS.includes('Android')
-        ? 'Android TV'
-        : newProduct.smartOS.includes('WebOS')
-        ? 'WebOS'
-        : newProduct.smartOS.includes('Tizen')
-        ? 'Tizen'
-        : 'Google TV',
-      image: primaryImg,
-      images: allImages,
-      inStock: editingProduct ? editingProduct.inStock : true,
-      isTopSelling: Boolean(newProduct.isTopSelling),
-      features: keyFeaturesList,
-      keyFeatures: keyFeaturesList,
-      technicalSpecs,
-      warrantyInstallation: newProduct.warrantyInstallation.trim() || undefined,
-      whatsIncluded: newProduct.whatsIncludedText.trim()
-        ? newProduct.whatsIncludedText.split('\n').map((s) => s.trim()).filter(Boolean)
-        : [],
-    };
-
+    setIsSubmittingProduct(true);
     setImageError(null);
+
     try {
+      // 1. Upload any newly selected physical image files to backend /api/v1/products/upload-images
+      const imagesToUpload = uploadedImages.filter((img) => img.file);
+      let currentImages = [...uploadedImages];
+
+      if (imagesToUpload.length > 0) {
+        const filesToUpload = imagesToUpload.map((img) => img.file!);
+        const serverUrls = await productService.uploadImages(filesToUpload);
+
+        let urlIdx = 0;
+        currentImages = uploadedImages.map((img) => {
+          if (img.file && serverUrls[urlIdx]) {
+            const serverUrl = serverUrls[urlIdx++];
+            return {
+              ...img,
+              url: serverUrl,
+              file: undefined,
+            };
+          }
+          return img;
+        });
+        setUploadedImages(currentImages);
+      }
+
+      const primaryImg =
+        currentImages.find((img) => img.isPrimary)?.url ||
+        currentImages[0]?.url ||
+        newProduct.image ||
+        '';
+
+      const allImages =
+        currentImages.length > 0
+          ? currentImages.map((img) => img.url)
+          : newProduct.image
+          ? [newProduct.image]
+          : [primaryImg];
+
+      const productPayload: CatalogProduct = {
+        ...(editingProduct || {}),
+        id: newId,
+        model: modelClean || `BF${newProduct.size.replace(/[^0-9]/g, '')}X1`,
+        name: newProduct.name.trim() || `${newProduct.size} Smart TV`,
+        size: newProduct.size,
+        screenSizeCategory: newProduct.size,
+        resolution: newProduct.resolution,
+        resolutionCategory: newProduct.resolution.includes('Full')
+          ? 'Full HD'
+          : newProduct.resolution.includes('4K')
+          ? '4K UHD'
+          : 'HD',
+        price: `₹ ${priceNum.toLocaleString('en-IN')}`,
+        numericPrice: priceNum,
+        priceNumber: priceNum,
+        originalPrice: originalPriceNum > 0 ? `₹ ${originalPriceNum.toLocaleString('en-IN')}` : undefined,
+        originalNumericPrice: originalPriceNum > 0 ? originalPriceNum : undefined,
+        priceCategory:
+          priceNum < 20000
+            ? 'Under ₹20,000'
+            : priceNum <= 40000
+            ? '₹20,000 – ₹40,000'
+            : priceNum <= 60000
+            ? '₹40,000 – ₹60,000'
+            : 'Above ₹60,000',
+        brand: 'Butterfly',
+        sound: newProduct.sound.trim() || '2 x 10W Stereo Speakers',
+        displayTech: newProduct.displayTech,
+        smartOS: newProduct.smartOS.trim() || 'Google TV',
+        os: newProduct.smartOS.trim() || 'Google TV',
+        smartCategory: newProduct.smartOS.includes('Android')
+          ? 'Android TV'
+          : newProduct.smartOS.includes('WebOS')
+          ? 'WebOS'
+          : newProduct.smartOS.includes('Tizen')
+          ? 'Tizen'
+          : 'Google TV',
+        image: primaryImg,
+        images: allImages,
+        inStock: editingProduct ? editingProduct.inStock : true,
+        isTopSelling: Boolean(newProduct.isTopSelling),
+        features: keyFeaturesList,
+        keyFeatures: keyFeaturesList,
+        technicalSpecs,
+        warrantyInstallation: newProduct.warrantyInstallation.trim() || undefined,
+        whatsIncluded: newProduct.whatsIncludedText.trim()
+          ? newProduct.whatsIncludedText.split('\n').map((s) => s.trim()).filter(Boolean)
+          : [],
+      };
+
       if (editingProduct) {
         await onUpdateProduct(editingProduct.id, productPayload);
       } else {
@@ -788,7 +842,10 @@ export function InventoryTab({
               try {
                 const stored = localStorage.getItem('butterfly_custom_models');
                 const parsed = stored ? JSON.parse(stored) : [];
-                localStorage.setItem('butterfly_custom_models', JSON.stringify(Array.from(new Set([...parsed, modelClean]))));
+                localStorage.setItem(
+                  'butterfly_custom_models',
+                  JSON.stringify(Array.from(new Set([...parsed, modelClean])))
+                );
               } catch {}
             }
             return next;
@@ -800,15 +857,18 @@ export function InventoryTab({
       setShowModal(false);
       resetProductForm();
     } catch (err: any) {
+      console.error('Failed to save TV product:', err);
       const apiMessage = err?.response?.data?.message;
       const message = Array.isArray(apiMessage)
         ? apiMessage.join(', ')
         : apiMessage || err?.message || 'Unable to save the product. Please try again.';
       setImageError(String(message));
+    } finally {
+      setIsSubmittingProduct(false);
     }
   };
 
-  return (
+    return (
     <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-150">
       {/* SECTION CONTAINER 1: SEARCH & FILTERS */}
       <section className="bg-white rounded-3xl border border-slate-200/90 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] p-5 sm:p-6 space-y-4">
@@ -996,7 +1056,7 @@ export function InventoryTab({
         {productsViewMode === 'cards' ? (
           <div className="p-5 sm:p-6 bg-slate-50/50">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredProducts.map((tv) => {
+              {filteredProducts.map((tv, idx) => {
                 const isTvInStock = tv.inStock !== false;
                 return (
                   <div
@@ -1037,6 +1097,9 @@ export function InventoryTab({
 
                       <div className="relative w-full h-36 my-1">
                         <Image
+                          priority={true}
+                          loading="eager"
+
                           src={normalizeProductImageUrl(tv.image)}
                           alt={tv.name}
                           fill
@@ -1124,13 +1187,16 @@ export function InventoryTab({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredProducts.map((tv) => {
+                {filteredProducts.map((tv, idx) => {
                   const isTvInStock = tv.inStock !== false;
                   return (
                     <tr key={tv.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="py-3 px-4">
                         <div className="relative w-14 h-10 bg-slate-100 rounded-lg overflow-hidden border border-slate-200 p-0.5">
                           <Image
+                          priority={true}
+                          loading="eager"
+
                             src={normalizeProductImageUrl(tv.image)}
                             alt={tv.name}
                             fill
@@ -1266,24 +1332,71 @@ export function InventoryTab({
                     <span className="text-[10px] font-bold text-slate-400 uppercase">Step 1 of 5</span>
                   </div>
 
-                  {/* Television Title & Screen Size */}
+                  {/* Model Name, Custom Model Name & Screen Size */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                    <div className="sm:col-span-2">
-                      <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                        Television Title / Product Name <span className="text-[#E50914]">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        autoComplete="off"
-                        placeholder='e.g. 50" 4K UHD Smart Google TV'
-                        value={newProduct.name}
-                        onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-xs font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#E50914]/15 focus:border-[#E50914] transition-all"
-                      />
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                          Model Name <span className="text-[#E50914]">*</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => handleAddNewModel()}
+                          className="text-[10px] font-bold text-[#E50914] hover:underline cursor-pointer"
+                        >
+                          + Add Model
+                        </button>
+                      </div>
+                      <select
+                        value={
+                          newProduct.modelSelectionType ||
+                          (availableModels.includes(newProduct.model)
+                            ? newProduct.model
+                            : newProduct.model
+                            ? 'CUSTOM'
+                            : '')
+                        }
+                        onChange={(e) => handleSelectModelPreset(e.target.value)}
+                        className="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#E50914]/15 focus:border-[#E50914] transition-all cursor-pointer"
+                      >
+                        <option value="">Select Model Name...</option>
+                        <option value="__ADD_NEW__">+ Add New Model Name...</option>
+                        {availableModels.map((m) => (
+                          <option key={m} value={m}>
+                            {m}
+                          </option>
+                        ))}
+                        <option value="CUSTOM">Custom Model Name...</option>
+                      </select>
                     </div>
 
-                    <div>
+                    {(newProduct.modelSelectionType === 'CUSTOM' ||
+                      (!availableModels.includes(newProduct.model) && newProduct.model)) && (
+                      <div className="animate-in fade-in duration-200">
+                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                          Custom Model Name <span className="text-[#E50914]">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. BF50UI or BTV002"
+                          value={newProduct.model}
+                          onChange={(e) =>
+                            setNewProduct({ ...newProduct, model: e.target.value.toUpperCase() })
+                          }
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-xs font-mono font-bold uppercase focus:outline-none focus:ring-2 focus:ring-[#E50914]/15 focus:border-[#E50914] transition-all"
+                        />
+                      </div>
+                    )}
+
+                    <div
+                      className={
+                        newProduct.modelSelectionType === 'CUSTOM' ||
+                        (!availableModels.includes(newProduct.model) && newProduct.model)
+                          ? ''
+                          : 'sm:col-span-2'
+                      }
+                    >
                       <div className="flex items-center justify-between mb-1">
                         <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
                           Screen Size <span className="text-[#E50914]">*</span>
@@ -1315,6 +1428,22 @@ export function InventoryTab({
                         )}
                       </select>
                     </div>
+                  </div>
+
+                  {/* Television Title / Product Name */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      Television Title / Product Name <span className="text-[#E50914]">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      autoComplete="off"
+                      placeholder='e.g. 50" 4K UHD Smart Google TV'
+                      value={newProduct.name}
+                      onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-xs font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#E50914]/15 focus:border-[#E50914] transition-all"
+                    />
                   </div>
 
                   {/* Dual Price Inputs: Original Price (MRP / Slash Price) & Actual Selling Price */}
@@ -1584,6 +1713,9 @@ export function InventoryTab({
                             >
                               <div className="relative w-20 h-14 bg-slate-950 rounded-lg overflow-hidden border border-slate-700 shadow-xs flex items-center justify-center flex-shrink-0">
                                 <Image
+                          priority={true}
+                          loading="eager"
+
                                   src={img.url}
                                   alt={img.name}
                                   fill
@@ -2129,10 +2261,23 @@ export function InventoryTab({
                   </button>
                   <button
                     type="submit"
-                    className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#E50914] hover:bg-[#c70811] text-white font-bold text-xs cursor-pointer shadow-sm hover:shadow transition-all active:scale-95"
+                    disabled={isSubmittingProduct}
+                    className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#E50914] hover:bg-[#c70811] disabled:opacity-60 text-white font-bold text-xs cursor-pointer shadow-sm hover:shadow transition-all active:scale-95"
                   >
-                    {editingProduct ? <Pencil className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                    <span>{editingProduct ? 'Update TV Model' : 'Save TV Model'}</span>
+                    {isSubmittingProduct ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : editingProduct ? (
+                      <Pencil className="w-4 h-4" />
+                    ) : (
+                      <Plus className="w-4 h-4" />
+                    )}
+                    <span>
+                      {isSubmittingProduct
+                        ? 'Saving TV Model...'
+                        : editingProduct
+                        ? 'Update TV Model'
+                        : 'Save TV Model'}
+                    </span>
                   </button>
                 </div>
               </div>
@@ -2141,6 +2286,77 @@ export function InventoryTab({
         </div>
       )}
 
+
+      {/* ================= MODAL: ADD NEW MODEL NAME (UI POPUP) ================= */}
+      {isModelModalOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 sm:p-7 max-w-sm w-full border border-slate-200 shadow-2xl relative animate-in zoom-in-95">
+            <button
+              type="button"
+              onClick={() => {
+                setIsModelModalOpen(false);
+                setNewModelError('');
+              }}
+              className="absolute top-5 right-5 p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#E50914]" />
+              <h3 className="text-base font-extrabold text-slate-900">Add New Model Name</h3>
+            </div>
+            <p className="text-xs text-slate-500 mb-4">
+              Enter TV model name or series identifier (e.g. BF50UI, BTV002, or QLED-PRO).
+            </p>
+
+            {newModelError && (
+              <div className="mb-3.5 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-center gap-2 animate-in fade-in">
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                <span>{newModelError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleConfirmAddModel} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Model Name *
+                </label>
+                <input
+                  type="text"
+                  autoFocus
+                  value={newModelInput}
+                  onChange={(e) => {
+                    setNewModelInput(e.target.value);
+                    if (newModelError) setNewModelError('');
+                  }}
+                  placeholder="e.g. BF50UI or BTV002"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-900 font-bold uppercase focus:outline-none focus:ring-2 focus:ring-[#E50914]/20 focus:border-[#E50914] bg-white transition-all"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsModelModalOpen(false);
+                    setNewModelError('');
+                  }}
+                  className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-100 cursor-pointer transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl bg-[#E50914] hover:bg-[#c70811] text-xs font-bold text-white cursor-pointer shadow-xs transition-colors"
+                >
+                  Add Model Name
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* ================= MODAL: ADD NEW SCREEN SIZE (UI POPUP) ================= */}
       {isSizeModalOpen && (

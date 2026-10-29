@@ -1,11 +1,25 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import express from 'express';
+import * as path from 'path';
+import * as fs from 'fs';
 import { AppModule } from './app.module.js';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap'); // Dynamic services loaded
   const app = await NestFactory.create(AppModule);
+
+  // Ensure persistent uploads directory exists for image storage
+  const uploadsDir = path.join(process.cwd(), 'uploads', 'products');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+
+  // Configure body limit (25MB) to safely support rich product payloads and image transfers
+  app.use(express.json({ limit: '25mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT', 3001);
