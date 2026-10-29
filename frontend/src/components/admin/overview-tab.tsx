@@ -432,7 +432,7 @@ export function OverviewTab({
                   <tr>
                     <th className="py-3 px-4">Order ID</th>
                     <th className="py-3 px-4">Customer</th>
-                    <th className="py-3 px-4">Model Ordered</th>
+                    <th className="py-3 px-4">Television Item</th>
                     <th className="py-3 px-4">Amount</th>
                     <th className="py-3 px-4">Payment</th>
                     <th className="py-3 px-4">Status</th>

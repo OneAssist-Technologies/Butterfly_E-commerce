@@ -97,9 +97,11 @@ export function CartDrawer({
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="text-xs font-bold text-zinc-900 dark:text-white truncate">
-                      {item.model}
+                      {item.name}
                     </h4>
-                    <p className="text-[11px] text-zinc-500 truncate">{item.name}</p>
+                    {item.size && (
+                      <p className="text-[11px] text-zinc-500 truncate">{item.size} Display</p>
+                    )}
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-xs font-black text-[#E50914]">
                         {item.price}

@@ -550,9 +550,6 @@ export default function CartPage() {
 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap mb-1">
-                            <span className="text-xs font-black text-[#E50914] bg-red-50 border border-red-100 px-2 py-0.5 rounded-md">
-                              {item.model}
-                            </span>
                             <span className="text-[11px] font-semibold text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-md">
                               {item.size} Display
                             </span>
@@ -623,7 +620,7 @@ export default function CartPage() {
                           type="button"
                           onClick={() => removeFromCart(idx)}
                           className="p-2 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                          aria-label={`Remove ${item.model} from cart`}
+                          aria-label={`Remove ${item.name} from cart`}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -1086,11 +1083,8 @@ export default function CartPage() {
                       />
                     </div>
                     <div className="flex items-center justify-between gap-2 mb-1">
-                      <span className="text-xs font-black text-[#E50914] bg-red-50 border border-red-100 px-2 py-0.5 rounded">
-                        {prod.model}
-                      </span>
                       <span className="text-[11px] font-semibold text-zinc-500">
-                        {prod.size}
+                        {prod.size} Display
                       </span>
                     </div>
                     <h3 className="text-sm font-bold text-zinc-900 mt-1 line-clamp-1">

@@ -104,14 +104,14 @@ export function ProductCatalogCard({
         </div>
       </div>
 
-      {/* Model & Name */}
+      {/* Name & Size */}
       <div className="mt-2">
-        <span className="text-sm font-bold text-zinc-900 uppercase tracking-tight block">
-          {product.model}
-        </span>
-        <h3 className="text-xs text-zinc-500 font-medium mt-0.5">
+        <h3 className="text-sm font-bold text-zinc-900 tracking-tight line-clamp-1">
           {product.name}
         </h3>
+        <p className="text-xs text-zinc-500 font-medium mt-0.5">
+          {product.size} Display
+        </p>
       </div>
 
       {/* Specs List with subtle icons */}

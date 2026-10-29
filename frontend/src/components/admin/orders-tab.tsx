@@ -291,7 +291,7 @@ export function OrdersTab({
                 <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase tracking-wider font-semibold">
                   <th className="py-3 px-4">Order Code</th>
                   <th className="py-3 px-4">Customer Details</th>
-                  <th className="py-3 px-4">TV Model</th>
+                  <th className="py-3 px-4">Television Item</th>
                   <th className="py-3 px-4">Amount</th>
                   <th className="py-3 px-4">Date</th>
                   <th className="py-3 px-4">Status &amp; Verification</th>

@@ -578,15 +578,15 @@ export function EnquiriesTab({
               </div>
 
               <div>
-                <label className="block font-bold text-zinc-700 mb-1">Interested TV Model</label>
+                <label className="block font-bold text-zinc-700 mb-1">Interested Television</label>
                 <select
                   value={form.productModel}
                   onChange={(e) => setForm({ ...form, productModel: e.target.value })}
                   className="w-full px-3 py-2 rounded-xl border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#E50914]/20 focus:border-[#E50914] bg-white"
                 >
                   {productsList.map((tv) => (
-                    <option key={tv.id} value={`${tv.model} - ${tv.name}`}>
-                      {tv.model} - {tv.name} ({tv.price})
+                    <option key={tv.id} value={tv.name}>
+                      {tv.name} ({tv.size}) - {tv.price}
                     </option>
                   ))}
                 </select>
