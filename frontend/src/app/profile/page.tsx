@@ -92,6 +92,25 @@ function ProfileContent() {
   const [enquirySuccessMsg, setEnquirySuccessMsg] = useState('');
   const [enquiryErrorMsg, setEnquiryErrorMsg] = useState('');
 
+  // Immediate redirect for Admin users: admins must never view the customer profile page
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const adminToken = localStorage.getItem('butterfly_admin_token');
+      const adminUser = localStorage.getItem('butterfly_admin_user');
+      const normalUser = localStorage.getItem('butterfly_user');
+      const target = adminUser || normalUser;
+      if (adminToken || target) {
+        try {
+          const parsed = target ? JSON.parse(target) : null;
+          if (parsed && ['SUPER_ADMIN', 'ADMIN', 'OPERATOR', 'CATALOG_MANAGER'].includes(parsed.role)) {
+            router.replace('/admin/overview');
+            return;
+          }
+        } catch {}
+      }
+    }
+  }, [router]);
+
   // Sync tab with URL
   useEffect(() => {
     const tabParam = searchParams.get('tab') as ProfileTab;
