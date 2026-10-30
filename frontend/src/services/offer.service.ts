@@ -93,23 +93,28 @@ export function calculateProductPricing(
     if (o.startDate && new Date(o.startDate) > now) return false;
     if (o.endDate && new Date(o.endDate) < now) return false;
 
-    // Check specific TV model match
+    // Check specific TV model match (offer applies to all products under this model)
     if (o.targetProducts && o.targetProducts.trim()) {
       const target = o.targetProducts.trim().toLowerCase();
       const model = (product.model || '').toLowerCase();
       const name = (product.name || '').toLowerCase();
-      return model === target || model.includes(target) || name.includes(target);
+      const matchesModel = model === target || model.includes(target) || name.includes(target);
+      if (!matchesModel) return false;
     }
 
     // Check screen size match
     if (o.applicableSize && o.applicableSize !== 'ALL') {
       const targetSize = o.applicableSize.replace(/[^0-9]/g, '');
       const productSize = (product.size || product.screenSizeCategory || '').replace(/[^0-9]/g, '');
-      return targetSize === productSize;
+      if (targetSize !== productSize) return false;
     }
 
-    // Storewide automatic offer
-    return Boolean(o.applyAutomatically) && actualPrice >= (o.minOrderAmount || 0);
+    // Storewide or model-wide automatic offer
+    if (o.minOrderAmount && actualPrice < o.minOrderAmount) {
+      return false;
+    }
+
+    return Boolean(o.applyAutomatically);
   });
 
   let bestOffer: Offer | undefined;

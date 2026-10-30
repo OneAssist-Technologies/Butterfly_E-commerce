@@ -379,49 +379,55 @@ export class ProductsService implements OnModuleInit {
   }
 
   async findOne(idOrModel: string) {
-    const product = await this.prisma.product.findFirst({
-      where: {
-        OR: [
-          { id: idOrModel },
-          { model: { equals: idOrModel, mode: 'insensitive' } },
-        ],
-      },
-      select: {
-        id: true,
-        model: true,
-        name: true,
-        size: true,
-        screenSizeCategory: true,
-        badge: true,
-        image: true,
-        images: true,
-        resolution: true,
-        resolutionCategory: true,
-        os: true,
-        smartOS: true,
-        smartCategory: true,
-        sound: true,
-        displayTech: true,
-        price: true,
-        numericPrice: true,
-        originalPrice: true,
-        originalNumericPrice: true,
-        priceCategory: true,
-        brand: true,
-        isFilledButton: true,
-        buttonLabel: true,
-        featuredRank: true,
-        isTopSelling: true,
-        inStock: true,
-        features: true,
-        keyFeatures: true,
-        technicalSpecs: true,
-        warrantyInstallation: true,
-        whatsIncluded: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+    const selectFields = {
+      id: true,
+      model: true,
+      name: true,
+      size: true,
+      screenSizeCategory: true,
+      badge: true,
+      image: true,
+      images: true,
+      resolution: true,
+      resolutionCategory: true,
+      os: true,
+      smartOS: true,
+      smartCategory: true,
+      sound: true,
+      displayTech: true,
+      price: true,
+      numericPrice: true,
+      originalPrice: true,
+      originalNumericPrice: true,
+      priceCategory: true,
+      brand: true,
+      isFilledButton: true,
+      buttonLabel: true,
+      featuredRank: true,
+      isTopSelling: true,
+      inStock: true,
+      features: true,
+      keyFeatures: true,
+      technicalSpecs: true,
+      warrantyInstallation: true,
+      whatsIncluded: true,
+      createdAt: true,
+      updatedAt: true,
+    };
+
+    let product = await this.prisma.product.findUnique({
+      where: { id: idOrModel },
+      select: selectFields,
     });
+
+    if (!product) {
+      product = await this.prisma.product.findFirst({
+        where: {
+          model: { equals: idOrModel, mode: 'insensitive' },
+        },
+        select: selectFields,
+      });
+    }
 
     if (!product) {
       throw new NotFoundException(`Product with ID or Model '${idOrModel}' not found.`);

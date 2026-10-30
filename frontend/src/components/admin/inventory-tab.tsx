@@ -154,13 +154,19 @@ export function InventoryTab({
 
   const handleConfirmAddModel = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    const code = newModelInput.trim().toUpperCase();
+    const code = newModelInput.trim();
     if (!code) {
       setNewModelError('Please enter a TV Model Name or Series Name.');
       return;
     }
-    if (availableModels.includes(code)) {
-      setNewModelError(`Model "${code}" already exists in the catalog.`);
+    const existingMatch = availableModels.find(
+      (m) => m.toLowerCase() === code.toLowerCase()
+    );
+    if (existingMatch) {
+      setNewProduct((prev) => ({ ...prev, model: existingMatch, modelSelectionType: existingMatch }));
+      setIsModelModalOpen(false);
+      setNewModelInput('');
+      setNewModelError('');
       return;
     }
     const updated = Array.from(new Set([...availableModels, code]));
@@ -563,9 +569,12 @@ export function InventoryTab({
         p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
         p.resolution.toLowerCase().includes(productSearch.toLowerCase());
       const matchSize = selectedSizeFilter === 'All' || p.size === selectedSizeFilter;
-      return matchSearch && matchSize;
+      const matchModel =
+        selectedModelFilter === 'All' ||
+        p.model?.trim().toLowerCase() === selectedModelFilter.trim().toLowerCase();
+      return matchSearch && matchSize && matchModel;
     });
-  }, [productsList, productSearch, selectedSizeFilter]);
+  }, [productsList, productSearch, selectedSizeFilter, selectedModelFilter]);
 
   // Retail Price Number Only & INR Formatting Handlers
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -683,21 +692,12 @@ export function InventoryTab({
 
     const priceNum = parseInt(newProduct.price.replace(/[^0-9]/g, ''), 10) || 0;
     const originalPriceNum = parseInt(newProduct.originalPrice.replace(/[^0-9]/g, ''), 10) || 0;
-    const modelClean = editingProduct?.model || (newProduct.model?.trim() ? newProduct.model.trim() : ('BF' + (newProduct.size.replace(/[^0-9]/g, '') || 'TV') + '-' + Date.now().toString(36).toUpperCase()));
-    if (!editingProduct) {
-      const isDuplicate = productsList.some(
-        (p) => p.model?.trim().toLowerCase() === modelClean.toLowerCase(),
-      );
-      if (isDuplicate) {
-        setImageError(
-          `Model Name "${modelClean}" already exists in the catalog. Please enter a unique Model Name (e.g. ${modelClean}-V2 or click + Add Model).`
-        );
-        return;
-      }
-    }
+    const modelClean = (newProduct.model?.trim() || editingProduct?.model || 'Android').trim();
+    // Model name acts as a storage/series category holding multiple products - no duplicate model restriction!
+    const modelSlug = (modelClean || 'tv').toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
     const newId = editingProduct
       ? editingProduct.id
-      : `tv-${modelClean.toLowerCase().replace(/[^a-z0-9]/g, '-') || Date.now()}`;
+      : `tv-${modelSlug}-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
     const keyFeaturesList = newProduct.keyFeaturesText.trim()
       ? newProduct.keyFeaturesText.split('\n').map((s) => s.trim()).filter(Boolean)
       : [];
@@ -986,6 +986,62 @@ export function InventoryTab({
                 <span>Add Size</span>
               </button>
             )}
+          </div>
+        </div>
+
+        {/* Model Storage Category Filter Bar */}
+        <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              TV Model Storage:
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+            <button
+              type="button"
+              onClick={() => setSelectedModelFilter('All')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                selectedModelFilter === 'All'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              All Models ({productsList.length})
+            </button>
+            {availableModels.map((m) => {
+              const count = productsList.filter(
+                (p) => p.model?.trim().toLowerCase() === m.toLowerCase()
+              ).length;
+              return (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setSelectedModelFilter(m)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0 inline-flex items-center gap-1.5 ${
+                    selectedModelFilter === m
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  <span>{m}</span>
+                  <span
+                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                      selectedModelFilter === m ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              onClick={() => handleAddNewModel()}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-dashed border-slate-300 text-slate-600 hover:border-[#E50914] hover:text-[#E50914] font-bold text-xs transition-colors cursor-pointer bg-slate-50/50 shrink-0"
+            >
+              <Plus className="w-3 h-3" />
+              <span>+ Add Model</span>
+            </button>
           </div>
         </div>
       </section>
@@ -1342,11 +1398,16 @@ export function InventoryTab({
                         className="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#E50914]/15 focus:border-[#E50914] transition-all cursor-pointer"
                       >
                         <option value="">Select Model Name...</option>
-                        {availableModels.map((m) => (
-                          <option key={m} value={m}>
-                            {m}
-                          </option>
-                        ))}
+                        {Array.from(new Set([...availableModels, newProduct.model].filter(Boolean))).map((m) => {
+                          const count = productsList.filter(
+                            (p) => p.model?.trim().toLowerCase() === m.toLowerCase()
+                          ).length;
+                          return (
+                            <option key={m} value={m}>
+                              {m} ({count} {count === 1 ? 'TV' : 'TVs'})
+                            </option>
+                          );
+                        })}
                       </select>
                     </div>
 

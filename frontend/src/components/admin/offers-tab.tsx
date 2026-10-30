@@ -92,6 +92,37 @@ export function OffersTab({
   // Dynamic Screen Sizes loaded from admin settings & storage
   const [dynamicSizes, setDynamicSizes] = useState<string[]>(availableSizes || []);
 
+  // Dynamic TV Model Storages loaded from products and admin storage
+  const availableModels = useMemo(() => {
+    const set = new Set<string>();
+    productsList.forEach((p) => {
+      const clean = p.model?.trim();
+      if (clean && !/^(BF\d+|BTV\d+|BF.*-MVT.*|.*-NEW.*)$/i.test(clean)) {
+        set.add(clean);
+      }
+    });
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('butterfly_custom_models');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((m) => {
+              if (typeof m === 'string' && m.trim() && !/^(BF\d+|BTV\d+|BF.*-MVT.*|.*-NEW.*)$/i.test(m.trim())) {
+                set.add(m.trim());
+              }
+            });
+          }
+        }
+      } catch {}
+    }
+    if (set.size === 0) {
+      set.add('Android');
+      set.add('Google Android');
+    }
+    return Array.from(set).sort();
+  }, [productsList]);
+
   useEffect(() => {
     if (availableSizes && availableSizes.length > 0) {
       setDynamicSizes(availableSizes);
@@ -732,10 +763,15 @@ export function OffersTab({
 
                       {/* Card Footer: Metadata & Actions */}
                       <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-medium text-slate-500">
                             {offer.usageCount || 0} used
                           </span>
+                          {offer.targetProducts && (
+                            <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-bold text-[10px]">
+                              Model: {offer.targetProducts}
+                            </span>
+                          )}
                           {offer.applicableSize && offer.applicableSize !== 'ALL' && (
                             <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-bold font-mono">
                               {offer.applicableSize} TV
@@ -890,20 +926,28 @@ export function OffersTab({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Apply to Specific TV
+                    Apply to TV Model Storage
                   </label>
                   <select
                     value={formTargetProduct}
                     onChange={(e) => setFormTargetProduct(e.target.value)}
                     className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#E50914]/20 focus:border-[#E50914]"
                   >
-                    <option value="">-- All TVs (Whole Catalog) --</option>
-                    {productsList.map((prod) => (
-                      <option key={prod.id} value={prod.model}>
-                        {prod.model} - {prod.name} (Selling: {prod.price}{prod.originalPrice ? ` | MRP: ${prod.originalPrice}` : ''})
-                      </option>
-                    ))}
+                    <option value="">-- All TV Models (Whole Catalog) --</option>
+                    {availableModels.map((m) => {
+                      const count = productsList.filter(
+                        (p) => p.model?.trim().toLowerCase() === m.toLowerCase()
+                      ).length;
+                      return (
+                        <option key={m} value={m}>
+                          Model: {m} ({count} {count === 1 ? 'TV product' : 'TV products'})
+                        </option>
+                      );
+                    })}
                   </select>
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Selecting a model applies this offer to all products under that model.
+                  </p>
                 </div>
 
                 <div>
