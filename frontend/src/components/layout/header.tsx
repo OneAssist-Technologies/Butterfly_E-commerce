@@ -31,17 +31,20 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [authUser, setAuthUser] = useState<{ name: string; email: string; role?: string } | null>(null);
+  const isAdmin = Boolean(
+    authUser && ['SUPER_ADMIN', 'ADMIN', 'OPERATOR', 'CATALOG_MANAGER'].includes(authUser.role || '')
+  );
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
     const checkUser = () => {
       const token =
-        localStorage.getItem('butterfly_user_token') ||
-        localStorage.getItem('butterfly_admin_token');
+        localStorage.getItem('butterfly_admin_token') ||
+        localStorage.getItem('butterfly_user_token');
       const raw =
-        localStorage.getItem('butterfly_user') ||
-        localStorage.getItem('butterfly_admin_user');
+        localStorage.getItem('butterfly_admin_user') ||
+        localStorage.getItem('butterfly_user');
       if (token && raw) {
         try {
           setAuthUser(JSON.parse(raw));
@@ -284,8 +287,9 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
 
           {/* User Profile Link - directly redirects to /profile */}
           <Link
-            href="/profile"
-            aria-label="User Profile"
+            href={isAdmin ? "/admin/overview" : "/profile"}
+            aria-label={isAdmin ? "Admin Dashboard" : "User Profile"}
+            title={isAdmin ? "Admin Dashboard" : (authUser ? (authUser.name || "My Profile") : "Sign In / Profile")}
             className="p-2 rounded-full text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 transition-colors cursor-pointer relative"
           >
             <User className="w-5 h-5" />
@@ -636,7 +640,7 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
             {/* Separate User Profile Section at Bottom */}
             <div className="p-4 sm:p-5 border-t border-zinc-100 bg-zinc-50/70 shrink-0">
               <Link
-                href="/profile"
+                href={isAdmin ? "/admin/overview" : "/profile"}
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center justify-between p-3.5 rounded-xl bg-white border border-zinc-200/80 shadow-2xs hover:border-[#E50914]/40 hover:bg-red-50/20 transition-all group"
               >
@@ -646,10 +650,10 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
                   </div>
                   <div>
                     <span className="block text-xs font-bold text-zinc-900 group-hover:text-[#E50914] transition-colors">
-                      {authUser ? (authUser.name || 'My Profile') : 'User Profile'}
+                      {isAdmin ? 'Admin Dashboard' : (authUser ? (authUser.name || 'My Profile') : 'User Profile')}
                     </span>
                     <span className="block text-[11px] text-zinc-500 font-medium">
-                      {authUser ? authUser.email : 'View orders & personal details'}
+                      {isAdmin ? 'Manage inventory, orders & settings' : (authUser ? authUser.email : 'View orders & personal details')}
                     </span>
                   </div>
                 </div>

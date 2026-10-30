@@ -89,6 +89,7 @@ export function InventoryTab({
 }: InventoryTabProps) {
   const [productSearch, setProductSearch] = useState('');
   const [selectedSizeFilter, setSelectedSizeFilter] = useState<string>('All');
+  const [selectedModelFilter, setSelectedModelFilter] = useState<string>('All');
   const [productsViewMode, setProductsViewMode] = useState<'cards' | 'table'>('cards');
 
   // Dynamic sizes state
@@ -116,21 +117,32 @@ export function InventoryTab({
 
   const [sizeFeedbackError, setSizeFeedbackError] = useState('');
 
-  // Sync dynamic models from productsList and local storage
+  // Sync dynamic models: ONLY show added model names (exclude legacy product codes like BTV001, BF50UI, etc.)
   useEffect(() => {
-    let customModels: string[] = [];
+    let customModels: string[] = ['Android', 'Google Android'];
     if (typeof window !== 'undefined') {
       try {
         const stored = localStorage.getItem('butterfly_custom_models');
         if (stored) {
           const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) customModels = parsed;
+          if (Array.isArray(parsed)) {
+            const clean = parsed.filter(
+              (m: any) => typeof m === 'string' && m.trim() && !/^(BF\d+|BTV\d+|BF.*-MVT.*|.*-NEW.*)$/i.test(m.trim())
+            );
+            if (clean.length > 0) customModels = clean;
+          }
         }
+        localStorage.setItem('butterfly_custom_models', JSON.stringify(customModels));
       } catch {}
     }
-    const catalogModels = productsList.map((p) => p.model?.trim()).filter(Boolean) as string[];
-    const combined = Array.from(new Set([...catalogModels, ...customModels])).filter(Boolean);
-    setAvailableModels(combined);
+
+    // Only include models from productsList if they match an added clean model name (not a legacy product code)
+    const validCatalogModels = productsList
+      .map((p) => p.model?.trim())
+      .filter((m) => m && !/^(BF\d+|BTV\d+|BF.*-MVT.*|.*-NEW.*)$/i.test(m)) as string[];
+
+    const finalModels = Array.from(new Set([...customModels, ...validCatalogModels])).filter(Boolean);
+    setAvailableModels(finalModels);
   }, [productsList]);
 
   // Dynamic Model Add Handler (UI Modal)
@@ -653,37 +665,13 @@ export function InventoryTab({
     }
   };
 
-  // Dynamic Model Selection Handler
-  const handleSelectModelPreset = (codeOrAction: string) => {
-    if (codeOrAction === '__ADD_NEW__') {
-      handleAddNewModel();
-      return;
-    }
-    if (!codeOrAction || codeOrAction === 'CUSTOM') {
-      setNewProduct((prev) => ({ ...prev, modelSelectionType: 'CUSTOM' }));
-      return;
-    }
-
-    const existing = productsList.find((p) => p.model === codeOrAction);
-    if (existing) {
-      setNewProduct((prev) => ({
-        ...prev,
-        modelSelectionType: editingProduct ? existing.model : 'CUSTOM',
-        model: editingProduct ? existing.model : `${existing.model}-NEW`,
-        name: prev.name ? prev.name : existing.name,
-        size: existing.size,
-        resolution: existing.resolution,
-        sound: prev.sound ? prev.sound : existing.sound,
-        smartOS: existing.smartOS || existing.os || 'Google TV',
-        displayTech: existing.displayTech || 'Ultra Bright D-LED',
-      }));
-    } else {
-      setNewProduct((prev) => ({
-        ...prev,
-        modelSelectionType: codeOrAction,
-        model: codeOrAction,
-      }));
-    }
+  // Dynamic Model Selection Handler: sets the selected model storage
+  const handleSelectModelPreset = (modelName: string) => {
+    setNewProduct((prev) => ({
+      ...prev,
+      model: modelName,
+      modelSelectionType: modelName,
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1332,8 +1320,8 @@ export function InventoryTab({
                     <span className="text-[10px] font-bold text-slate-400 uppercase">Step 1 of 5</span>
                   </div>
 
-                  {/* Model Name, Custom Model Name & Screen Size */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                  {/* Model Name & Screen Size */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
@@ -1348,55 +1336,21 @@ export function InventoryTab({
                         </button>
                       </div>
                       <select
-                        value={
-                          newProduct.modelSelectionType ||
-                          (availableModels.includes(newProduct.model)
-                            ? newProduct.model
-                            : newProduct.model
-                            ? 'CUSTOM'
-                            : '')
-                        }
+                        required
+                        value={newProduct.model || ''}
                         onChange={(e) => handleSelectModelPreset(e.target.value)}
                         className="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#E50914]/15 focus:border-[#E50914] transition-all cursor-pointer"
                       >
                         <option value="">Select Model Name...</option>
-                        <option value="__ADD_NEW__">+ Add New Model Name...</option>
                         {availableModels.map((m) => (
                           <option key={m} value={m}>
                             {m}
                           </option>
                         ))}
-                        <option value="CUSTOM">Custom Model Name...</option>
                       </select>
                     </div>
 
-                    {(newProduct.modelSelectionType === 'CUSTOM' ||
-                      (!availableModels.includes(newProduct.model) && newProduct.model)) && (
-                      <div className="animate-in fade-in duration-200">
-                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                          Custom Model Name <span className="text-[#E50914]">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          placeholder="e.g. BF50UI or BTV002"
-                          value={newProduct.model}
-                          onChange={(e) =>
-                            setNewProduct({ ...newProduct, model: e.target.value.toUpperCase() })
-                          }
-                          className="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-xs font-mono font-bold uppercase focus:outline-none focus:ring-2 focus:ring-[#E50914]/15 focus:border-[#E50914] transition-all"
-                        />
-                      </div>
-                    )}
-
-                    <div
-                      className={
-                        newProduct.modelSelectionType === 'CUSTOM' ||
-                        (!availableModels.includes(newProduct.model) && newProduct.model)
-                          ? ''
-                          : 'sm:col-span-2'
-                      }
-                    >
+                    <div>
                       <div className="flex items-center justify-between mb-1">
                         <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
                           Screen Size <span className="text-[#E50914]">*</span>
@@ -1429,7 +1383,6 @@ export function InventoryTab({
                       </select>
                     </div>
                   </div>
-
                   {/* Television Title / Product Name */}
                   <div>
                     <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">

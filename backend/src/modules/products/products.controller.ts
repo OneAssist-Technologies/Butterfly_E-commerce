@@ -35,6 +35,7 @@ export class ProductsController {
 
   @Get()
   async getAll(
+    @Query('model') model?: string,
     @Query('size') size?: string,
     @Query('resolution') resolution?: string,
     @Query('smart') smart?: string,
@@ -44,6 +45,7 @@ export class ProductsController {
     @Query('sort') sort?: string,
   ) {
     return this.productsService.findAll({
+      model,
       size,
       resolution,
       smart,

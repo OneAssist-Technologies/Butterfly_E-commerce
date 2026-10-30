@@ -133,6 +133,7 @@ export class ProductsService implements OnModuleInit {
   }
 
   async findAll(query?: {
+    model?: string;
     size?: string;
     resolution?: string;
     smart?: string;
@@ -143,6 +144,13 @@ export class ProductsService implements OnModuleInit {
   }) {
     const where: any = {};
     const andConditions: any[] = [];
+
+    // Filter by model storage name (e.g. "Android", "Google Android")
+    if (query?.model && query.model !== 'All') {
+      andConditions.push({
+        model: { equals: query.model.trim(), mode: 'insensitive' },
+      });
+    }
 
     // Filter by screen size(s) - e.g. "55"", "55", "55 inch", or "43",55""
     if (query?.size && query.size !== 'All') {
@@ -588,11 +596,6 @@ export class ProductsService implements OnModuleInit {
         data,
       });
     } catch (err: any) {
-      if (err?.code === 'P2002') {
-        throw new ConflictException(
-          `A TV model with Model Name '${data.model}' already exists. Please choose a unique Model Name.`,
-        );
-      }
       this.logger.error(`Product create error: ${err?.message || err}`, err?.stack);
       throw err;
     }
@@ -625,11 +628,6 @@ export class ProductsService implements OnModuleInit {
         data,
       });
     } catch (err: any) {
-      if (err?.code === 'P2002') {
-        throw new ConflictException(
-          `A TV model with Model Name '${data.model}' already exists. Please choose a unique Model Name.`,
-        );
-      }
       this.logger.error(`Product update error for ${id}: ${err?.message || err}`, err?.stack);
       throw err;
     }

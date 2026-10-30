@@ -65,6 +65,26 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       await this.$executeRawUnsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "warrantyInstallation" TEXT;`);
       await this.$executeRawUnsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "originalPrice" TEXT;`);
       await this.$executeRawUnsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "originalNumericPrice" INTEGER;`);
+      await this.$executeRawUnsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "whatsIncluded" TEXT[] DEFAULT ARRAY[]::TEXT[];`);
+      await this.$executeRawUnsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "screenSizeCategory" TEXT;`);
+      await this.$executeRawUnsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "badge" TEXT;`);
+      await this.$executeRawUnsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "images" TEXT[] DEFAULT ARRAY[]::TEXT[];`);
+      await this.$executeRawUnsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "resolutionCategory" TEXT;`);
+      await this.$executeRawUnsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "smartOS" TEXT;`);
+      await this.$executeRawUnsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "smartCategory" TEXT;`);
+      await this.$executeRawUnsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "displayTech" TEXT;`);
+      await this.$executeRawUnsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "priceCategory" TEXT;`);
+      await this.$executeRawUnsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "brand" TEXT DEFAULT 'Butterfly';`);
+      await this.$executeRawUnsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "isFilledButton" BOOLEAN NOT NULL DEFAULT false;`);
+      await this.$executeRawUnsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "buttonLabel" TEXT;`);
+      await this.$executeRawUnsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "featuredRank" INTEGER;`);
+      await this.$executeRawUnsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "inStock" BOOLEAN NOT NULL DEFAULT true;`);
+      await this.$executeRawUnsafe(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "features" TEXT[] DEFAULT ARRAY[]::TEXT[];`);
+
+      // Ensure products.model is non-unique so Model Name acts as a storage holding multiple products
+      await this.$executeRawUnsafe(`ALTER TABLE "products" DROP CONSTRAINT IF EXISTS "products_model_key";`);
+      await this.$executeRawUnsafe(`DROP INDEX IF EXISTS "products_model_key";`);
+      await this.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "products_model_idx" ON "products"("model");`);
 
       // 3. Ensure DiscountType enum and offers table
       await this.$executeRawUnsafe(`

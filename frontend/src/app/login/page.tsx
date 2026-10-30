@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -24,6 +24,22 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // If already authenticated as admin, redirect directly to admin dashboard
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const adminToken = localStorage.getItem('butterfly_admin_token');
+      const adminRaw = localStorage.getItem('butterfly_admin_user');
+      if (adminToken && adminRaw) {
+        try {
+          const parsed = JSON.parse(adminRaw);
+          if (['SUPER_ADMIN', 'ADMIN', 'OPERATOR', 'CATALOG_MANAGER'].includes(parsed?.role)) {
+            router.replace('/admin/overview');
+          }
+        } catch {}
+      }
+    }
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
