@@ -49,7 +49,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#F8FAFC] text-slate-900 min-h-screen flex flex-col`}
       >
         <AppProviders>
-          <Suspense fallback={<div className="h-20 bg-white" />}>
+          <Suspense fallback={<div className="h-16 sm:h-[72px] bg-white" />}>
             <Header />
           </Suspense>
           <div className="flex-1 flex flex-col">{children}</div>

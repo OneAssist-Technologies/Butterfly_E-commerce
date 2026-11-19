@@ -23,8 +23,10 @@ import { ALL_PRODUCTS } from '@/data/products';
 import { productService } from '@/services/product.service';
 import { settingsService, CompanySettings } from '@/services/settings.service';
 import { ExternalLink } from 'lucide-react';
+import { useAlert } from '@/providers';
 
 export default function ContactPage() {
+  const { toast, openContactModal } = useAlert();
   const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
   const [liveProducts, setLiveProducts] = useState<any[]>(ALL_PRODUCTS);
   const [formData, setFormData] = useState({
@@ -87,6 +89,7 @@ export default function ContactPage() {
       });
 
       setSuccess(true);
+      toast.success('Your enquiry has been received! Our support team will get back to you shortly.', 'Enquiry Submitted');
       setFormData({
         name: '',
         email: '',
@@ -100,7 +103,9 @@ export default function ContactPage() {
         err?.response?.data?.message ||
         err?.message ||
         'Failed to submit your enquiry. Please verify your details or call our support line.';
-      setErrorMessage(Array.isArray(msg) ? msg.join(', ') : msg);
+      const finalMsg = Array.isArray(msg) ? msg.join(', ') : msg;
+      setErrorMessage(finalMsg);
+      toast.error(finalMsg, 'Submission Error');
     } finally {
       setLoading(false);
     }
@@ -159,9 +164,31 @@ export default function ContactPage() {
             <div className="space-y-4 pt-2">
               
               {/* Phone Card */}
-              <a
-                href={`tel:${companySettings?.phone || '+914224301234'}`}
-                className="flex items-start gap-4 p-5 rounded-2xl bg-white border border-zinc-200/90 shadow-xs hover:shadow-md hover:border-[#E50914]/40 transition-all group"
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() =>
+                  openContactModal({
+                    type: 'phone',
+                    title: 'Customer Care Helpline',
+                    value: companySettings?.phone || '+91 422 430 1234',
+                    hours: companySettings?.supportHours || 'Mon - Sat | 9:00 AM - 6:00 PM IST',
+                    whatsapp: companySettings?.whatsapp || '+91 98765 43210',
+                  })
+                }
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    openContactModal({
+                      type: 'phone',
+                      title: 'Customer Care Helpline',
+                      value: companySettings?.phone || '+91 422 430 1234',
+                      hours: companySettings?.supportHours || 'Mon - Sat | 9:00 AM - 6:00 PM IST',
+                      whatsapp: companySettings?.whatsapp || '+91 98765 43210',
+                    });
+                  }
+                }}
+                className="flex items-start gap-4 p-5 rounded-2xl bg-white border border-zinc-200/90 shadow-xs hover:shadow-md hover:border-[#E50914]/40 transition-all group cursor-pointer"
               >
                 <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center text-[#E50914] shrink-0 group-hover:scale-110 transition-transform">
                   <Phone className="w-5 h-5" />
@@ -183,12 +210,32 @@ export default function ContactPage() {
                     {companySettings?.supportHours || 'Mon - Sat | 9:00 AM - 6:00 PM IST'}
                   </p>
                 </div>
-              </a>
+              </div>
 
               {/* Email Card */}
-              <a
-                href={`mailto:${companySettings?.supportEmail || companySettings?.email || 'support@butterflytv.in'}`}
-                className="flex items-start gap-4 p-5 rounded-2xl bg-white border border-zinc-200/90 shadow-xs hover:shadow-md hover:border-[#E50914]/40 transition-all group"
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() =>
+                  openContactModal({
+                    type: 'email',
+                    title: 'Direct Email Support',
+                    value: companySettings?.supportEmail || companySettings?.email || 'support@butterflytv.in',
+                    hours: companySettings?.supportHours || 'Mon - Sat | 9:00 AM - 6:00 PM (Working Hours)',
+                  })
+                }
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    openContactModal({
+                      type: 'email',
+                      title: 'Direct Email Support',
+                      value: companySettings?.supportEmail || companySettings?.email || 'support@butterflytv.in',
+                      hours: companySettings?.supportHours || 'Mon - Sat | 9:00 AM - 6:00 PM (Working Hours)',
+                    });
+                  }
+                }}
+                className="flex items-start gap-4 p-5 rounded-2xl bg-white border border-zinc-200/90 shadow-xs hover:shadow-md hover:border-[#E50914]/40 transition-all group cursor-pointer"
               >
                 <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center text-[#E50914] shrink-0 group-hover:scale-110 transition-transform">
                   <Mail className="w-5 h-5" />
@@ -201,10 +248,10 @@ export default function ContactPage() {
                     {companySettings?.supportEmail || companySettings?.email || 'support@butterflytv.in'}
                   </p>
                   <p className="text-xs text-zinc-500 mt-1">
-                    Response guaranteed within 24 hours
+                    Mon - Sat | 9:00 AM - 6:00 PM (Working Hours)
                   </p>
                 </div>
-              </a>
+              </div>
 
               {/* Address Card */}
               <div className="flex items-start gap-4 p-5 rounded-2xl bg-white border border-zinc-200/90 shadow-xs">
@@ -243,16 +290,16 @@ export default function ContactPage() {
             <div className="bg-red-50/60 border border-red-100 rounded-2xl p-5 space-y-2.5">
               <div className="flex items-center gap-2 text-xs font-bold text-[#E50914]">
                 <Shield className="w-4 h-4" />
-                <span>Pan-India On-Site Warranty</span>
+                <span>All-Tamil Nadu On-Site Warranty</span>
               </div>
               <p className="text-xs text-zinc-600 leading-relaxed">
-                Technician visit right at your doorstep for installation, wall-mounting, or troubleshooting across 250+ cities.
+                Technician visit right at your doorstep for installation, wall-mounting, or troubleshooting all over Tamil Nadu.
               </p>
             </div>
           </div>
 
           {/* Right Column: User Enquiry Form (7 cols) */}
-          <div className="lg:col-span-7 bg-white rounded-3xl p-8 sm:p-10 border border-zinc-200 shadow-sm relative">
+          <div className="lg:col-span-7 bg-white rounded-3xl p-5 sm:p-8 lg:p-10 border border-zinc-200 shadow-sm relative">
             
             <div className="mb-6">
               <span className="text-xs font-black tracking-widest text-[#E50914] uppercase block mb-1">

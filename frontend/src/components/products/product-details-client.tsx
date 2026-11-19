@@ -31,7 +31,7 @@ import {
 import { CatalogProduct } from '@/data/products';
 import { ProductCatalogCard } from '@/components/cards/product-catalog-card';
 import { EnquiryModal } from '@/components/shared/enquiry-modal';
-import { useCart } from '@/providers';
+import { useCart, customToast } from '@/providers';
 import { TVProduct } from '@/components/cards/product-card';
 import { productService, normalizeProductImageUrl } from '@/services/product.service';
 import { offerService, calculateProductPricing, Offer } from '@/services/offer.service';
@@ -335,7 +335,7 @@ export function ProductDetailsClient({
   const handleShare = () => {
     if (typeof window !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(window.location.href);
-      alert('Product link copied to clipboard!');
+      customToast.success('Product link copied to clipboard!', 'Link Copied');
     }
   };
 
@@ -617,7 +617,7 @@ export function ProductDetailsClient({
                   </span>
                 </div>
 
-                <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+                <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
                   {availableSizes.map((sizeOption) => {
                     const isCurrent = sizeOption.label === product.screenSizeCategory || sizeOption.label === product.size;
                     return (
@@ -629,7 +629,7 @@ export function ProductDetailsClient({
                             router.push(`/products/${sizeOption.targetId}`);
                           }
                         }}
-                        className={`py-2.5 px-3 rounded-xl text-xs font-bold text-center transition-all cursor-pointer border ${
+                        className={`py-2 px-1 sm:py-2.5 sm:px-3 rounded-xl text-xs font-bold text-center transition-all cursor-pointer border ${
                           isCurrent
                             ? 'bg-[#E50914] text-white border-[#E50914] shadow-sm'
                             : sizeOption.targetId

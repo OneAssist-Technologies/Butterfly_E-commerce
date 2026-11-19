@@ -9,6 +9,7 @@ import { enquiryService } from '@/services/enquiry.service';
 import { authService } from '@/services/auth.service';
 import { settingsService, CompanySettings } from '@/services/settings.service';
 import { offerService, Offer, CreateOfferPayload } from '@/services/offer.service';
+import { customConfirm, customToast } from '@/providers';
 
 // Modular Admin Components
 import {
@@ -362,20 +363,29 @@ export function AdminDashboardClient({ initialTab }: AdminDashboardClientProps) 
     }
   };
 
-  const handleDeleteProduct = async (id: string) => {
-    if (confirm('Are you sure you want to delete this TV model from the catalog?')) {
-      const updated = productsList.filter((p) => p.id !== id);
-      setProductsList(updated);
-      if (typeof window !== 'undefined') {
-        try { localStorage.setItem('butterfly_admin_products', JSON.stringify(updated)); } catch {}
-        window.dispatchEvent(new Event('butterfly_products_updated'));
-      }
-      try {
-        await productService.delete(id);
-      } catch (e) {
-        console.warn('Backend delete product failed:', e);
-      }
-    }
+  const handleDeleteProduct = async (id: string): Promise<void> => {
+    const prod = productsList.find((p) => p.id === id);
+    customConfirm({
+      title: 'Delete Product Confirmation',
+      message: `Are you sure you want to delete ${prod ? `"${prod.name}"` : 'this TV model'} from the catalog? This cannot be undone.`,
+      confirmText: 'Delete Product',
+      cancelText: 'Cancel',
+      type: 'danger',
+      onConfirm: async () => {
+        const updated = productsList.filter((p) => p.id !== id);
+        setProductsList(updated);
+        if (typeof window !== 'undefined') {
+          try { localStorage.setItem('butterfly_admin_products', JSON.stringify(updated)); } catch {}
+          window.dispatchEvent(new Event('butterfly_products_updated'));
+        }
+        try {
+          await productService.delete(id);
+          customToast.success('Product removed from catalog.', 'Deleted');
+        } catch (e) {
+          console.warn('Backend delete product warning:', e);
+        }
+      },
+    });
   };
 
   const handleAddProduct = async (product: CatalogProduct): Promise<CatalogProduct> => {
@@ -609,7 +619,7 @@ export function AdminDashboardClient({ initialTab }: AdminDashboardClientProps) 
 
   const handleDeleteUser = async (id: string) => {
     if (id === 'USR-001' || id === 'super-admin-001') {
-      alert('Cannot delete primary Super Admin account.');
+      customToast.error('Cannot delete primary Super Admin account.', 'Action Restricted');
       return;
     }
     const updated = teamUsers.filter((u) => u.id !== id);
