@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { CustomerEnquiry } from './types';
 import { CatalogProduct } from '@/data/products';
+import { customConfirm, customToast } from '@/providers';
 
 interface EnquiriesTabProps {
   enquiries: CustomerEnquiry[];
@@ -126,13 +127,20 @@ export function EnquiriesTab({
     setReviewEnquiry({ ...reviewEnquiry, status });
   };
 
-  const handleDeleteInModal = async () => {
+  const handleDeleteInModal = () => {
     if (!reviewEnquiry) return;
-    if (confirm(`Delete enquiry from ${reviewEnquiry.name} (${reviewEnquiry.id})?`)) {
-      const id = reviewEnquiry.id;
-      setReviewEnquiry(null);
-      await onDeleteEnquiry(id);
-    }
+    const targetEnquiry = reviewEnquiry;
+    customConfirm({
+      title: 'Delete Customer Enquiry',
+      message: `Are you sure you want to delete the enquiry from ${targetEnquiry.name} (${targetEnquiry.id})?`,
+      confirmText: 'Delete Enquiry',
+      cancelText: 'Cancel',
+      type: 'danger',
+      onConfirm: async () => {
+        setReviewEnquiry(null);
+        await onDeleteEnquiry(targetEnquiry.id);
+      },
+    });
   };
 
   const getCleanPhone = (phoneStr: string) => {
@@ -258,23 +266,35 @@ export function EnquiriesTab({
                         {enq.name}
                       </button>
                       <div className="flex items-center gap-3 text-[11px] text-zinc-500 mt-0.5">
-                        <a
-                          href={`tel:${enq.phone}`}
-                          className="flex items-center gap-1 hover:text-[#E50914] transition-colors"
-                          title="Call customer directly"
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                              navigator.clipboard.writeText(enq.phone);
+                              customToast.success(`Copied phone: ${enq.phone}`, 'Copied');
+                            }
+                          }}
+                          className="flex items-center gap-1 hover:text-[#E50914] transition-colors cursor-pointer"
+                          title="Copy phone number"
                         >
                           <Phone className="w-3 h-3 text-zinc-400" />
                           {enq.phone}
-                        </a>
+                        </button>
                         {enq.email && (
-                          <a
-                            href={`mailto:${enq.email}`}
-                            className="flex items-center gap-1 hover:text-[#E50914] transition-colors"
-                            title="Email customer"
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                                navigator.clipboard.writeText(enq.email);
+                                customToast.success(`Copied email: ${enq.email}`, 'Copied');
+                              }
+                            }}
+                            className="flex items-center gap-1 hover:text-[#E50914] transition-colors cursor-pointer"
+                            title="Copy customer email"
                           >
                             <Mail className="w-3 h-3 text-zinc-400" />
                             {enq.email}
-                          </a>
+                          </button>
                         )}
                       </div>
                     </td>
@@ -391,13 +411,19 @@ export function EnquiriesTab({
 
               {/* Direct Contact Links */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-zinc-200/70">
-                <a
-                  href={`tel:${reviewEnquiry.phone}`}
-                  className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-white border border-zinc-200 hover:border-zinc-300 text-zinc-800 font-bold text-xs hover:bg-zinc-50 transition-all shadow-xs"
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                      navigator.clipboard.writeText(reviewEnquiry.phone);
+                      customToast.success(`Copied phone: ${reviewEnquiry.phone}`, 'Copied');
+                    }
+                  }}
+                  className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-white border border-zinc-200 hover:border-zinc-300 text-zinc-800 font-bold text-xs hover:bg-zinc-50 transition-all shadow-xs cursor-pointer"
                 >
                   <Phone className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Call: {reviewEnquiry.phone}</span>
-                </a>
+                  <span>Copy Phone: {reviewEnquiry.phone}</span>
+                </button>
 
                 <a
                   href={`https://wa.me/${getCleanPhone(reviewEnquiry.phone)}?text=${encodeURIComponent(
@@ -414,13 +440,19 @@ export function EnquiriesTab({
 
               {reviewEnquiry.email && (
                 <div className="pt-1">
-                  <a
-                    href={`mailto:${reviewEnquiry.email}?subject=Butterfly TV Enquiry [${reviewEnquiry.id}]`}
-                    className="flex items-center gap-2 text-xs text-zinc-600 hover:text-[#E50914] font-medium"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                        navigator.clipboard.writeText(reviewEnquiry.email!);
+                        customToast.success(`Copied email: ${reviewEnquiry.email}`, 'Copied');
+                      }
+                    }}
+                    className="flex items-center gap-2 text-xs text-zinc-600 hover:text-[#E50914] font-medium cursor-pointer"
                   >
                     <Mail className="w-3.5 h-3.5 text-zinc-400" />
-                    <span>{reviewEnquiry.email}</span>
-                  </a>
+                    <span>{reviewEnquiry.email} (Click to copy)</span>
+                  </button>
                 </div>
               )}
             </div>

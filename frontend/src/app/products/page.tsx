@@ -13,16 +13,19 @@ import {
   SlidersHorizontal,
   X,
   Search,
+  Gift,
+  MessageCircle,
+  Sparkles,
 } from 'lucide-react';
 import { ALL_PRODUCTS, CatalogProduct } from '@/data/products';
 import { productService } from '@/services/product.service';
-import { settingsService } from '@/services/settings.service';
+import { settingsService, CompanySettings } from '@/services/settings.service';
 import { ProductCatalogCard } from '@/components/cards/product-catalog-card';
 import { EnquiryModal } from '@/components/shared/enquiry-modal';
 import { TVProduct } from '@/components/cards/product-card';
 import { useCart } from '@/providers';
 
-type SortOption = 'featured' | 'price-asc' | 'price-desc' | 'name-asc';
+type SortOption = 'featured' | 'size-asc' | 'size-desc' | 'price-asc' | 'price-desc' | 'name-asc';
 
 export interface PriceRangeOption {
   id: string;
@@ -234,8 +237,9 @@ function ProductsCatalogContent() {
     setCatalogSearchInput((prev) => (prev !== q ? q : prev));
   }, [queryParam]);
 
-  // Dynamic available TV sizes state (fully reactive to admin changes)
+  // Dynamic available TV sizes & company settings (fully reactive to admin changes)
   const [availableSizes, setAvailableSizes] = useState<string[]>([]);
+  const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
 
   useEffect(() => {
     const loadSizes = async () => {
@@ -252,10 +256,13 @@ function ProductsCatalogContent() {
       }
       try {
         const st = await settingsService.getSettings();
-        if (Array.isArray(st.availableSizes)) {
-          setAvailableSizes(st.availableSizes);
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('butterfly_tv_sizes', JSON.stringify(st.availableSizes));
+        if (st) {
+          setCompanySettings(st);
+          if (Array.isArray(st.availableSizes)) {
+            setAvailableSizes(st.availableSizes);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('butterfly_tv_sizes', JSON.stringify(st.availableSizes));
+            }
           }
         }
       } catch {}
@@ -351,7 +358,7 @@ function ProductsCatalogContent() {
     }
 
     const sortVal = searchParams.get('sort') as SortOption;
-    if (sortVal && ['featured', 'price-asc', 'price-desc', 'name-asc'].includes(sortVal)) {
+    if (sortVal && ['featured', 'size-asc', 'size-desc', 'price-asc', 'price-desc', 'name-asc'].includes(sortVal)) {
       setSortBy(sortVal);
     } else {
       setSortBy('featured');
@@ -526,6 +533,26 @@ function ProductsCatalogContent() {
   }, []);
 
   // Helper functions for dynamic attributes & categorization
+  const getProductSizeInches = (p: CatalogProduct): number => {
+    if (p.size) {
+      const m = p.size.match(/\d{2,3}/);
+      if (m) return parseInt(m[0], 10);
+    }
+    if (p.screenSizeCategory) {
+      const m = p.screenSizeCategory.match(/\d{2,3}/);
+      if (m) return parseInt(m[0], 10);
+    }
+    if (p.name) {
+      const m = p.name.match(/(\d{2,3})\s*(?:["'”]|inch|in\b|-inch)/i) || p.name.match(/\b(\d{2,3})\b/);
+      if (m) return parseInt(m[1], 10);
+    }
+    if (p.model) {
+      const m = p.model.match(/(\d{2,3})/);
+      if (m) return parseInt(m[1], 10);
+    }
+    return 999;
+  };
+
   const getProductSizeLabel = (p: CatalogProduct): string => {
     if (p.size) return p.size.trim();
     if (p.screenSizeCategory) return p.screenSizeCategory.trim();
@@ -716,10 +743,27 @@ function ProductsCatalogContent() {
       .sort((a, b) => {
         const priceA = getProductPriceNumber(a);
         const priceB = getProductPriceNumber(b);
+        const sizeA = getProductSizeInches(a);
+        const sizeB = getProductSizeInches(b);
+
         if (sortBy === 'price-asc') return priceA - priceB;
         if (sortBy === 'price-desc') return priceB - priceA;
+        if (sortBy === 'size-asc') return sizeA - sizeB || priceA - priceB;
+        if (sortBy === 'size-desc') return sizeB - sizeA || priceB - priceA;
         if (sortBy === 'name-asc') return a.model.localeCompare(b.model);
-        return (a.featuredRank ?? 99) - (b.featuredRank ?? 99);
+
+        // Default 'featured' sorting: Show lower screen sizes first (e.g. 32" -> 43" -> 50" -> 55" -> 65" -> 75" -> 85")
+        if (sizeA !== sizeB) {
+          return sizeA - sizeB;
+        }
+
+        const rankA = a.featuredRank ?? 99;
+        const rankB = b.featuredRank ?? 99;
+        if (rankA !== rankB) {
+          return rankA - rankB;
+        }
+
+        return priceA - priceB;
       });
   }, [
     productsList,
@@ -959,6 +1003,46 @@ function ProductsCatalogContent() {
           <span className="text-zinc-900 font-medium">Products</span>
         </nav>
 
+        {/* Current Deals & Store Reference Prompt Banner */}
+        <div className="mb-6 bg-gradient-to-r from-red-50/80 via-white to-amber-50/60 border border-red-200/90 rounded-2xl p-4 sm:px-5 sm:py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center text-[#E50914] shrink-0">
+              <Gift className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-wider text-[#E50914] bg-red-100/60 px-2 py-0.5 rounded-md">
+                  TODAY&apos;S STORE OFFER
+                </span>
+                <span className="text-xs text-zinc-500 font-medium hidden sm:inline">•</span>
+                <span className="text-xs font-bold text-zinc-900 hidden sm:inline">
+                  Seasonal &amp; In-Store Discounts
+                </span>
+              </div>
+              <p className="text-xs text-zinc-600 mt-0.5">
+                Looking for unadvertised festival discounts or custom wall-mounting packages? Contact our store team directly!
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+            <a
+              href={`https://wa.me/${(companySettings?.whatsapp || companySettings?.phone || '919876543210').replace(/[^0-9]/g, '').replace(/^(\d{10})$/, '91$1')}?text=${encodeURIComponent("Hello Butterfly Smart TV Team, I am browsing products and want to know about today's current offers and discounts.")}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all inline-flex items-center gap-1.5 shadow-xs cursor-pointer"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              <span>WhatsApp for Deals</span>
+            </a>
+            <Link
+              href="/#exclusive-offers"
+              className="px-3.5 py-2 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 text-xs font-bold text-zinc-800 transition-colors"
+            >
+              Check Offers
+            </Link>
+          </div>
+        </div>
+
         {/* Catalog Header: Title + Subtitle + Showing Count + Sort Dropdown */}
         <div className="flex flex-col lg:flex-row lg:items-end justify-between pb-8 border-b border-zinc-100 gap-4">
           <div>
@@ -1027,7 +1111,9 @@ function ProductsCatalogContent() {
                   onChange={(e) => handleSortChange(e.target.value as SortOption)}
                   className="appearance-none bg-white border border-zinc-200 rounded-lg px-3 py-1.5 pr-8 text-xs font-medium text-zinc-800 focus:outline-none focus:ring-1 focus:ring-[#E50914] cursor-pointer"
                 >
-                  <option value="featured">Featured</option>
+                  <option value="featured">Featured (Size: Low to High)</option>
+                  <option value="size-asc">Screen Size: Low to High</option>
+                  <option value="size-desc">Screen Size: High to Low</option>
                   <option value="price-asc">Price: Low to High</option>
                   <option value="price-desc">Price: High to Low</option>
                   <option value="name-asc">Model: A to Z</option>

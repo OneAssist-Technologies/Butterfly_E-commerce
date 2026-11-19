@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { HeroCarousel } from '@/components/sections/hero-carousel';
 import { SizeSelector } from '@/components/sections/size-selector';
 import { BestSelling } from '@/components/sections/best-selling';
+import { OffersSection } from '@/components/sections/offers-section';
 import { AboutSection } from '@/components/sections/about-section';
 import { TrustBar } from '@/components/sections/trust-bar';
 import { TVProduct } from '@/components/cards/product-card';
@@ -42,10 +43,13 @@ export default function Home() {
         selectedFilterSize={selectedSizeFilter}
       />
 
-      {/* 4. About Butterfly: Legacy of Quality, Vision for Tomorrow */}
+      {/* 4. Current Offers & In-Store Deal Enquiries */}
+      <OffersSection />
+
+      {/* 5. About Butterfly: Legacy of Quality, Vision for Tomorrow */}
       <AboutSection />
 
-      {/* 5. Trust Bar (Warranty, Pan India Support, Dedicated Support, Trusted Brand) */}
+      {/* 5. Trust Bar (Warranty, Tamil Nadu Support, Dedicated Support, Trusted Brand) */}
       <TrustBar />
     </main>
   );

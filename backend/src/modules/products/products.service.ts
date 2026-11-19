@@ -346,6 +346,32 @@ export class ProductsService implements OnModuleInit {
       });
     }
 
+    // Sort by screen size low-to-high by default (e.g. 32" -> 43" -> 50" -> 55" -> 65" -> 75" -> 85")
+    const getSizeNumber = (p: any): number => {
+      const raw = `${p.size || ''} ${p.screenSizeCategory || ''} ${p.name || ''}`;
+      const match = raw.match(/(\d{2,3})/);
+      return match ? parseInt(match[1], 10) : 999;
+    };
+
+    if (!query?.sort || query.sort === 'featured' || query.sort === 'size-asc') {
+      products.sort((a, b) => {
+        const sizeA = getSizeNumber(a);
+        const sizeB = getSizeNumber(b);
+        if (sizeA !== sizeB) return sizeA - sizeB;
+        const rankA = typeof a.featuredRank === 'number' ? a.featuredRank : 99;
+        const rankB = typeof b.featuredRank === 'number' ? b.featuredRank : 99;
+        if (rankA !== rankB) return rankA - rankB;
+        return (a.numericPrice || 0) - (b.numericPrice || 0);
+      });
+    } else if (query.sort === 'size-desc') {
+      products.sort((a, b) => {
+        const sizeA = getSizeNumber(a);
+        const sizeB = getSizeNumber(b);
+        if (sizeA !== sizeB) return sizeB - sizeA;
+        return (b.numericPrice || 0) - (a.numericPrice || 0);
+      });
+    }
+
     const baseUrl = this.getBaseUrl();
     return products.map((p) => {
       let imageUrl = p.image;

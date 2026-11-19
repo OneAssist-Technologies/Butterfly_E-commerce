@@ -52,7 +52,7 @@ export default function AboutPage() {
               </h1>
 
               <p className="text-zinc-300 text-xs sm:text-base leading-relaxed max-w-xl">
-                Butterfly Smart TV is more than just a television brand. We are a Coimbatore-based company committed to delivering innovative, high-quality and affordable smart TVs for every home.
+                Butterfly Enterprises is committed to delivering innovative, high-quality and affordable smart TVs for every home, proudly rooted in Coimbatore.
               </p>
 
               <div className="pt-2 flex items-center gap-2.5 sm:gap-4">
@@ -114,10 +114,10 @@ export default function AboutPage() {
 
             <div className="space-y-3 sm:space-y-4 text-xs sm:text-base text-zinc-600 leading-relaxed">
               <p>
-                Established with a passion for innovation and a deep understanding of Indian homes, Butterfly Smart TV was born in Coimbatore — a city known for its entrepreneurial spirit and quality craftsmanship.
+                Established with a passion for innovation and a deep understanding of modern homes, Butterfly Enterprises was founded in Coimbatore — a city celebrated for its entrepreneurial spirit and quality craftsmanship.
               </p>
               <p>
-                We started with a simple belief: everyone deserves a premium viewing experience, without compromise. Today, we bring you a range of smart TVs that combine cutting-edge technology, stunning visuals and trusted reliability — all under the Butterfly name.
+                We started with a simple belief: everyone deserves a premium viewing experience without compromise. Today, Butterfly Enterprises delivers a trusted range of Smart TVs that combine cutting-edge technology, stunning visuals, and dependable reliability all over Tamil Nadu.
               </p>
             </div>
 
@@ -213,7 +213,7 @@ export default function AboutPage() {
                 Our Mission
               </h3>
               <p className="text-xs sm:text-sm text-zinc-600 leading-relaxed">
-                To make smart entertainment accessible to every home in India and beyond.
+                To make smart entertainment accessible to every home across Tamil Nadu.
               </p>
             </div>
 
@@ -364,10 +364,10 @@ export default function AboutPage() {
                 <Heart className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <h4 className="text-xs sm:text-base font-bold text-zinc-900 leading-snug">
-                Proudly Indian
+                Proudly from Tamil Nadu
               </h4>
               <p className="text-[11px] sm:text-sm text-zinc-500 leading-relaxed">
-                Rooted in Coimbatore, serving homes across India.
+                Rooted in Coimbatore, serving homes all over Tamil Nadu.
               </p>
             </div>
 
