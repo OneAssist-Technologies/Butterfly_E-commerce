@@ -8,8 +8,9 @@ import {
   Search,
   Settings,
   Wrench,
-  FileText,
   ShieldCheck,
+  FileText,
+  Download,
   ArrowRight,
   Phone,
   Mail,
@@ -25,7 +26,6 @@ import {
   HelpCircle,
   X,
   ExternalLink,
-  Download,
 } from 'lucide-react';
 
 interface FAQItem {
@@ -150,6 +150,12 @@ export default function SupportPage() {
           el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
         setActiveModal('warranty');
+      } else if (hash === '#manual' || hash === '#manuals' || hash === '#user-manual' || hash === '#user-manuals') {
+        const el = document.getElementById('manuals');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        setActiveModal('manuals');
       } else if (
         hash === '#quick-help' ||
         hash === '#how-can-we-help' ||
@@ -347,8 +353,9 @@ export default function SupportPage() {
 
           {/* Card 3: User Manuals */}
           <div
+            id="manuals"
             onClick={() => setActiveModal('manuals')}
-            className="group bg-white p-7 rounded-2xl border border-zinc-200 shadow-sm hover:shadow-xl hover:border-[#E50914]/40 hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between"
+            className="group bg-white p-7 rounded-2xl border border-zinc-200 shadow-sm hover:shadow-xl hover:border-[#E50914]/40 hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between scroll-mt-28"
           >
             <div>
               <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center text-[#E50914] mb-5 group-hover:bg-[#E50914] group-hover:text-white transition-colors">
@@ -358,7 +365,7 @@ export default function SupportPage() {
                 User Manuals
               </h3>
               <p className="text-xs sm:text-sm text-zinc-500 leading-relaxed">
-                Download user guides and product manuals.
+                Download official PDF user manuals, quick start guides and setup documents.
               </p>
             </div>
             <div className="pt-6 flex justify-end">
@@ -727,57 +734,114 @@ export default function SupportPage() {
         </div>
       )}
 
-      {/* Modal 2: User Manuals Download */}
+      {/* Modal: Official User Manuals Download */}
       {activeModal === 'manuals' && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 relative shadow-2xl animate-in fade-in zoom-in-95">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 relative shadow-2xl animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setActiveModal(null)}
-              className="absolute top-5 right-5 text-zinc-400 hover:text-zinc-700"
+              className="absolute top-5 right-5 text-zinc-400 hover:text-zinc-700 p-1 rounded-full hover:bg-zinc-100 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
             <div className="w-12 h-12 rounded-xl bg-red-50 text-[#E50914] flex items-center justify-center mb-4">
               <FileText className="w-6 h-6" />
             </div>
-            <h3 className="text-xl font-black text-zinc-900 mb-2">
-              Download User Manuals
+            <h3 className="text-2xl font-black text-zinc-900 mb-1">
+              Official User &amp; Setup Manuals
             </h3>
-            <p className="text-xs text-zinc-500 mb-6">
-              Official PDF user documentation for Butterfly Smart TVs.
+            <p className="text-xs sm:text-sm text-zinc-500 mb-6">
+              Download the official User Manual and Quick Setup Guide for Butterfly Smart Android &amp; WebOS LED TVs.
             </p>
-            <div className="space-y-3">
-              {[
-                { name: 'Butterfly 4K UHD Series (43" - 65")', size: '3.4 MB' },
-                { name: 'Butterfly Full HD Smart Series (32" - 40")', size: '2.8 MB' },
-                { name: 'Remote Control & Voice Assistant Guide', size: '1.2 MB' },
-              ].map((manual, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between p-3.5 rounded-xl bg-zinc-50 border border-zinc-200"
-                >
-                  <div>
-                    <p className="text-xs font-bold text-zinc-900">{manual.name}</p>
-                    <span className="text-[10px] text-zinc-500">PDF Document • {manual.size}</span>
+
+            <div className="space-y-4">
+              {/* Document 1: Butterfly Smart LED TV - User Manual */}
+              <div className="p-4 sm:p-5 rounded-2xl border border-zinc-200 bg-zinc-50/70 hover:bg-white hover:border-[#E50914]/40 hover:shadow-md transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-md bg-red-100 text-[#E50914]">Official User Manual</span>
+                    <span className="text-xs text-zinc-400 font-medium">18 Pages • 800 KB</span>
                   </div>
+                  <h4 className="text-base font-bold text-zinc-900">
+                    Butterfly Smart LED TV: User Manual
+                  </h4>
+                  <p className="text-xs text-zinc-500 leading-relaxed max-w-md">
+                    Covers Butterfly Smart Android &amp; WebOS 4K Series (32&quot; to 75&quot;). Includes safety, specifications, port overview, remote controls, first-time setup, picture &amp; sound calibration, troubleshooting, and warranty terms.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
                   <a
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      alert(`Downloading ${manual.name}...`);
-                    }}
-                    className="p-2 rounded-lg bg-white border border-zinc-200 text-zinc-700 hover:text-[#E50914] hover:border-[#E50914]"
+                    href="/manuals/Butterfly%20Smart%20LED%20TV%20-%20User%20Manual.pdf"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-zinc-300 text-zinc-700 text-xs font-bold hover:bg-zinc-100 transition-all"
                   >
-                    <Download className="w-4 h-4" />
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    View
+                  </a>
+                  <a
+                    href="/manuals/Butterfly%20Smart%20LED%20TV%20-%20User%20Manual.pdf"
+                    download="Butterfly Smart LED TV - User Manual.pdf"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#E50914] hover:bg-[#c70811] text-white text-xs font-bold transition-all shadow-sm"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Download
                   </a>
                 </div>
-              ))}
+              </div>
+
+              {/* Document 2: Butterfly TV Quick Setup Guide */}
+              <div className="p-4 sm:p-5 rounded-2xl border border-zinc-200 bg-zinc-50/70 hover:bg-white hover:border-[#E50914]/40 hover:shadow-md transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-md bg-blue-100 text-blue-700">Quick Setup Guide</span>
+                    <span className="text-xs text-zinc-400 font-medium">5 Pages (Illustrated) • 2.7 MB</span>
+                  </div>
+                  <h4 className="text-base font-bold text-zinc-900">
+                    Butterfly TV Quick Setup Guide
+                  </h4>
+                  <p className="text-xs text-zinc-500 leading-relaxed max-w-md">
+                    Illustrated guide for Models 32LB65* and 43LB65*. Includes step-by-step unboxing, desktop stand assembly, power adapter connections, rear view diagrams, and wall-mount specifications.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <a
+                    href="/manuals/Butterfly%20TV%20Quick%20Setup%20Guide.pdf"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-zinc-300 text-zinc-700 text-xs font-bold hover:bg-zinc-100 transition-all"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    View
+                  </a>
+                  <a
+                    href="/manuals/Butterfly%20TV%20Quick%20Setup%20Guide.pdf"
+                    download="Butterfly TV Quick Setup Guide.pdf"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#E50914] hover:bg-[#c70811] text-white text-xs font-bold transition-all shadow-sm"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Download
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-zinc-100 flex items-center justify-between">
+              <span className="text-xs text-zinc-400">
+                Manufactured by Butterfly Enterprises • Coimbatore, India
+              </span>
+              <button
+                onClick={() => setActiveModal(null)}
+                className="px-5 py-2 rounded-xl bg-zinc-900 text-white text-xs font-bold hover:bg-zinc-800 transition-colors"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Modal 3: Warranty Checker */}
+      {/* Modal 2: Warranty Checker */}
       {activeModal === 'warranty' && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 relative shadow-2xl animate-in fade-in zoom-in-95">

@@ -50,13 +50,14 @@ export function SizeCard({ item, onSelect }: SizeCardProps) {
               const fallbackMap: Record<string, string> = {
                 '32"': '/menu_tv_32.jpg',
                 '43"': '/menu_tv_43.jpg',
+                '50"': '/menu_tv_50.jpg',
                 '55"': '/menu_tv_55.jpg',
                 '65"': '/menu_tv_65.jpg',
               };
               setImgSrc(fallbackMap[item.size] || '/menu_tv_32.jpg');
             }}
             className="object-contain"
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 25vw"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
           />
         </div>
       </div>

@@ -19,6 +19,7 @@ import {
 import { CatalogProduct } from '@/data/products';
 import { settingsService } from '@/services/settings.service';
 import { productService, normalizeProductImageUrl } from '@/services/product.service';
+import { customConfirm } from '@/providers';
 
 interface InventoryTabProps {
   productsList: CatalogProduct[];
@@ -332,26 +333,33 @@ export function InventoryTab({
     }
   };
 
-  const handleDeleteSize = async (sizeToDelete: string) => {
+  const handleDeleteSize = (sizeToDelete: string) => {
     if (availableSizes.length <= 1) {
       setSizeFeedbackError('You must have at least one screen size in the catalog.');
       setTimeout(() => setSizeFeedbackError(''), 4000);
       return;
     }
-    if (confirm(`Remove ${sizeToDelete} screen size from the dynamic catalog?`)) {
-      const updated = availableSizes.filter((s) => s !== sizeToDelete);
-      setAvailableSizes(updated);
-      if (selectedSizeFilter === sizeToDelete) setSelectedSizeFilter('All');
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('butterfly_tv_sizes', JSON.stringify(updated));
-        window.dispatchEvent(new CustomEvent('butterfly_sizes_updated', { detail: updated }));
-      }
-      try {
-        await settingsService.updateSettings({ availableSizes: updated });
-      } catch (e) {
-        console.warn('Failed to update sizes in settings:', e);
-      }
-    }
+    customConfirm({
+      title: 'Remove Screen Size',
+      message: `Are you sure you want to remove "${sizeToDelete}" screen size from the dynamic catalog?`,
+      confirmText: 'Remove Size',
+      cancelText: 'Cancel',
+      type: 'danger',
+      onConfirm: async () => {
+        const updated = availableSizes.filter((s) => s !== sizeToDelete);
+        setAvailableSizes(updated);
+        if (selectedSizeFilter === sizeToDelete) setSelectedSizeFilter('All');
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('butterfly_tv_sizes', JSON.stringify(updated));
+          window.dispatchEvent(new CustomEvent('butterfly_sizes_updated', { detail: updated }));
+        }
+        try {
+          await settingsService.updateSettings({ availableSizes: updated });
+        } catch (e) {
+          console.warn('Failed to update sizes in settings:', e);
+        }
+      },
+    });
   };
 
   // Image Upload state

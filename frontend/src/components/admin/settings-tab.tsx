@@ -20,12 +20,16 @@ import {
   Check,
   AlertCircle,
   X,
+  FileText,
+  Download,
 } from 'lucide-react';
 import { CompanySettings, SizeSelectorCard } from '@/services/settings.service';
+import { customToast } from '@/providers';
 
 const DEFAULT_SIZE_CARDS: SizeSelectorCard[] = [
   { size: '32"', tagline: 'Compact & Smart', image: '/menu_tv_32.jpg' },
   { size: '43"', tagline: 'Perfect for Every Home', image: '/menu_tv_43.jpg' },
+  { size: '50"', tagline: 'True 4K Entertainment', image: '/menu_tv_50.jpg' },
   { size: '55"', tagline: 'Bigger Screen, Bigger Joy', image: '/menu_tv_55.jpg' },
   { size: '65"', tagline: 'The Ultimate Experience', image: '/menu_tv_65.jpg' },
 ];
@@ -116,7 +120,7 @@ export function SettingsTab({
 
   const handleCardImageUpload = async (size: string, file: File) => {
     if (!file.type.startsWith('image/')) {
-      alert('Please upload a valid image file (PNG, JPG, WEBP, SVG).');
+      customToast.error('Please upload a valid image file (PNG, JPG, WEBP, SVG).', 'Invalid File');
       return;
     }
 
@@ -157,7 +161,7 @@ export function SettingsTab({
       }, 4000);
     } catch (err) {
       console.error('Image processing error:', err);
-      alert('Could not process image. Please try again.');
+      customToast.error('Could not process image. Please try again.', 'Upload Failed');
     } finally {
       setProcessingSize(null);
     }
@@ -345,14 +349,14 @@ export function SettingsTab({
               <div className="space-y-3.5 text-xs">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Company / Brand Name
+                    Company / Manufacturer Name
                   </label>
                   <input
                     type="text"
                     value={form.companyName}
                     onChange={(e) => handleFieldChange('companyName', e.target.value)}
                     required
-                    placeholder="e.g. Butterfly Smart TV"
+                    placeholder="e.g. Butterfly Enterprises"
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#E50914]/15 focus:border-[#E50914]"
                   />
                 </div>
@@ -469,14 +473,14 @@ export function SettingsTab({
               <div className="space-y-3.5 text-xs">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Registered Street Address
+                    Manufacturer / Registered Street Address
                   </label>
                   <textarea
                     rows={2}
                     value={form.address}
                     onChange={(e) => handleFieldChange('address', e.target.value)}
                     required
-                    placeholder="e.g. Butterfly Smart TV Technologies, Avinashi Road, Peelamedu"
+                    placeholder="e.g. Avinashi Road, Peelamedu"
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#E50914]/15 focus:border-[#E50914]"
                   />
                 </div>
@@ -620,6 +624,44 @@ export function SettingsTab({
                   </span>
                 </p>
               </div>
+
+              {/* Official User Manuals & Documentation */}
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2.5 mt-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5 text-[#E50914]" />
+                    <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                      Official User Manuals
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    Active
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-600 leading-relaxed">
+                  Official user documentation available for customer download on the Support page:
+                </p>
+                <div className="pt-1 flex items-center gap-2 flex-wrap">
+                  <a
+                    href="/manuals/Butterfly%20Smart%20LED%20TV%20-%20User%20Manual.pdf"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 text-[10px] font-bold hover:border-[#E50914] hover:text-[#E50914] transition-all shadow-xs"
+                  >
+                    <span>User Manual (PDF)</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                  <a
+                    href="/manuals/Butterfly%20TV%20Quick%20Setup%20Guide.pdf"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 text-[10px] font-bold hover:border-[#E50914] hover:text-[#E50914] transition-all shadow-xs"
+                  >
+                    <span>Quick Setup Guide (PDF)</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              </div>
             </div>
 
             {/* SECTION 3: Storefront Section Images - TVs for Every Space (Screen Sizes) */}
@@ -657,8 +699,8 @@ export function SettingsTab({
                 </p>
               </div>
 
-              {/* Responsive Grid for the 4 Size Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+              {/* Responsive Grid for the 5 Size Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
                 {DEFAULT_SIZE_CARDS.map((cardDef) => {
                   const card = form.sizeSelectorCards?.find((c) => c.size === cardDef.size) || cardDef;
                   const isProcessing = processingSize === cardDef.size;

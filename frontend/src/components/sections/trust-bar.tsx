@@ -12,8 +12,8 @@ export function TrustBar() {
     },
     {
       icon: <Truck className="w-6 h-6 text-zinc-900" />,
-      title: 'Pan India Support',
-      subtitle: 'Service centers across India',
+      title: 'Tamil Nadu Support',
+      subtitle: 'Service across Tamil Nadu only',
     },
     {
       icon: <Headphones className="w-6 h-6 text-zinc-900" />,

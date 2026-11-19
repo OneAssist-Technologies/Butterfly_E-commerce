@@ -11,6 +11,7 @@ import { settingsService, SizeSelectorCard } from '@/services/settings.service';
 const BASE_SIZE_CONFIGS: { size: string; defaultTagline: string; defaultImage: string }[] = [
   { size: '32"', defaultTagline: 'Compact & Smart', defaultImage: '/menu_tv_32.jpg' },
   { size: '43"', defaultTagline: 'Perfect for Every Home', defaultImage: '/menu_tv_43.jpg' },
+  { size: '50"', defaultTagline: 'True 4K Entertainment', defaultImage: '/menu_tv_50.jpg' },
   { size: '55"', defaultTagline: 'Bigger Screen, Bigger Joy', defaultImage: '/menu_tv_55.jpg' },
   { size: '65"', defaultTagline: 'The Ultimate Experience', defaultImage: '/menu_tv_65.jpg' },
 ];
@@ -126,10 +127,15 @@ export function SizeSelector({ onSelectSize }: SizeSelectorProps) {
           </Link>
         </div>
 
-        {/* Responsive Grid: 2x2 on mobile, 4-column on desktop */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-          {sizeOptions.map((item) => (
-            <SizeCard key={item.size} item={item} onSelect={onSelectSize} />
+        {/* Responsive Grid: 2 columns on mobile, 3 on tablet, 5-column on desktop */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
+          {sizeOptions.map((item, idx) => (
+            <div
+              key={item.size}
+              className={idx === sizeOptions.length - 1 && sizeOptions.length % 2 !== 0 ? 'col-span-2 sm:col-span-1 max-w-xs sm:max-w-none mx-auto w-full' : 'w-full'}
+            >
+              <SizeCard item={item} onSelect={onSelectSize} />
+            </div>
           ))}
         </div>
       </div>

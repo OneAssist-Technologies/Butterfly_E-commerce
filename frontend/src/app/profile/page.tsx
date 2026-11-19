@@ -33,6 +33,7 @@ import {
 import { authService } from '@/services/auth.service';
 import { orderService } from '@/services/order.service';
 import { enquiryService } from '@/services/enquiry.service';
+import { customConfirm, customContactModal } from '@/providers';
 import { productService } from '@/services/product.service';
 import { settingsService, CompanySettings } from '@/services/settings.service';
 import { User, Order, Enquiry } from '@/types';
@@ -352,13 +353,20 @@ function ProfileContent() {
 
   // Sign out handler
   const handleLogout = () => {
-    if (confirm('Are you sure you want to sign out?')) {
-      localStorage.removeItem('butterfly_user_token');
-      localStorage.removeItem('butterfly_user');
-      localStorage.removeItem('butterfly_admin_token');
-      localStorage.removeItem('butterfly_admin_user');
-      router.push('/login');
-    }
+    customConfirm({
+      title: 'Sign Out Confirmation',
+      message: 'Are you sure you want to sign out from your Butterfly account?',
+      confirmText: 'Sign Out',
+      cancelText: 'Stay Logged In',
+      type: 'danger',
+      onConfirm: () => {
+        localStorage.removeItem('butterfly_user_token');
+        localStorage.removeItem('butterfly_user');
+        localStorage.removeItem('butterfly_admin_token');
+        localStorage.removeItem('butterfly_admin_user');
+        router.push('/login');
+      },
+    });
   };
 
   // Filtered orders
@@ -993,12 +1001,21 @@ function ProfileContent() {
                     </div>
                     <div>
                       <span className="text-[10px] uppercase font-bold text-zinc-400 block">Customer Helpline</span>
-                      <a
-                        href={`tel:${companySettings?.phone || '+91422430120'}`}
-                        className="font-bold text-zinc-900 hover:text-[#E50914] transition-colors"
+                      <button
+                        type="button"
+                        onClick={() =>
+                          customContactModal({
+                            type: 'phone',
+                            title: 'Customer Helpline',
+                            value: companySettings?.phone || companySettings?.supportEmail || '+91 422 430 120',
+                            hours: companySettings?.supportHours || 'Mon - Sat | 9:00 AM - 6:00 PM (Working Hours)',
+                            whatsapp: companySettings?.whatsapp || '+91 98765 43210',
+                          })
+                        }
+                        className="font-bold text-zinc-900 hover:text-[#E50914] transition-colors cursor-pointer text-left block"
                       >
                         {companySettings?.phone || companySettings?.supportEmail || '+91 422 430 120'}
-                      </a>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1510,7 +1527,7 @@ function ProfileContent() {
           onClick={() => setSelectedOrderForInvoice(null)}
         >
           <div
-            className="relative w-full max-w-xl bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-zinc-200 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+            className="relative w-full max-w-xl bg-white rounded-3xl p-4 sm:p-8 shadow-2xl border border-zinc-200 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-4 border-b border-zinc-100">

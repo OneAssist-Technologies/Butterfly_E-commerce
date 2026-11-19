@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { OrderRecord } from './types';
 import { CatalogProduct } from '@/data/products';
+import { customConfirm, customToast } from '@/providers';
 
 interface OrdersTabProps {
   orders: OrderRecord[];
@@ -324,16 +325,36 @@ export function OrdersTab({
                         <span className="font-bold text-zinc-900 block">{order.customerName}</span>
                         <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 mt-0.5">
                           <Mail className="w-3 h-3 text-zinc-400" />
-                          <a href={`mailto:${order.email}`} className="hover:text-zinc-800 hover:underline">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                                navigator.clipboard.writeText(order.email);
+                                customToast.success(`Copied email: ${order.email}`, 'Copied');
+                              }
+                            }}
+                            className="hover:text-zinc-800 hover:underline cursor-pointer"
+                            title="Copy customer email"
+                          >
                             {order.email}
-                          </a>
+                          </button>
                         </div>
                         {order.phone && (
                           <div className="flex items-center gap-1.5 text-[11px] text-zinc-700 mt-0.5 font-semibold">
                             <Phone className="w-3 h-3 text-emerald-600" />
-                            <a href={`tel:${order.phone}`} className="hover:text-emerald-700 hover:underline">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                                  navigator.clipboard.writeText(order.phone!);
+                                  customToast.success(`Copied phone: ${order.phone}`, 'Copied');
+                                }
+                              }}
+                              className="hover:text-emerald-700 hover:underline cursor-pointer"
+                              title="Copy customer phone"
+                            >
                               {order.phone}
-                            </a>
+                            </button>
                           </div>
                         )}
                       </td>
@@ -497,13 +518,20 @@ export function OrdersTab({
                   <span className="text-zinc-400 font-semibold block text-[10px] uppercase">
                     Email Address
                   </span>
-                  <a
-                    href={`mailto:${selectedOrderForReview.email}`}
-                    className="font-bold text-zinc-900 hover:text-[#E50914] hover:underline flex items-center gap-1 mt-0.5"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                        navigator.clipboard.writeText(selectedOrderForReview.email);
+                        customToast.success(`Copied email: ${selectedOrderForReview.email}`, 'Copied');
+                      }
+                    }}
+                    className="font-bold text-zinc-900 hover:text-[#E50914] hover:underline flex items-center gap-1 mt-0.5 cursor-pointer text-left"
+                    title="Click to copy email"
                   >
                     <Mail className="w-3.5 h-3.5 text-zinc-400" />
                     <span>{selectedOrderForReview.email}</span>
-                  </a>
+                  </button>
                 </div>
 
                 <div>
@@ -511,13 +539,20 @@ export function OrdersTab({
                     Contact Phone
                   </span>
                   {selectedOrderForReview.phone ? (
-                    <a
-                      href={`tel:${selectedOrderForReview.phone}`}
-                      className="font-bold text-emerald-700 hover:underline flex items-center gap-1.5 mt-0.5"
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                          navigator.clipboard.writeText(selectedOrderForReview.phone!);
+                          customToast.success(`Copied phone: ${selectedOrderForReview.phone}`, 'Copied');
+                        }
+                      }}
+                      className="font-bold text-emerald-700 hover:underline flex items-center gap-1.5 mt-0.5 cursor-pointer text-left"
+                      title="Click to copy phone number"
                     >
                       <Phone className="w-3.5 h-3.5 text-emerald-600" />
                       <span>{selectedOrderForReview.phone}</span>
-                    </a>
+                    </button>
                   ) : (
                     <span className="text-zinc-400 italic">Not provided</span>
                   )}
@@ -639,11 +674,19 @@ export function OrdersTab({
 
                 <button
                   type="button"
-                  onClick={async () => {
-                    if (confirm('Are you sure you want to cancel / reject this order request?')) {
-                      await onUpdateStatus(selectedOrderForReview.id, 'Cancelled');
-                      setSelectedOrderForReview(null);
-                    }
+                  onClick={() => {
+                    const targetOrder = selectedOrderForReview;
+                    customConfirm({
+                      title: 'Cancel Order Request',
+                      message: `Are you sure you want to cancel / reject order #${targetOrder.orderNumber || targetOrder.id}?`,
+                      confirmText: 'Reject / Cancel',
+                      cancelText: 'Keep Order',
+                      type: 'danger',
+                      onConfirm: async () => {
+                        await onUpdateStatus(targetOrder.id, 'Cancelled');
+                        setSelectedOrderForReview(null);
+                      },
+                    });
                   }}
                   className="w-full py-2.5 px-4 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                 >

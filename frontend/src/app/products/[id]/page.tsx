@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   return {
     title: `${product.name} | Butterfly Smart TV`,
-    description: `Discover the Butterfly ${product.name} with ${product.resolution}, ${product.sound}, ${product.os}, and official brand warranty. Free installation across India.`,
+    description: `Discover the Butterfly ${product.name} with ${product.resolution}, ${product.sound}, ${product.os}, and official brand warranty. Free installation all over Tamil Nadu.`,
     openGraph: {
       title: `${product.model} - ${product.name} | Butterfly Smart TV`,
       description: `Shop ${product.name} at ${product.price}. Enjoy cinema-grade visuals and immersive sound.`,
