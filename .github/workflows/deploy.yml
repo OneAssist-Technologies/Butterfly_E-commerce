@@ -48,6 +48,7 @@ jobs:
 
             echo "Applying production database migrations..."
             cd /var/www/butterfly-ecommerce/backend
+            npx prisma migrate resolve --rolled-back "20261114093341_butterfly_ecommerce" --config prisma7.config.ts || true
             npx prisma migrate deploy --config prisma7.config.ts
 
             echo "Restarting Butterfly services only..."
