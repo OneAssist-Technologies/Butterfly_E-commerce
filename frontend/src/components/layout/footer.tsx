@@ -80,12 +80,12 @@ export function Footer() {
           {/* Brand & Socials Column (4 cols) */}
           <div className="lg:col-span-4 space-y-4">
             <Link href="/" className="flex items-center gap-2 group">
-              <div className="relative h-7 sm:h-8 w-44 sm:w-48 transition-transform duration-300 group-hover:scale-105">
+              <div className="relative h-6 sm:h-7 w-36 sm:w-42 transition-transform duration-300 group-hover:scale-105">
                 <Image
                   src="/brand/butterfly-wordmark-white.png"
                   alt="Butterfly Logo"
                   fill
-                  sizes="(max-width: 640px) 176px, 192px"
+                  sizes="(max-width: 640px) 144px, 168px"
                   className="object-contain object-left"
                 />
               </div>

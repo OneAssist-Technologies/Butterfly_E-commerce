@@ -72,9 +72,9 @@ export function OffersSection() {
     }
   };
 
-  const whatsappPhone = (companySettings?.whatsapp || companySettings?.phone || '919876543210').replace(/[^0-9]/g, '');
+  const whatsappPhone = (companySettings?.whatsapp || companySettings?.phone || '8921793054').replace(/[^0-9]/g, '');
   const cleanWhatsapp = whatsappPhone.length === 10 ? `91${whatsappPhone}` : whatsappPhone;
-  const storePhone = companySettings?.phone || '+91 422 430 1234';
+  const storePhone = companySettings?.phone || '8921793054';
   const supportHours = companySettings?.supportHours || 'Mon - Sat | 9:00 AM - 6:00 PM (Working Hours)';
 
   return (

@@ -78,11 +78,19 @@ export default function ContactPage() {
     setLoading(true);
     setErrorMessage(null);
 
+    // Validate 10-digit Indian phone number
+    const cleanPhone = formData.phone.replace(/\D/g, '');
+    if (!cleanPhone || cleanPhone.length !== 10) {
+      setErrorMessage('Please enter a valid 10-digit mobile number.');
+      setLoading(false);
+      return;
+    }
+
     try {
       await enquiryService.create({
         name: formData.name.trim(),
         email: formData.email.trim(),
-        phone: formData.phone.trim(),
+        phone: cleanPhone,
         city: formData.city.trim() || 'Coimbatore',
         productModel: formData.productModel,
         message: formData.message.trim(),
@@ -171,9 +179,9 @@ export default function ContactPage() {
                   openContactModal({
                     type: 'phone',
                     title: 'Customer Care Helpline',
-                    value: companySettings?.phone || '+91 422 430 1234',
+                    value: companySettings?.phone || '8921793054',
                     hours: companySettings?.supportHours || 'Mon - Sat | 9:00 AM - 6:00 PM IST',
-                    whatsapp: companySettings?.whatsapp || '+91 98765 43210',
+                    whatsapp: companySettings?.whatsapp || '8921793054',
                   })
                 }
                 onKeyDown={(e) => {
@@ -182,9 +190,9 @@ export default function ContactPage() {
                     openContactModal({
                       type: 'phone',
                       title: 'Customer Care Helpline',
-                      value: companySettings?.phone || '+91 422 430 1234',
+                      value: companySettings?.phone || '8921793054',
                       hours: companySettings?.supportHours || 'Mon - Sat | 9:00 AM - 6:00 PM IST',
-                      whatsapp: companySettings?.whatsapp || '+91 98765 43210',
+                      whatsapp: companySettings?.whatsapp || '8921793054',
                     });
                   }
                 }}
@@ -198,7 +206,7 @@ export default function ContactPage() {
                     Customer Care Helpline
                   </span>
                   <p className="text-base font-black text-zinc-900 mt-0.5 group-hover:text-[#E50914] transition-colors">
-                    {companySettings?.phone || '+91 422 430 1234'}
+                    {companySettings?.phone || '8921793054'}
                   </p>
                   {companySettings?.alternatePhone && (
                     <p className="text-xs text-zinc-500 mt-0.5">
@@ -362,10 +370,13 @@ export default function ContactPage() {
                   </label>
                   <input
                     type="tel"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={10}
                     required
-                    placeholder="+91 98765 43210"
+                    placeholder="10-digit mobile number (e.g. 9876543210)"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
                     className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50/50 text-sm text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#E50914] focus:bg-white transition-all"
                   />
                 </div>

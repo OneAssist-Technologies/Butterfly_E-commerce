@@ -263,8 +263,9 @@ function ProfileContent() {
       setSaveErrorMsg('Please enter your full name.');
       return;
     }
-    if (!phone.trim()) {
-      setSaveErrorMsg('Please enter your contact phone number.');
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (!cleanPhone || cleanPhone.length !== 10) {
+      setSaveErrorMsg('Please enter a valid 10-digit contact mobile number.');
       return;
     }
     if (!address.trim()) {
@@ -818,11 +819,14 @@ function ProfileContent() {
                       <Phone className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <input
                         type="tel"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={10}
                         required
                         disabled={!isEditingPersonal}
                         value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="Enter phone number"
+                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                        placeholder="10-digit mobile number"
                         className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-zinc-300 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-[#E50914]/20 focus:border-[#E50914] disabled:bg-zinc-50 disabled:text-zinc-600 disabled:cursor-not-allowed transition-all"
                       />
                     </div>
@@ -1007,14 +1011,14 @@ function ProfileContent() {
                           customContactModal({
                             type: 'phone',
                             title: 'Customer Helpline',
-                            value: companySettings?.phone || companySettings?.supportEmail || '+91 422 430 120',
+                            value: companySettings?.phone || companySettings?.supportEmail || '8921793054',
                             hours: companySettings?.supportHours || 'Mon - Sat | 9:00 AM - 6:00 PM (Working Hours)',
-                            whatsapp: companySettings?.whatsapp || '+91 98765 43210',
+                            whatsapp: companySettings?.whatsapp || '8921793054',
                           })
                         }
                         className="font-bold text-zinc-900 hover:text-[#E50914] transition-colors cursor-pointer text-left block"
                       >
-                        {companySettings?.phone || companySettings?.supportEmail || '+91 422 430 120'}
+                        {companySettings?.phone || companySettings?.supportEmail || '8921793054'}
                       </button>
                     </div>
                   </div>
@@ -1463,10 +1467,13 @@ function ProfileContent() {
                       Contact Phone
                     </label>
                     <input
-                      type="text"
+                      type="tel"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={10}
                       value={newEnquiryPhone}
-                      onChange={(e) => setNewEnquiryPhone(e.target.value)}
-                      placeholder="Enter contact phone"
+                      onChange={(e) => setNewEnquiryPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      placeholder="10-digit phone"
                       className="w-full px-3 py-2 rounded-xl border border-zinc-300 text-xs text-zinc-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#E50914]/20 focus:border-[#E50914]"
                     />
                   </div>

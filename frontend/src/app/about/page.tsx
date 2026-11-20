@@ -88,7 +88,7 @@ export default function AboutPage() {
                 </div>
                 <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 flex items-center justify-between text-[11px] sm:text-xs text-zinc-300 bg-zinc-950/80 backdrop-blur-md px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl border border-zinc-800">
                   <span className="font-semibold text-white">Butterfly Smart TV</span>
-                  <span className="text-zinc-400">Engineered for Indian Homes</span>
+                  <span className="text-zinc-400">Engineered for Tamil Nadu Homes</span>
                 </div>
               </div>
             </div>
@@ -358,7 +358,7 @@ export default function AboutPage() {
               </p>
             </div>
 
-            {/* 6. Proudly Indian */}
+            {/* 6. Proudly from Tamil Nadu */}
             <div className="space-y-1.5 sm:space-y-2 p-2.5 sm:p-0 rounded-xl sm:rounded-none bg-zinc-50/60 sm:bg-transparent border border-zinc-100 sm:border-0 flex flex-col justify-start">
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl border border-red-200 bg-red-50 flex items-center justify-center text-[#E50914]">
                 <Heart className="w-4 h-4 sm:w-5 sm:h-5" />

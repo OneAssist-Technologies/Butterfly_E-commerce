@@ -159,9 +159,9 @@ export function AdminDashboardClient({ initialTab }: AdminDashboardClientProps) 
     companyName: 'Butterfly Smart TV',
     email: 'butterflytvs@gmail.com',
     supportEmail: 'support@butterflytv.in',
-    phone: '+91 422 430 1234',
-    alternatePhone: '+91 98765 43210',
-    whatsapp: '+91 98765 43210',
+    phone: '8921793054',
+    alternatePhone: '9876543210',
+    whatsapp: '8921793054',
     address: 'Butterfly Smart TV Technologies, Avinashi Road, Peelamedu',
     city: 'Coimbatore',
     state: 'Tamil Nadu',
@@ -300,7 +300,20 @@ export function AdminDashboardClient({ initialTab }: AdminDashboardClientProps) 
       }
 
       if (liveSettings.status === 'fulfilled' && liveSettings.value) {
-        setSettings(liveSettings.value);
+        const s = liveSettings.value;
+        const cleanTo10 = (val?: string) => {
+          if (!val) return '';
+          let d = String(val).replace(/\D/g, '');
+          if (d.length > 10 && d.startsWith('91')) d = d.slice(2);
+          else if (d.length > 10 && d.startsWith('0')) d = d.slice(1);
+          return d.slice(0, 10);
+        };
+        setSettings({
+          ...s,
+          phone: cleanTo10(s.phone),
+          alternatePhone: cleanTo10(s.alternatePhone),
+          whatsapp: cleanTo10(s.whatsapp),
+        });
       }
     } catch (e) {
       console.warn('Dashboard live hydration warning:', e);

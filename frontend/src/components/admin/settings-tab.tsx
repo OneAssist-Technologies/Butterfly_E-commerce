@@ -45,8 +45,19 @@ export function SettingsTab({
   onUpdateSettings,
   externalSaveTrigger,
 }: SettingsTabProps) {
+  const cleanTo10Digits = (val?: string) => {
+    if (!val) return '';
+    let d = String(val).replace(/\D/g, '');
+    if (d.length > 10 && d.startsWith('91')) d = d.slice(2);
+    else if (d.length > 10 && d.startsWith('0')) d = d.slice(1);
+    return d.slice(0, 10);
+  };
+
   const [form, setForm] = useState<CompanySettings>(() => ({
     ...initialSettings,
+    phone: cleanTo10Digits(initialSettings?.phone),
+    alternatePhone: cleanTo10Digits(initialSettings?.alternatePhone),
+    whatsapp: cleanTo10Digits(initialSettings?.whatsapp),
     sizeSelectorCards:
       Array.isArray(initialSettings?.sizeSelectorCards) && initialSettings.sizeSelectorCards.length > 0
         ? initialSettings.sizeSelectorCards
@@ -58,12 +69,97 @@ export function SettingsTab({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [processingSize, setProcessingSize] = useState<string | null>(null);
   const [uploadFeedback, setUploadFeedback] = useState<{ [size: string]: string }>({});
+  const [phoneErrors, setPhoneErrors] = useState<{
+    phone?: string;
+    alternatePhone?: string;
+    whatsapp?: string;
+  }>({});
+
+  const handlePhoneKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Allow navigational and control keys
+    const allowed = ['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
+    if (allowed.includes(e.key) || e.ctrlKey || e.metaKey) {
+      return;
+    }
+    // Block non-digit keys completely
+    if (!/^[0-9]$/.test(e.key)) {
+      e.preventDefault();
+      return;
+    }
+    // Block key if already 10 digits
+    const input = e.currentTarget;
+    const selectedLen = (input.selectionEnd || 0) - (input.selectionStart || 0);
+    if (input.value.length >= 10 && selectedLen === 0) {
+      e.preventDefault();
+    }
+  };
+
+  const handlePhonePaste = (
+    key: 'phone' | 'alternatePhone' | 'whatsapp',
+    e: React.ClipboardEvent<HTMLInputElement>
+  ) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text');
+    const digits = cleanTo10Digits(pasted);
+    handlePhoneChange(key, digits);
+  };
+
+  const handlePhoneChange = (key: 'phone' | 'alternatePhone' | 'whatsapp', rawValue: string) => {
+    setIsDirty(true);
+    setSaveSuccess(false);
+    setSaveError(null);
+
+    // Filter to only digits and strictly limit to 10 digits
+    const digits = cleanTo10Digits(rawValue);
+
+    setPhoneErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+
+    setForm((prev) => ({ ...prev, [key]: digits }));
+  };
+
+  const validatePhone = (key: 'phone' | 'alternatePhone' | 'whatsapp', val?: string) => {
+    const digits = cleanTo10Digits(val);
+    if (key === 'phone') {
+      if (!digits) {
+        return 'Primary customer care phone number is required (10 digits).';
+      }
+      if (digits.length !== 10) {
+        return `Please enter a valid 10-digit number (currently ${digits.length}/10 digits).`;
+      }
+      if (!/^[6-9]\d{9}$/.test(digits)) {
+        return 'Must be a valid 10-digit Indian number starting with 6, 7, 8, or 9.';
+      }
+    } else if (key === 'alternatePhone' && digits) {
+      if (digits.length !== 10) {
+        return `Must be exactly 10 digits (currently ${digits.length}/10 digits), or leave blank.`;
+      }
+      if (!/^[6-9]\d{9}$/.test(digits)) {
+        return 'Must be a valid 10-digit Indian number starting with 6, 7, 8, or 9.';
+      }
+    } else if (key === 'whatsapp' && digits) {
+      if (digits.length !== 10) {
+        return `Must be exactly 10 digits (currently ${digits.length}/10 digits).`;
+      }
+      if (!/^[6-9]\d{9}$/.test(digits)) {
+        return 'Must be a valid 10-digit WhatsApp number starting with 6, 7, 8, or 9.';
+      }
+    }
+    return undefined;
+  };
 
   // Only sync from external changes if user does not have uncommitted edits
   useEffect(() => {
     if (!isDirty && initialSettings) {
       setForm({
         ...initialSettings,
+        phone: cleanTo10Digits(initialSettings.phone),
+        alternatePhone: cleanTo10Digits(initialSettings.alternatePhone),
+        whatsapp: cleanTo10Digits(initialSettings.whatsapp),
         sizeSelectorCards:
           Array.isArray(initialSettings?.sizeSelectorCards) && initialSettings.sizeSelectorCards.length > 0
             ? initialSettings.sizeSelectorCards
@@ -226,6 +322,22 @@ export function SettingsTab({
     setIsSaving(true);
     setSaveSuccess(false);
     setSaveError(null);
+
+    // Validate 10-digit Indian phone numbers
+    const phoneErr = validatePhone('phone', form.phone);
+    const altErr = validatePhone('alternatePhone', form.alternatePhone);
+    const waErr = validatePhone('whatsapp', form.whatsapp);
+
+    if (phoneErr || altErr || waErr) {
+      setPhoneErrors({
+        phone: phoneErr,
+        alternatePhone: altErr,
+        whatsapp: waErr,
+      });
+      setSaveError(phoneErr || altErr || waErr || 'Please provide valid 10-digit Indian phone numbers.');
+      setIsSaving(false);
+      return;
+    }
 
     try {
       await onUpdateSettings(form);
@@ -402,61 +514,199 @@ export function SettingsTab({
 
             {/* SECTION 2: Phone Numbers & WhatsApp */}
             <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/90 shadow-sm space-y-4">
-              <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
-                <Phone className="w-4 h-4 text-[#E50914]" />
-                <h3 className="text-xs font-black uppercase tracking-wider text-slate-800">
-                  Phone Numbers &amp; Helplines
-                </h3>
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 flex-wrap gap-2">
+                <div className="flex items-center gap-2.5">
+                  <Phone className="w-4 h-4 text-[#E50914]" />
+                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                    Phone Numbers &amp; Helplines
+                  </h3>
+                </div>
+                <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
+                  🇮🇳 10-Digit Numbers Only
+                </span>
               </div>
 
-              <div className="space-y-3.5 text-xs">
+              <div className="space-y-4 text-xs">
+                {/* 1. Primary Helpline */}
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Primary Helpline / Customer Care Phone
-                  </label>
-                  <div className="relative">
-                    <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                      Primary Helpline / Customer Care Phone <span className="text-[#E50914] font-black">*</span>
+                    </label>
+                    <span className="text-[10px] font-semibold">
+                      {cleanTo10Digits(form.phone).length === 10 ? (
+                        <span className="text-emerald-600 font-bold flex items-center gap-0.5">
+                          <CheckCircle2 className="w-3 h-3" /> 10 / 10 digits (Valid)
+                        </span>
+                      ) : (
+                        <span className={cleanTo10Digits(form.phone).length > 0 ? 'text-amber-600 font-bold' : 'text-slate-400'}>
+                          {cleanTo10Digits(form.phone).length} / 10 digits
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="relative flex items-center">
+                    <div className="absolute left-3.5 flex items-center gap-1.5 pointer-events-none text-slate-500 font-bold text-xs select-none z-10">
+                      <Phone className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="text-slate-700 font-extrabold">+91</span>
+                      <span className="w-px h-3.5 bg-slate-300" />
+                    </div>
                     <input
-                      type="text"
-                      value={form.phone}
-                      onChange={(e) => handleFieldChange('phone', e.target.value)}
+                      type="tel"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={10}
+                      value={cleanTo10Digits(form.phone)}
+                      onKeyDown={handlePhoneKeyDown}
+                      onPaste={(e) => handlePhonePaste('phone', e)}
+                      onChange={(e) => handlePhoneChange('phone', e.target.value)}
+                      onBlur={() => {
+                        const err = validatePhone('phone', form.phone);
+                        setPhoneErrors((prev) => ({ ...prev, phone: err }));
+                      }}
                       required
-                      placeholder="e.g. +91 422 430 1234"
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#E50914]/15 focus:border-[#E50914]"
+                      placeholder="e.g. 8921793054"
+                      className={`w-full pl-20 pr-4 py-2.5 bg-slate-50 border rounded-xl text-xs font-semibold tracking-wider text-slate-900 focus:outline-none transition-all ${
+                        phoneErrors.phone
+                          ? 'border-red-500 ring-2 ring-red-500/20 bg-red-50/20'
+                          : cleanTo10Digits(form.phone).length === 10
+                          ? 'border-emerald-500/70 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600'
+                          : 'border-slate-200 focus:ring-2 focus:ring-[#E50914]/15 focus:border-[#E50914]'
+                      }`}
                     />
                   </div>
+                  {phoneErrors.phone ? (
+                    <p className="text-[11px] text-red-600 font-bold mt-1.5 flex items-center gap-1 animate-in fade-in">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{phoneErrors.phone}</span>
+                    </p>
+                  ) : (
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Customers will call this primary 10-digit number for customer service and support inquiries.
+                    </p>
+                  )}
                 </div>
 
+                {/* 2. Alternate Phone Number */}
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Alternate Phone Number (Optional)
-                  </label>
-                  <div className="relative">
-                    <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                      Alternate Phone Number (Optional)
+                    </label>
+                    <span className="text-[10px] font-semibold">
+                      {cleanTo10Digits(form.alternatePhone).length === 10 ? (
+                        <span className="text-emerald-600 font-bold flex items-center gap-0.5">
+                          <CheckCircle2 className="w-3 h-3" /> 10 / 10 digits (Valid)
+                        </span>
+                      ) : cleanTo10Digits(form.alternatePhone).length > 0 ? (
+                        <span className="text-amber-600 font-bold">
+                          {cleanTo10Digits(form.alternatePhone).length} / 10 digits
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">Optional</span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="relative flex items-center">
+                    <div className="absolute left-3.5 flex items-center gap-1.5 pointer-events-none text-slate-500 font-bold text-xs select-none z-10">
+                      <Phone className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="text-slate-700 font-extrabold">+91</span>
+                      <span className="w-px h-3.5 bg-slate-300" />
+                    </div>
                     <input
-                      type="text"
-                      value={form.alternatePhone || ''}
-                      onChange={(e) => handleFieldChange('alternatePhone', e.target.value)}
-                      placeholder="e.g. +91 98765 43210"
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#E50914]/15 focus:border-[#E50914]"
+                      type="tel"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={10}
+                      value={cleanTo10Digits(form.alternatePhone)}
+                      onKeyDown={handlePhoneKeyDown}
+                      onPaste={(e) => handlePhonePaste('alternatePhone', e)}
+                      onChange={(e) => handlePhoneChange('alternatePhone', e.target.value)}
+                      onBlur={() => {
+                        const err = validatePhone('alternatePhone', form.alternatePhone);
+                        setPhoneErrors((prev) => ({ ...prev, alternatePhone: err }));
+                      }}
+                      placeholder="e.g. 9876543210 (optional)"
+                      className={`w-full pl-20 pr-4 py-2.5 bg-slate-50 border rounded-xl text-xs font-semibold tracking-wider text-slate-900 focus:outline-none transition-all ${
+                        phoneErrors.alternatePhone
+                          ? 'border-red-500 ring-2 ring-red-500/20 bg-red-50/20'
+                          : cleanTo10Digits(form.alternatePhone).length === 10
+                          ? 'border-emerald-500/70 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600'
+                          : 'border-slate-200 focus:ring-2 focus:ring-[#E50914]/15 focus:border-[#E50914]'
+                      }`}
                     />
                   </div>
+                  {phoneErrors.alternatePhone ? (
+                    <p className="text-[11px] text-red-600 font-bold mt-1.5 flex items-center gap-1 animate-in fade-in">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{phoneErrors.alternatePhone}</span>
+                    </p>
+                  ) : (
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Secondary line displayed when primary helpline is busy or unreachable.
+                    </p>
+                  )}
                 </div>
 
+                {/* 3. WhatsApp Helpline */}
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    WhatsApp Helpline Number
-                  </label>
-                  <div className="relative">
-                    <Phone className="w-4 h-4 text-emerald-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                      WhatsApp Helpline Number
+                    </label>
+                    <span className="text-[10px] font-semibold">
+                      {cleanTo10Digits(form.whatsapp).length === 10 ? (
+                        <span className="text-emerald-600 font-bold flex items-center gap-0.5">
+                          <CheckCircle2 className="w-3 h-3" /> 10 / 10 digits (Valid)
+                        </span>
+                      ) : cleanTo10Digits(form.whatsapp).length > 0 ? (
+                        <span className="text-amber-600 font-bold">
+                          {cleanTo10Digits(form.whatsapp).length} / 10 digits
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">Optional</span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="relative flex items-center">
+                    <div className="absolute left-3.5 flex items-center gap-1.5 pointer-events-none text-emerald-600 font-bold text-xs select-none z-10">
+                      <Phone className="w-3.5 h-3.5 text-emerald-500" />
+                      <span className="text-emerald-700 font-extrabold">+91</span>
+                      <span className="w-px h-3.5 bg-slate-300" />
+                    </div>
                     <input
-                      type="text"
-                      value={form.whatsapp || ''}
-                      onChange={(e) => handleFieldChange('whatsapp', e.target.value)}
-                      placeholder="e.g. +91 98765 43210"
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#E50914]/15 focus:border-[#E50914]"
+                      type="tel"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={10}
+                      value={cleanTo10Digits(form.whatsapp)}
+                      onKeyDown={handlePhoneKeyDown}
+                      onPaste={(e) => handlePhonePaste('whatsapp', e)}
+                      onChange={(e) => handlePhoneChange('whatsapp', e.target.value)}
+                      onBlur={() => {
+                        const err = validatePhone('whatsapp', form.whatsapp);
+                        setPhoneErrors((prev) => ({ ...prev, whatsapp: err }));
+                      }}
+                      placeholder="e.g. 8921793054"
+                      className={`w-full pl-20 pr-4 py-2.5 bg-slate-50 border rounded-xl text-xs font-semibold tracking-wider text-slate-900 focus:outline-none transition-all ${
+                        phoneErrors.whatsapp
+                          ? 'border-red-500 ring-2 ring-red-500/20 bg-red-50/20'
+                          : cleanTo10Digits(form.whatsapp).length === 10
+                          ? 'border-emerald-500/70 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600'
+                          : 'border-slate-200 focus:ring-2 focus:ring-[#E50914]/15 focus:border-[#E50914]'
+                      }`}
                     />
                   </div>
+                  {phoneErrors.whatsapp ? (
+                    <p className="text-[11px] text-red-600 font-bold mt-1.5 flex items-center gap-1 animate-in fade-in">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{phoneErrors.whatsapp}</span>
+                    </p>
+                  ) : (
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Direct WhatsApp chat button links across the store will connect to this 10-digit number.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
