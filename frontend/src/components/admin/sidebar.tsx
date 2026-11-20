@@ -104,18 +104,18 @@ export function AdminSidebar({
       <div>
         {/* Brand Header */}
         <div className="flex items-center justify-between pb-5 border-b border-slate-100">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="relative h-7 w-32">
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="relative h-5 w-26">
               <Image
                 src="/brand/butterfly-wordmark-red.png"
                 alt="Butterfly Logo"
                 fill
-                sizes="128px"
+                sizes="104px"
                 className="object-contain object-left group-hover:opacity-90 transition-opacity"
                 priority
               />
             </div>
-            <span className="px-2 py-0.5 rounded-md bg-[#E50914] text-white font-black text-[9px] tracking-wider uppercase shadow-xs">
+            <span className="px-1.5 py-0.5 rounded bg-[#E50914] text-white font-black text-[8px] tracking-wider uppercase shadow-xs">
               ADMIN
             </span>
           </Link>

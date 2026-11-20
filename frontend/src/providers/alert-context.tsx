@@ -442,7 +442,7 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
                     <span>Call Helpline</span>
                   </button>
                   <a
-                    href={`https://wa.me/${(contactModal.whatsapp || '919876543210').replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Hello Butterfly Smart TV Support, I need assistance with a television.')}`}
+                    href={`https://wa.me/${(contactModal.whatsapp || '918921793054').replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Hello Butterfly Smart TV Support, I need assistance with a television.')}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-md shadow-emerald-900/20 text-center"

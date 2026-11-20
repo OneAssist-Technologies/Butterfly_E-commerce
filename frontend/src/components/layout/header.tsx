@@ -145,18 +145,18 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
           
           {/* Official Butterfly Brand Logo */}
           <Link href="/" className="flex items-center gap-1.5 sm:gap-2 group flex-shrink-0 py-1">
-            <div className="relative h-7 sm:h-8 md:h-9 w-32 xs:w-40 sm:w-48 md:w-56 transition-transform duration-300 group-hover:scale-105">
+            <div className="relative h-6 sm:h-7 md:h-8 w-28 xs:w-36 sm:w-40 md:w-48 transition-transform duration-300 group-hover:scale-105">
               <Image
                 src="/brand/butterfly-wordmark-red.png"
                 alt="Butterfly Logo"
                 fill
-                sizes="(max-width: 480px) 140px, (max-width: 640px) 192px, 224px"
+                sizes="(max-width: 480px) 112px, (max-width: 640px) 160px, 192px"
                 className="object-contain object-left"
                 priority
               />
             </div>
-            <div className="hidden sm:flex flex-col border-l border-zinc-300 pl-2 py-0.5">
-              <span className="text-[10px] sm:text-xs font-black tracking-wider text-zinc-900 uppercase leading-none whitespace-nowrap">
+            <div className="hidden sm:flex flex-col border-l border-zinc-300 pl-2.5 py-0.5">
+              <span className="text-[10px] sm:text-[11px] font-black tracking-wider text-zinc-900 uppercase leading-none whitespace-nowrap">
                 SMART TV
               </span>
             </div>
@@ -502,7 +502,7 @@ export function Header({ cartCount, onOpenCart, onSearch }: HeaderProps) {
               <Link
                 href="/"
                 onClick={() => setMobileMenuOpen(false)}
-                className="relative h-7 w-32"
+                className="relative h-6 w-28"
               >
                 <Image
                   src="/brand/butterfly-wordmark-red.png"

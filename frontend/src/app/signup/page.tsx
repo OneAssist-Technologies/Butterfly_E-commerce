@@ -165,18 +165,18 @@ export default function SignupPage() {
           
           {/* Official Butterfly Brand Logo matching Navbar */}
           <Link href="/" className="inline-flex items-center gap-2 group mb-8">
-            <div className="relative h-8 sm:h-9 w-48 sm:w-56 transition-transform duration-300 group-hover:scale-105">
+            <div className="relative h-7 sm:h-8 w-40 sm:w-48 transition-transform duration-300 group-hover:scale-105">
               <Image
                 src="/brand/butterfly-wordmark-red.png"
                 alt="Butterfly Logo"
                 fill
-                sizes="(max-width: 640px) 192px, 224px"
+                sizes="(max-width: 640px) 160px, 192px"
                 className="object-contain object-left"
                 priority
               />
             </div>
-            <div className="flex flex-col border-l border-zinc-300 pl-2 py-0.5">
-              <span className="text-[11px] sm:text-xs font-black tracking-wider text-zinc-900 uppercase leading-none whitespace-nowrap">
+            <div className="flex flex-col border-l border-zinc-300 pl-2.5 py-0.5">
+              <span className="text-[10px] sm:text-[11px] font-black tracking-wider text-zinc-900 uppercase leading-none whitespace-nowrap">
                 SMART TV
               </span>
             </div>
@@ -258,9 +258,12 @@ export default function SignupPage() {
               <input
                 id="phone"
                 type="tel"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={10}
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+91 98765 43210"
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                placeholder="10-digit mobile number (e.g. 9876543210)"
                 className="w-full px-4 py-2.5 rounded-xl border border-zinc-300 text-sm text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#E50914]/20 focus:border-[#E50914] transition-all bg-white"
               />
             </div>

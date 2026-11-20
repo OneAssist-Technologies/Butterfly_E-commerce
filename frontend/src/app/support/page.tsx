@@ -76,7 +76,7 @@ const FAQ_DATA: FAQItem[] = [
     category: 'Warranty & Service',
     question: 'Where can I find the service center near me?',
     answer:
-      'We have over 250+ authorized service centers across India including primary hubs in Coimbatore, Chennai, Bengaluru, Hyderabad, Mumbai, and Delhi. You can request free on-site service via our support helpline or online enquiry form.',
+      'We provide authorized on-site service all over Tamil Nadu, with our primary service hub in Coimbatore and dedicated service coverage across Coimbatore, Tirupur, Erode, Salem, Chennai, Madurai, and surrounding areas. You can request free doorstep on-site technician service via our support helpline or online enquiry form.',
   },
   {
     id: 'faq-7',
@@ -97,7 +97,7 @@ const FAQ_DATA: FAQItem[] = [
     category: 'Installation & Setup',
     question: 'How do I request standard wall-mounting installation?',
     answer:
-      'Complimentary wall-mount brackets are included in the box for all models 43" and above. To schedule professional technician installation within 24-48 hours of delivery, call +91 422 430 1234 or submit your order details on our Contact page.',
+      'Complimentary wall-mount brackets are included in the box for all models 43" and above. To schedule professional technician installation within 24-48 hours of delivery, call our support helpline at 8921793054 or submit your order details on our Contact page.',
   },
   {
     id: 'faq-10',
@@ -528,7 +528,7 @@ export default function SupportPage() {
                   Doorstep technician support
                 </p>
                 <p className="text-xs text-zinc-500 mt-1">
-                  Available across 250+ cities
+                  All over Tamil Nadu &amp; Coimbatore areas
                 </p>
               </div>
             </div>
@@ -828,7 +828,7 @@ export default function SupportPage() {
 
             <div className="mt-6 pt-4 border-t border-zinc-100 flex items-center justify-between">
               <span className="text-xs text-zinc-400">
-                Manufactured by Butterfly Enterprises • Coimbatore, India
+                Manufactured by Butterfly Enterprises • Coimbatore, Tamil Nadu
               </span>
               <button
                 onClick={() => setActiveModal(null)}
@@ -862,14 +862,14 @@ export default function SupportPage() {
             </p>
             <div className="space-y-3 text-xs text-zinc-700 bg-zinc-50 p-4 rounded-2xl border border-zinc-200">
               <p>• <strong>1-Year Comprehensive Warranty:</strong> Covers all electronic parts, motherboards, power supplies, and TV panels.</p>
-              <p>• <strong>Pan-India On-Site Service:</strong> Authorized technician visit directly to your home within 24-48 business hours.</p>
+              <p>• <strong>All-Tamil Nadu On-Site Service:</strong> Authorized technician visit directly to your home within 24-48 business hours across Coimbatore and all Tamil Nadu districts.</p>
               <p>
                 • <strong>Customer Care Toll-Free:</strong>{' '}
                 <a
-                  href={`tel:${(companySettings?.phone || '+91 422 430 120').replace(/\s+/g, '')}`}
+                  href={`tel:${(companySettings?.phone || '8921793054').replace(/\s+/g, '')}`}
                   className="font-bold text-zinc-900 hover:text-[#E50914] transition-colors"
                 >
-                  {companySettings?.phone || '+91 422 430 120'}
+                  {companySettings?.phone || '8921793054'}
                 </a>
                 {companySettings?.alternatePhone ? ` / ${companySettings.alternatePhone}` : ''}
               </p>

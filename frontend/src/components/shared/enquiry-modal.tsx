@@ -30,10 +30,17 @@ export function EnquiryModal({ product, onClose }: EnquiryModalProps) {
     setIsSubmitting(true);
     setErrorMessage('');
 
+    const cleanPhone = formData.phone.replace(/\D/g, '');
+    if (!cleanPhone || cleanPhone.length !== 10) {
+      setErrorMessage('Please enter a valid 10-digit mobile number.');
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       await enquiryService.create({
         name: formData.name,
-        phone: formData.phone,
+        phone: cleanPhone,
         email: formData.email,
         city: formData.city,
         message: formData.message,
@@ -154,10 +161,13 @@ export function EnquiryModal({ product, onClose }: EnquiryModalProps) {
                   </label>
                   <input
                     type="tel"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={10}
                     required
-                    placeholder="+91 98765 43210"
+                    placeholder="10-digit mobile (e.g. 9876543210)"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
                     className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-[#E50914]/40 focus:border-[#E50914]"
                   />
                 </div>

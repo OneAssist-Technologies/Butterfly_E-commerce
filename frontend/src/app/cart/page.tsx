@@ -638,7 +638,7 @@ export default function CartPage() {
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-zinc-900">3 Years Warranty</h4>
-                    <p className="text-[11px] text-zinc-500">Comprehensive on-site service</p>
+                    <p className="text-[11px] text-zinc-500">All-Tamil Nadu on-site service</p>
                   </div>
                 </div>
 
@@ -913,13 +913,17 @@ export default function CartPage() {
                     </label>
                     <input
                       type="tel"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={10}
                       value={phone}
                       onChange={(e) => {
-                        setPhone(e.target.value);
+                        const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                        setPhone(val);
                         if (fieldErrors.phone) setFieldErrors((prev) => ({ ...prev, phone: undefined }));
                         if (fieldErrors.general) setFieldErrors((prev) => ({ ...prev, general: undefined }));
                       }}
-                      placeholder="+91 98765 43210"
+                      placeholder="10-digit mobile number (e.g. 9876543210)"
                       className={`w-full px-3 py-2 border rounded-xl text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none transition-all ${
                         fieldErrors.phone
                           ? 'border-red-500 ring-2 ring-red-500/20 bg-red-50/20'
@@ -946,7 +950,7 @@ export default function CartPage() {
                         if (fieldErrors.address) setFieldErrors((prev) => ({ ...prev, address: undefined }));
                         if (fieldErrors.general) setFieldErrors((prev) => ({ ...prev, general: undefined }));
                       }}
-                      placeholder="Door No, Street, Landmark, City & PIN code"
+                      placeholder="Door No, Street, Landmark, City & PIN code (Tamil Nadu)"
                       className={`w-full px-3 py-2 border rounded-xl text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none resize-none transition-all ${
                         fieldErrors.address
                           ? 'border-red-500 ring-2 ring-red-500/20 bg-red-50/20'
