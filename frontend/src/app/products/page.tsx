@@ -1026,7 +1026,7 @@ function ProductsCatalogContent() {
           </div>
           <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
             <a
-              href={`https://wa.me/${(companySettings?.whatsapp || companySettings?.phone || '919876543210').replace(/[^0-9]/g, '').replace(/^(\d{10})$/, '91$1')}?text=${encodeURIComponent("Hello Butterfly Smart TV Team, I am browsing products and want to know about today's current offers and discounts.")}`}
+              href={`https://wa.me/${(companySettings?.whatsapp || companySettings?.phone || '918921793054').replace(/[^0-9]/g, '').replace(/^(\d{10})$/, '91$1')}?text=${encodeURIComponent("Hello Butterfly Smart TV Team, I am browsing products and want to know about today's current offers and discounts.")}`}
               target="_blank"
               rel="noopener noreferrer"
               className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all inline-flex items-center gap-1.5 shadow-xs cursor-pointer"

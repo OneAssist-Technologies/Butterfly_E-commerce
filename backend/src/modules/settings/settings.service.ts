@@ -12,14 +12,22 @@ export const DEFAULT_SIZE_CARDS = [
 
 export const DEFAULT_AVAILABLE_SIZES = ['32"', '43"', '50"', '55"', '65"', '75"', '85"'];
 
+export const sanitizePhoneNumber = (val: any): string => {
+  if (!val) return '';
+  let d = String(val).replace(/\D/g, '');
+  if (d.length > 10 && d.startsWith('91')) d = d.slice(2);
+  else if (d.length > 10 && d.startsWith('0')) d = d.slice(1);
+  return d.slice(0, 10);
+};
+
 const DEFAULT_SETTINGS = {
   id: 'default',
   companyName: 'Butterfly Enterprises',
   email: 'butterflytvs@gmail.com',
   supportEmail: 'support@butterflytv.in',
-  phone: '+91 422 430 1234',
-  alternatePhone: '+91 98765 43210',
-  whatsapp: '+91 98765 43210',
+  phone: '8921793054',
+  alternatePhone: '9876543210',
+  whatsapp: '8921793054',
   address: 'Avinashi Road, Peelamedu',
   city: 'Coimbatore',
   state: 'Tamil Nadu',
@@ -125,6 +133,12 @@ export class SettingsService implements OnModuleInit {
         }
       }
 
+      if (settings) {
+        if (settings.phone) settings.phone = sanitizePhoneNumber(settings.phone);
+        if (settings.alternatePhone) settings.alternatePhone = sanitizePhoneNumber(settings.alternatePhone);
+        if (settings.whatsapp) settings.whatsapp = sanitizePhoneNumber(settings.whatsapp);
+      }
+
       return settings;
     } catch (err) {
       this.logger.error(`Error in getSettings, returning defaults: ${err instanceof Error ? err.message : err}`);
@@ -135,6 +149,11 @@ export class SettingsService implements OnModuleInit {
   async updateSettings(dto: UpdateSettingsDto) {
     try {
       const { id, createdAt, updatedAt, ...cleanDto } = dto as any;
+
+      if (cleanDto.phone) cleanDto.phone = sanitizePhoneNumber(cleanDto.phone);
+      if (cleanDto.alternatePhone) cleanDto.alternatePhone = sanitizePhoneNumber(cleanDto.alternatePhone);
+      if (cleanDto.whatsapp) cleanDto.whatsapp = sanitizePhoneNumber(cleanDto.whatsapp);
+
       const updated = await this.prisma.companySetting.upsert({
         where: { id: 'default' },
         update: {

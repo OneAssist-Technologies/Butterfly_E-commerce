@@ -741,15 +741,21 @@ export function OrdersTab({
               </div>
 
               <div>
-                <label className="block font-bold text-zinc-700 mb-1">Contact Phone Number *</label>
-                <input
-                  type="tel"
-                  required
-                  placeholder="+91 98765 43210"
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#E50914]/20 focus:border-[#E50914]"
-                />
+                <label className="block font-bold text-zinc-700 mb-1">Contact Phone Number * (10 Digits)</label>
+                <div className="relative flex items-center">
+                  <span className="absolute left-3 text-xs font-bold text-zinc-500 pointer-events-none">+91</span>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={10}
+                    required
+                    placeholder="9876543210"
+                    value={form.phone.replace(/\D/g, '').slice(0, 10)}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                    className="w-full pl-11 pr-3 py-2 rounded-xl border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-[#E50914]/20 focus:border-[#E50914] text-xs font-medium"
+                  />
+                </div>
               </div>
 
               <div>
